@@ -40,7 +40,7 @@ import com.naaammme.bbspace.feature.download.navigation.downloadScreen
 import com.naaammme.bbspace.feature.download.navigation.navigateToDownload
 import com.naaammme.bbspace.feature.history.navigation.historyScreen
 import com.naaammme.bbspace.feature.history.navigation.navigateToHistory
-import com.naaammme.bbspace.feature.home.ui.HomeScreen
+import com.naaammme.bbspace.feature.home.HomeScreen
 import com.naaammme.bbspace.feature.live.navigation.liveScreen
 import com.naaammme.bbspace.feature.live.navigation.navigateToLive
 import com.naaammme.bbspace.feature.search.navigation.navigateToSearch

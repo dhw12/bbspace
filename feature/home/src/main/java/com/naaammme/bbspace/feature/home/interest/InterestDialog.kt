@@ -1,4 +1,4 @@
-package com.naaammme.bbspace.feature.home.ui
+package com.naaammme.bbspace.feature.home.interest
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

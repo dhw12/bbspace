@@ -1,4 +1,4 @@
-package com.naaammme.bbspace.feature.home.ui
+package com.naaammme.bbspace.feature.home.live
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,26 +47,26 @@ fun HomeLivePage(
     onOpenSpace: (SpaceRoute) -> Unit,
     viewModel: HomeLiveViewModel = hiltViewModel()
 ) {
-    val items = viewModel.items.collectAsStateWithLifecycle().value
+    val state = viewModel.uiState.collectAsStateWithLifecycle().value
 
     LaunchedEffect(isActive) {
         if (isActive) viewModel.ensureLoaded()
     }
     AdaptiveMediaGrid(
-        items = items,
-        isRefreshing = viewModel.isRefreshing,
-        isLoadingMore = viewModel.isLoadingMore,
+        items = state.items,
+        isRefreshing = state.isRefreshing,
+        isLoadingMore = state.isLoadingMore,
         onRefresh = viewModel::refresh,
         onLoadMore = viewModel::loadMore,
         modifier = Modifier.fillMaxSize(),
-        errorMessage = viewModel.errorMessage,
+        errorMessage = state.errorMessage,
         loadMoreEnabled = isActive,
         key = { index, item -> "${item.roomId}_${item.sessionId ?: index}" },
         loadingContent = {
             VideoGridCardSkeleton()
         },
         emptyContent = {
-            LiveEmptyState(viewModel.errorMessage)
+            LiveEmptyState(state.errorMessage)
         }
     ) { item ->
         LiveRecommendCard(

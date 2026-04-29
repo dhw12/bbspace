@@ -1,4 +1,4 @@
-﻿package com.naaammme.bbspace.feature.home.ui
+package com.naaammme.bbspace.feature.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
@@ -37,6 +37,9 @@ import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.feature.home.interest.InterestDialog
+import com.naaammme.bbspace.feature.home.live.HomeLivePage
+import com.naaammme.bbspace.feature.home.video.HomeVideoPage
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -52,12 +55,11 @@ fun HomeScreen(
     onOpenLive: (LiveRoute) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val items = viewModel.items.collectAsStateWithLifecycle().value
-    val interestChoose = viewModel.interestChoose.collectAsStateWithLifecycle().value
+    val state = viewModel.uiState.collectAsStateWithLifecycle().value
     val pagerState = rememberPagerState(pageCount = { homeTabs.size })
     val scope = rememberCoroutineScope()
 
-    if (interestChoose != null) {
+    state.interestChoose?.let { interestChoose ->
         InterestDialog(
             data = interestChoose,
             onDismiss = viewModel::dismissInterest,
@@ -87,10 +89,10 @@ fun HomeScreen(
         ) { page ->
             when (page) {
                 0 -> HomeVideoPage(
-                    items = items,
-                    isRefreshing = viewModel.isRefreshing,
-                    isLoadingMore = viewModel.isLoadingMore,
-                    errorMessage = viewModel.errorMessage,
+                    items = state.items,
+                    isRefreshing = state.isRefreshing,
+                    isLoadingMore = state.isLoadingMore,
+                    errorMessage = state.errorMessage,
                     onRefresh = viewModel::refresh,
                     onLoadMore = viewModel::loadMore,
                     onOpenVideo = onOpenVideo,
