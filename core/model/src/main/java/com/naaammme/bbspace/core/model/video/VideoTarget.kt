@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 import java.net.URI
 import java.net.URLDecoder
 
-sealed interface VideoRoute {
+sealed interface VideoTarget {
     val src: VideoSrc
 
     @Immutable
@@ -12,28 +12,37 @@ sealed interface VideoRoute {
         val aid: Long,
         val cid: Long,
         val bvid: String? = null,
-        override val src: VideoSrc = VideoRouteTool.feed()
-    ) : VideoRoute
+        override val src: VideoSrc = VideoTargetTool.feed()
+    ) : VideoTarget
 
     @Immutable
     data class Pgc(
         val epId: Long,
         val seasonId: Long? = null,
         val subType: Int? = null,
-        override val src: VideoSrc = VideoRouteTool.feed()
-    ) : VideoRoute
+        override val src: VideoSrc = VideoTargetTool.feed()
+    ) : VideoTarget
 
     @Immutable
     data class Pugv(
         val epId: Long,
         val seasonId: Long? = null,
-        override val src: VideoSrc = VideoRouteTool.feed()
-    ) : VideoRoute
+        override val src: VideoSrc = VideoTargetTool.feed()
+    ) : VideoTarget
 }
 
-fun VideoRoute.toPlayableParams(): PlayableParams? {
+fun VideoTarget.isSameEntry(other: VideoTarget?): Boolean {
+    return when {
+        this is VideoTarget.Ugc && other is VideoTarget.Ugc -> aid == other.aid
+        this is VideoTarget.Pgc && other is VideoTarget.Pgc -> epId == other.epId
+        this is VideoTarget.Pugv && other is VideoTarget.Pugv -> epId == other.epId
+        else -> false
+    }
+}
+
+fun VideoTarget.toPlayableParams(): PlayableParams {
     return when (this) {
-        is VideoRoute.Ugc -> PlayableParams(
+        is VideoTarget.Ugc -> PlayableParams(
             videoId = VideoPlaybackId(
                 aid = aid,
                 cid = cid,
@@ -42,7 +51,7 @@ fun VideoRoute.toPlayableParams(): PlayableParams? {
             src = src
         )
 
-        is VideoRoute.Pgc -> PlayableParams(
+        is VideoTarget.Pgc -> PlayableParams(
             videoId = VideoPlaybackId(
                 aid = 0L,
                 cid = 0L
@@ -56,7 +65,7 @@ fun VideoRoute.toPlayableParams(): PlayableParams? {
             )
         )
 
-        is VideoRoute.Pugv -> PlayableParams(
+        is VideoTarget.Pugv -> PlayableParams(
             videoId = VideoPlaybackId(
                 aid = 0L,
                 cid = 0L
@@ -73,13 +82,13 @@ fun VideoRoute.toPlayableParams(): PlayableParams? {
 
 @Immutable
 data class VideoSrc(
-    val from: String = VideoRouteTool.FROM_FEED,
-    val fromSpmid: String = VideoRouteTool.FROM_SPMID_FEED,
+    val from: String = VideoTargetTool.FROM_FEED,
+    val fromSpmid: String = VideoTargetTool.FROM_SPMID_FEED,
     val trackId: String? = null,
     val reportFlowData: String? = null
 )
 
-object VideoRouteTool {
+object VideoTargetTool {
     const val SPMID = "united.player-video-detail.0.0"
     const val FROM_FEED = "7"
     const val FROM_HISTORY = "64"

@@ -23,8 +23,8 @@ import com.naaammme.bbspace.core.model.SearchOrder
 import com.naaammme.bbspace.core.model.SearchPage
 import com.naaammme.bbspace.core.model.SearchReq
 import com.naaammme.bbspace.core.model.SearchVideo
-import com.naaammme.bbspace.core.model.VideoRoute
-import com.naaammme.bbspace.core.model.VideoRouteTool
+import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.infra.grpc.BiliGrpcClient
 import java.util.Locale
 import java.util.TimeZone
@@ -123,15 +123,15 @@ class SearchRepoImpl @Inject constructor(
     ): SearchVideo? {
         if (item.cardItemCase != Item.CardItemCase.AV) return null
         val av = item.av
-        val aid = item.param.toLongOrNull() ?: VideoRouteTool.aid(item.uri) ?: return null
-        val cid = VideoRouteTool.cid(item.uri)
+        val aid = item.param.toLongOrNull() ?: VideoTargetTool.aid(item.uri) ?: return null
+        val cid = VideoTargetTool.cid(item.uri)
             ?: av.share.video.cid.takeIf { it > 0L }
             ?: return null
-        val route = VideoRoute.Ugc(
+        val target = VideoTarget.Ugc(
             aid = aid,
             cid = cid,
-            bvid = VideoRouteTool.bvid(item.uri),
-            src = VideoRouteTool.search(
+            bvid = VideoTargetTool.bvid(item.uri),
+            src = VideoTargetTool.search(
                 uri = item.uri,
                 fallbackTrackId = pageTrackId
             )
@@ -139,7 +139,7 @@ class SearchRepoImpl @Inject constructor(
         return SearchVideo(
             aid = aid,
             cid = cid,
-            route = route,
+            target = target,
             title = av.title.cleanHtml(),
             cover = av.cover.replace("http://", "https://"),
             author = av.author,

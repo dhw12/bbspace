@@ -6,7 +6,7 @@ import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.domain.player.PlayerSettings
 import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.PlaybackRequest
-import com.naaammme.bbspace.core.model.VideoRouteTool
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.infra.network.BiliRestClient
 import com.naaammme.bbspace.infra.network.BiliRestParamBuilder
 import com.naaammme.bbspace.infra.network.BiliRestProfile
@@ -93,7 +93,7 @@ class RemotePlaybackReporter @Inject constructor(
         base["network_type"] = NETWORK_TYPE_WIFI
         base["from"] = src.from
         base["from_spmid"] = src.fromSpmid
-        base["spmid"] = VideoRouteTool.SPMID
+        base["spmid"] = VideoTargetTool.SPMID
         base["play_status"] = playStatus(active.request).toString()
         base["user_status"] = USER_STATUS
         base["auto_play"] = ZERO

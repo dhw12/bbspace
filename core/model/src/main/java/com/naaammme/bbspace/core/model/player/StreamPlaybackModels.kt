@@ -12,7 +12,7 @@ sealed interface StreamPlaybackTarget {
 
     @Immutable
     data class Video(
-        val route: VideoRoute
+        val target: VideoTarget
     ) : StreamPlaybackTarget {
         override val kind: StreamPlaybackKind = StreamPlaybackKind.Video
     }

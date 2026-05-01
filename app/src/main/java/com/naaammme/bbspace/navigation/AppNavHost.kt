@@ -29,10 +29,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.naaammme.bbspace.core.designsystem.theme.ThemeConfig
 import com.naaammme.bbspace.core.designsystem.theme.buildNavTransitions
-import com.naaammme.bbspace.core.model.StreamPlaybackTarget
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.StreamPlaybackTarget
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.auth.navigation.ACCOUNT_ROUTE
 import com.naaammme.bbspace.feature.auth.navigation.LOGIN_ROUTE
 import com.naaammme.bbspace.feature.auth.navigation.SMS_LOGIN_ROUTE
@@ -46,8 +46,7 @@ import com.naaammme.bbspace.feature.download.navigation.navigateToDownload
 import com.naaammme.bbspace.feature.history.navigation.historyScreen
 import com.naaammme.bbspace.feature.history.navigation.navigateToHistory
 import com.naaammme.bbspace.feature.home.HomeScreen
-import com.naaammme.bbspace.feature.live.navigation.liveScreen
-import com.naaammme.bbspace.feature.live.navigation.navigateToLive
+import com.naaammme.bbspace.feature.live.LiveViewModel
 import com.naaammme.bbspace.feature.search.navigation.navigateToSearch
 import com.naaammme.bbspace.feature.search.navigation.searchScreen
 import com.naaammme.bbspace.feature.space.navigation.navigateToSpace
@@ -56,10 +55,9 @@ import com.naaammme.bbspace.feature.settings.navigation.SETTINGS_ROUTE
 import com.naaammme.bbspace.feature.settings.navigation.settingsScreen
 import com.naaammme.bbspace.feature.download.DownloadViewModel
 import com.naaammme.bbspace.feature.user.UserScreen
-import com.naaammme.bbspace.playback.InAppMiniPlayer
+import com.naaammme.bbspace.feature.video.VideoViewModel
+import com.naaammme.bbspace.playback.PlaybackHost
 import com.naaammme.bbspace.playback.PlaybackHostViewModel
-import com.naaammme.bbspace.feature.video.navigation.navigateToVideo
-import com.naaammme.bbspace.feature.video.navigation.videoScreen
 
 private const val MAIN_ROUTE = "main"
 
@@ -68,35 +66,44 @@ fun AppNavHost(themeConfig: ThemeConfig = ThemeConfig()) {
     val rootNavController = rememberNavController()
     val downloadViewModel: DownloadViewModel = hiltViewModel()
     val playbackHostViewModel: PlaybackHostViewModel = hiltViewModel()
+    val videoViewModel: VideoViewModel = hiltViewModel()
+    val liveViewModel: LiveViewModel = hiltViewModel()
     val player by playbackHostViewModel.player.collectAsStateWithLifecycle()
     val target by playbackHostViewModel.currentTarget.collectAsStateWithLifecycle()
     val sessionState by playbackHostViewModel.sessionState.collectAsStateWithLifecycle()
     val pageMeta by playbackHostViewModel.pageMeta.collectAsStateWithLifecycle()
-    val miniPlayerEnabled by playbackHostViewModel.miniPlayerEnabled.collectAsStateWithLifecycle()
+    val miniPlayerAvailable by playbackHostViewModel.miniPlayerAvailable.collectAsStateWithLifecycle()
     val navBackStackEntry by rootNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route.orEmpty()
-    val isPlaybackRoute = currentRoute.startsWith("video/") || currentRoute.startsWith("live/")
-    val exitPlayback: () -> Unit = {
-        val targetRoute = rootNavController.previousBackStackEntry?.destination?.route.orEmpty()
-        val shouldMinimize = miniPlayerEnabled &&
-                targetRoute.isNotEmpty() &&
-                !targetRoute.startsWith("video/") &&
-                !targetRoute.startsWith("live/")
-        if (shouldMinimize) {
+    val hostMode = playbackHostViewModel.hostMode
+    val closeVideoHost: () -> Unit = {
+        playbackHostViewModel.close()
+    }
+    val dismissPlaybackHost: () -> Unit = {
+        if (miniPlayerAvailable) {
             playbackHostViewModel.minimize()
         } else {
-            playbackHostViewModel.close()
+            when (target) {
+                is StreamPlaybackTarget.Video -> closeVideoHost()
+                is StreamPlaybackTarget.Live, null -> playbackHostViewModel.close()
+            }
         }
-        rootNavController.popBackStack()
-        Unit
     }
-    val openVideo: (VideoRoute) -> Unit = { route ->
+    val openSpaceFromVideo: (SpaceRoute) -> Unit = { route ->
+        dismissPlaybackHost()
+        rootNavController.navigateToSpace(route)
+    }
+    val openDownloadFromVideo: () -> Unit = {
+        dismissPlaybackHost()
+        rootNavController.navigateToDownload()
+    }
+    val openVideo: (VideoTarget) -> Unit = { target ->
         playbackHostViewModel.expand()
-        rootNavController.navigateToVideo(route)
+        videoViewModel.openRoot(target)
     }
     val openLive: (LiveRoute) -> Unit = { route ->
+        playbackHostViewModel.openLive(route)
         playbackHostViewModel.expand()
-        rootNavController.navigateToLive(route)
     }
     val transitions = remember(themeConfig.transitionStyle, themeConfig.animationSpeed) {
         buildNavTransitions<NavBackStackEntry>(
@@ -169,51 +176,52 @@ fun AppNavHost(themeConfig: ThemeConfig = ThemeConfig()) {
                 onBack = { rootNavController.popBackStack() },
                 onOpenVideo = openVideo
             )
-            videoScreen(
-                onBack = exitPlayback,
-                onOpenVideo = openVideo,
-                onOpenSpace = rootNavController::navigateToSpace,
-                onOpenDownloadCache = { rootNavController.navigateToDownload() },
-                onStartDownload = downloadViewModel::enqueueDownload
-            )
             downloadScreen(
                 navController = rootNavController,
                 onBack = { rootNavController.popBackStack() },
                 viewModel = downloadViewModel
             )
-            liveScreen(
-                onBack = exitPlayback
-            )
         }
 
-        target?.let { miniTarget ->
-            if (playbackHostViewModel.isMiniMode && miniPlayerEnabled && !isPlaybackRoute) {
-            InAppMiniPlayer(
-                player = player,
-                target = miniTarget,
-                sessionState = sessionState,
-                pageMeta = pageMeta,
-                onExpand = {
-                    playbackHostViewModel.expand()
-                    when (val playbackTarget = miniTarget) {
-                        is StreamPlaybackTarget.Video -> openVideo(playbackTarget.route)
-                        is StreamPlaybackTarget.Live -> openLive(playbackTarget.route)
-                    }
-                },
-                onTogglePlay = playbackHostViewModel::togglePlayPause,
-                onClose = playbackHostViewModel::close,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .padding(
-                        end = 16.dp,
-                        top = 16.dp,
-                        start = 16.dp,
-                        bottom = if (currentRoute == MAIN_ROUTE) 88.dp else 16.dp
-                    )
-            )
-        }
-        }
+        PlaybackHost(
+            mode = hostMode,
+            target = target,
+            player = player,
+            sessionState = sessionState,
+            pageMeta = pageMeta,
+            miniPlayerAvailable = miniPlayerAvailable,
+            onExpand = {
+                playbackHostViewModel.expand()
+                when (val playbackTarget = target) {
+                    is StreamPlaybackTarget.Video -> videoViewModel.syncToPlayback(playbackTarget.target)
+                    is StreamPlaybackTarget.Live -> Unit
+                    null -> Unit
+                }
+            },
+            onTogglePlay = playbackHostViewModel::togglePlayPause,
+            onClose = {
+                when (target) {
+                    is StreamPlaybackTarget.Video -> closeVideoHost()
+                    is StreamPlaybackTarget.Live -> playbackHostViewModel.close()
+                    null -> Unit
+                }
+            },
+            onDismissExpanded = dismissPlaybackHost,
+            onOpenSpace = openSpaceFromVideo,
+            onOpenDownloadCache = openDownloadFromVideo,
+            onStartDownload = downloadViewModel::enqueueDownload,
+            videoViewModel = videoViewModel,
+            liveViewModel = liveViewModel,
+            miniPlayerModifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(
+                    end = 16.dp,
+                    top = 16.dp,
+                    start = 16.dp,
+                    bottom = if (currentRoute == MAIN_ROUTE) 88.dp else 16.dp
+                )
+        )
     }
 }
 
@@ -225,7 +233,7 @@ private fun MainTabsScaffold(
     onNavigateToBbSpace: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToDownload: () -> Unit,
-    onNavigateToVideo: (VideoRoute) -> Unit,
+    onNavigateToVideo: (VideoTarget) -> Unit,
     onNavigateToSpace: (SpaceRoute) -> Unit,
     onNavigateToLive: (LiveRoute) -> Unit
 ) {

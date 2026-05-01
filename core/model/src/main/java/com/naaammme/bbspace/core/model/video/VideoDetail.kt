@@ -60,7 +60,7 @@ data class VideoSeasonSection(
 
 @Immutable
 data class VideoSeasonEpisode(
-    val route: VideoRoute.Ugc,
+    val target: VideoTarget.Ugc,
     val title: String,
     val subTitle: String?,
     val cover: String?
@@ -75,7 +75,7 @@ data class VideoPagePart(
 
 @Immutable
 data class VideoRelate(
-    val route: VideoRoute.Ugc,
+    val target: VideoTarget.Ugc,
     val title: String,
     val cover: String,
     val author: String?,

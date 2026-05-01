@@ -17,8 +17,8 @@ import com.naaammme.bbspace.core.model.VideoDetail
 import com.naaammme.bbspace.core.model.VideoOwner
 import com.naaammme.bbspace.core.model.VideoPagePart
 import com.naaammme.bbspace.core.model.VideoRelate
-import com.naaammme.bbspace.core.model.VideoRoute
-import com.naaammme.bbspace.core.model.VideoRouteTool
+import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.core.model.VideoSeason
 import com.naaammme.bbspace.core.model.VideoSeasonEpisode
 import com.naaammme.bbspace.core.model.VideoSeasonSection
@@ -74,7 +74,7 @@ class VideoDetailRepoImpl @Inject constructor(
 
         val builder = ViewReq.newBuilder()
             .setFrom(src.from)
-            .setSpmid(VideoRouteTool.SPMID)
+            .setSpmid(VideoTargetTool.SPMID)
             .setFromSpmid(src.fromSpmid)
             .setSessionId(BiliSessionId.view(deviceIdentity.buvid))
             .setPlayerArgs(playerArgs)
@@ -194,7 +194,7 @@ class VideoDetailRepoImpl @Inject constructor(
             val eps = sec.episodesList.mapNotNull { ep ->
                 val epTitle = ep.title.ifBlank { return@mapNotNull null }
                 VideoSeasonEpisode(
-                    route = VideoRoute.Ugc(
+                    target = VideoTarget.Ugc(
                         aid = ep.aid,
                         cid = ep.cid
                     ),
@@ -240,10 +240,10 @@ class VideoDetailRepoImpl @Inject constructor(
             if (card.cardCase != RelateCard.CardCase.AV) return@mapNotNull null
             val basic = card.basicInfo
             val aid = basic.id.takeIf { it > 0L }
-                ?: VideoRouteTool.aid(basic.uri)
+                ?: VideoTargetTool.aid(basic.uri)
                 ?: return@mapNotNull null
             val cid = card.av.cid.takeIf { it > 0L }
-                ?: VideoRouteTool.cid(basic.uri)
+                ?: VideoTargetTool.cid(basic.uri)
                 ?: return@mapNotNull null
             val title = basic.title.ifBlank { return@mapNotNull null }
             val viewText = card.av.stat.vt.text.ifBlank {
@@ -253,11 +253,11 @@ class VideoDetailRepoImpl @Inject constructor(
                 formatCount(card.av.stat.danmaku.value)
             }.takeIf(String::isNotBlank)
             VideoRelate(
-                route = VideoRoute.Ugc(
+                target = VideoTarget.Ugc(
                     aid = aid,
                     cid = cid,
-                    bvid = VideoRouteTool.bvid(basic.uri),
-                    src = VideoRouteTool.relate(
+                    bvid = VideoTargetTool.bvid(basic.uri),
+                    src = VideoTargetTool.relate(
                         trackId = basic.trackId,
                         reportFlowData = basic.reportFlowData,
                         fromSpmidSuffix = basic.fromSpmidSuffix

@@ -8,7 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.SpaceRouteTool
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.space.SpaceScreen
 
 const val SPACE_MID_ARG = "mid"
@@ -33,7 +33,7 @@ fun NavController.navigateToSpace(route: SpaceRoute) {
 
 fun NavGraphBuilder.spaceScreen(
     onBack: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit
+    onOpenVideo: (VideoTarget) -> Unit
 ) {
     composable(
         route = SPACE_ROUTE,

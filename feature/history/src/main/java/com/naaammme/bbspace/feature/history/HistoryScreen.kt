@@ -55,7 +55,7 @@ import com.naaammme.bbspace.core.model.HistoryItem
 import com.naaammme.bbspace.core.model.HistoryTab
 import com.naaammme.bbspace.core.model.HistoryTarget
 import com.naaammme.bbspace.core.model.LiveRoute
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
@@ -63,7 +63,7 @@ import kotlinx.coroutines.flow.filter
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     onOpenLive: (LiveRoute) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
@@ -167,7 +167,7 @@ fun HistoryScreen(
                                     item = item,
                                     onClick = {
                                         when (val target = item.target) {
-                                            is HistoryTarget.Video -> onOpenVideo(target.route)
+                                            is HistoryTarget.Video -> onOpenVideo(target.target)
                                             is HistoryTarget.Live -> onOpenLive(target.route)
                                             null -> Unit
                                         }

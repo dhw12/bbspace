@@ -32,7 +32,7 @@ import com.naaammme.bbspace.core.common.media.thumbnailUrl
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
 import com.naaammme.bbspace.core.designsystem.component.VideoListCardSkeleton
 import com.naaammme.bbspace.core.model.SpaceVideo
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.space.SpaceArchiveUiState
 import com.naaammme.bbspace.feature.space.component.RetryCard
 import com.naaammme.bbspace.feature.space.component.StateCard
@@ -40,7 +40,7 @@ import java.util.Locale
 
 internal fun LazyListScope.spaceArchiveSection(
     state: SpaceArchiveUiState,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onSelectOrder: (String) -> Unit
@@ -108,7 +108,7 @@ internal fun LazyListScope.spaceArchiveSection(
             ) { video ->
                 SpaceVideoCard(
                     video = video,
-                    onClick = { onOpenVideo(video.route) }
+                    onClick = { onOpenVideo(video.target) }
                 )
             }
         }

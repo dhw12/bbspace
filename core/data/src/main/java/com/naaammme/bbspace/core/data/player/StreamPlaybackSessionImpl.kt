@@ -14,6 +14,7 @@ import com.naaammme.bbspace.core.model.LivePlaybackViewState
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.LiveRouteTool
 import com.naaammme.bbspace.core.model.PlayBiz
+import com.naaammme.bbspace.core.model.PlaybackControlMode
 import com.naaammme.bbspace.core.model.PlaybackAudio
 import com.naaammme.bbspace.core.model.PlaybackError
 import com.naaammme.bbspace.core.model.PlaybackHistory
@@ -27,8 +28,9 @@ import com.naaammme.bbspace.core.model.PlaybackViewState
 import com.naaammme.bbspace.core.model.PlayerSessionState
 import com.naaammme.bbspace.core.model.StreamPlaybackSessionState
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.buildPlaybackCdns
+import com.naaammme.bbspace.core.model.toPlayableParams
 import com.naaammme.bbspace.infra.player.DecoderMode
 import com.naaammme.bbspace.infra.player.EngineDiscontinuityReason
 import com.naaammme.bbspace.infra.player.EnginePlaybackState
@@ -112,32 +114,44 @@ class StreamPlaybackSessionImpl @Inject constructor(
         }
     }
 
-    override suspend fun openVideo(
-        route: VideoRoute,
-        request: PlaybackRequest
+    override fun openVideo(target: VideoTarget) {
+        runtimeScope.launch {
+            openVideoInternal(target)
+        }
+    }
+
+    private suspend fun openVideoInternal(
+        target: VideoTarget,
+        seekToMs: Long? = null,
+        preferredQuality: Int? = null,
+        controlMode: PlaybackControlMode = PlaybackControlMode.Default
     ) {
+        val request = target.toPlayableParams().getResolveParams(
+            seekToMs = seekToMs,
+            preferredQuality = preferredQuality,
+            controlMode = controlMode
+        )
         val state = videoSession.value
+        val currentVideoTarget = (_currentTarget.value as? StreamPlaybackTarget.Video)?.target
         if (
-            _currentTarget.value is StreamPlaybackTarget.Video &&
-            state.currentRequest == request &&
+            currentVideoTarget == target &&
             state.error == null &&
             (state.playbackSource != null || state.isPreparing)
         ) {
-            _currentTarget.value = StreamPlaybackTarget.Video(route)
+            _currentTarget.value = StreamPlaybackTarget.Video(target)
             return
         }
 
         val token = openId.incrementAndGet()
         finishCurrentPlayback(
             invalidateOpen = false,
-            releasePlayer = false
+            releasePlayer = false,
+            nextTarget = StreamPlaybackTarget.Video(target)
         )
-        _currentTarget.value = StreamPlaybackTarget.Video(route)
         nextPlayWhenReady = true
         _pageMeta.value = null
         reporter.bindOwner(token)
         videoSession.value = PlayerSessionState(
-            currentRequest = request,
             isPreparing = true
         )
         _videoState.value = PlaybackViewState(isPreparing = true)
@@ -176,7 +190,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
             if (openId.get() != token) return
 
             videoSession.value = PlayerSessionState(
-                currentRequest = request,
                 playbackSource = source,
                 currentStream = stream,
                 currentAudio = audio,
@@ -192,7 +205,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
             if (openId.get() != token) return
 
             videoSession.value = PlayerSessionState(
-                currentRequest = request,
                 playbackSource = source,
                 currentStream = stream,
                 currentAudio = audio,
@@ -264,9 +276,9 @@ class StreamPlaybackSessionImpl @Inject constructor(
         val token = openId.incrementAndGet()
         finishCurrentPlayback(
             invalidateOpen = false,
-            releasePlayer = false
+            releasePlayer = false,
+            nextTarget = StreamPlaybackTarget.Live(route)
         )
-        _currentTarget.value = StreamPlaybackTarget.Live(route)
         _pageMeta.value = null
         _videoState.value = PlaybackViewState()
         _liveState.value = LivePlaybackViewState(isPreparing = true)
@@ -377,27 +389,21 @@ class StreamPlaybackSessionImpl @Inject constructor(
     }
 
     override fun switchVideoPage(cid: Long) {
-        val target = (_currentTarget.value as? StreamPlaybackTarget.Video)?.route ?: return
-        val request = videoSession.value.currentRequest ?: return
-        if (request.videoId.cid == cid) return
-
-        val nextRequest = request.copy(
-            playable = request.playable.copy(
-                videoId = request.videoId.copy(cid = cid)
-            ),
-            seekToMs = null
+        val target = (_currentTarget.value as? StreamPlaybackTarget.Video)?.target as? VideoTarget.Ugc
+            ?: return
+        if (target.cid == cid) return
+        val videoId = videoSession.value.playbackSource?.videoId
+        val nextTarget = target.copy(
+            aid = videoId?.aid?.takeIf { it > 0L } ?: target.aid,
+            cid = cid,
+            bvid = videoId?.bvid?.takeIf(String::isNotBlank) ?: target.bvid
         )
-        val nextRoute = when (target) {
-            is VideoRoute.Ugc -> target.copy(
-                aid = nextRequest.videoId.aid,
-                cid = cid,
-                bvid = nextRequest.videoId.bvid ?: target.bvid
-            )
-            is VideoRoute.Pgc -> target
-            is VideoRoute.Pugv -> target
-        }
+        val preferredQuality = videoSession.value.currentStream?.quality
         runtimeScope.launch {
-            openVideo(nextRoute, nextRequest)
+            openVideoInternal(
+                target = nextTarget,
+                preferredQuality = preferredQuality
+            )
         }
     }
 
@@ -492,7 +498,8 @@ class StreamPlaybackSessionImpl @Inject constructor(
 
     private suspend fun finishCurrentPlayback(
         invalidateOpen: Boolean,
-        releasePlayer: Boolean
+        releasePlayer: Boolean,
+        nextTarget: StreamPlaybackTarget? = null
     ) {
         val target = _currentTarget.value
         val snapshot = latestSnapshot()
@@ -501,13 +508,16 @@ class StreamPlaybackSessionImpl @Inject constructor(
         if (invalidateOpen) {
             openId.incrementAndGet()
         }
-        _currentTarget.value = null
+        _currentTarget.value = nextTarget
         nextPlayWhenReady = true
         _pageMeta.value = null
         videoSession.value = PlayerSessionState()
         _videoState.value = PlaybackViewState()
         _liveState.value = LivePlaybackViewState()
-        _sessionState.value = StreamPlaybackSessionState()
+        _sessionState.value = when (val activeTarget = nextTarget) {
+            null -> StreamPlaybackSessionState()
+            else -> StreamPlaybackSessionState(target = activeTarget)
+        }
         if (hadVideo || hadLive) {
             if (releasePlayer) {
                 playerEngine.release()

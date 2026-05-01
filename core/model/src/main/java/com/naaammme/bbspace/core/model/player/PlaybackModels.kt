@@ -59,7 +59,7 @@ enum class PlaybackControlMode {
 @Immutable
 data class PlayableParams(
     val videoId: VideoPlaybackId,
-    val src: VideoSrc = VideoRouteTool.feed(),
+    val src: VideoSrc = VideoTargetTool.feed(),
     val biz: PlayBizInfo = PlayBizInfo(),
     val fromScene: String = DEFAULT_FROM_SCENE,
     val adExtra: String? = null,
@@ -242,7 +242,6 @@ sealed interface PlaybackError {
 
 @Immutable
 data class PlayerSessionState(
-    val currentRequest: PlaybackRequest? = null,
     val playbackSource: PlaybackSource? = null,
     val currentStream: PlaybackStream? = null,
     val currentAudio: PlaybackAudio? = null,

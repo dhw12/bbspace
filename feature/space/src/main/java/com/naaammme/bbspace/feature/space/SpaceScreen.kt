@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.space.archive.spaceArchiveSection
 import com.naaammme.bbspace.feature.space.component.SpaceError
 import com.naaammme.bbspace.feature.space.component.SpaceLoading
@@ -35,7 +35,7 @@ import kotlinx.coroutines.flow.filter
 @Composable
 fun SpaceScreen(
     onBack: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     viewModel: SpaceViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

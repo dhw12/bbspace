@@ -20,8 +20,8 @@ import com.naaammme.bbspace.core.model.HistoryTab
 import com.naaammme.bbspace.core.model.HistoryTarget
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.LiveRouteTool
-import com.naaammme.bbspace.core.model.VideoRoute
-import com.naaammme.bbspace.core.model.VideoRouteTool
+import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.infra.grpc.BiliGrpcClient
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -203,10 +203,10 @@ class HistoryRepoImpl @Inject constructor(
         item: CursorItem,
         card: CardUGC
     ): HistoryTarget.Video? {
-        val aid = item.oid.takeIf { it > 0L } ?: VideoRouteTool.aid(item.uri) ?: return null
-        val cid = card.cid.takeIf { it > 0L } ?: VideoRouteTool.cid(item.uri) ?: return null
+        val aid = item.oid.takeIf { it > 0L } ?: VideoTargetTool.aid(item.uri) ?: return null
+        val cid = card.cid.takeIf { it > 0L } ?: VideoTargetTool.cid(item.uri) ?: return null
         return HistoryTarget.Video(
-            VideoRoute.Ugc(
+            VideoTarget.Ugc(
                 aid = aid,
                 cid = cid,
                 bvid = card.bvid.blankToNull(),
@@ -216,9 +216,9 @@ class HistoryRepoImpl @Inject constructor(
     }
 
     private fun buildPgcTarget(item: CursorItem): HistoryTarget.Video? {
-        val epId = VideoRouteTool.epId(item.uri) ?: return null
+        val epId = VideoTargetTool.epId(item.uri) ?: return null
         return HistoryTarget.Video(
-            VideoRoute.Pgc(
+            VideoTarget.Pgc(
                 epId = epId,
                 src = HISTORY_VIDEO_SRC
             )
@@ -229,9 +229,9 @@ class HistoryRepoImpl @Inject constructor(
         item: CursorItem,
         card: CardCheese
     ): HistoryTarget.Video? {
-        val epId = VideoRouteTool.epId(item.uri) ?: return null
+        val epId = VideoTargetTool.epId(item.uri) ?: return null
         return HistoryTarget.Video(
-            VideoRoute.Pugv(
+            VideoTarget.Pugv(
                 epId = epId,
                 seasonId = card.seasonId.takeIf { it > 0L },
                 src = HISTORY_VIDEO_SRC
@@ -306,6 +306,6 @@ class HistoryRepoImpl @Inject constructor(
         const val DEFAULT_CLIENT_ATTR = 0L
         const val SHORT_EDGE = "1080"
         const val LONG_EDGE = "1920"
-        val HISTORY_VIDEO_SRC = VideoRouteTool.history()
+        val HISTORY_VIDEO_SRC = VideoTargetTool.history()
     }
 }

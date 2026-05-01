@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.naaammme.bbspace.core.domain.player.PlayerSettings
 import com.naaammme.bbspace.core.domain.player.StreamPlaybackSession
+import com.naaammme.bbspace.core.model.LiveRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,7 +26,7 @@ class PlaybackHostViewModel @Inject constructor(
     val currentTarget = playbackSession.currentTarget
     val sessionState = playbackSession.sessionState
     val pageMeta = playbackSession.pageMeta
-    val miniPlayerEnabled = playerSettings.state
+    val miniPlayerAvailable = playerSettings.state
         .combine(playbackSession.currentTarget) { settings, target ->
             settings.playback.inAppMiniPlayer && target != null
         }
@@ -35,29 +36,40 @@ class PlaybackHostViewModel @Inject constructor(
             initialValue = false
         )
 
-    var isMiniMode by mutableStateOf(false)
-        private set
+    private val _hostMode = mutableStateOf(PlaybackHostMode.Hidden)
+    val hostMode: PlaybackHostMode
+        get() = _hostMode.value
 
     init {
         viewModelScope.launch {
-            combine(currentTarget, miniPlayerEnabled) { target, enabled ->
-                target != null && enabled
-            }.collect { canShow ->
-                if (!canShow) {
-                    isMiniMode = false
+            combine(currentTarget, miniPlayerAvailable) { target, enabled ->
+                target to enabled
+            }.collect { (target, enabled) ->
+                if (target == null) {
+                    _hostMode.value = PlaybackHostMode.Hidden
+                    return@collect
+                }
+                if (_hostMode.value == PlaybackHostMode.Mini && !enabled) {
+                    _hostMode.value = PlaybackHostMode.Hidden
                 }
             }
         }
     }
 
     fun expand() {
-        isMiniMode = false
+        _hostMode.value = PlaybackHostMode.Expanded
     }
 
     fun minimize() {
-        if (!miniPlayerEnabled.value) return
+        if (!miniPlayerAvailable.value) return
         if (currentTarget.value == null) return
-        isMiniMode = true
+        _hostMode.value = PlaybackHostMode.Mini
+    }
+
+    fun openLive(route: LiveRoute) {
+        viewModelScope.launch {
+            playbackSession.openLive(route)
+        }
     }
 
     fun togglePlayPause() {
@@ -69,7 +81,7 @@ class PlaybackHostViewModel @Inject constructor(
     }
 
     fun close() {
-        isMiniMode = false
+        _hostMode.value = PlaybackHostMode.Hidden
         playbackSession.close()
     }
 }

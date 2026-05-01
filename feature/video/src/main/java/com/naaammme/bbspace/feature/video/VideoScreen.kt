@@ -36,7 +36,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -60,7 +59,6 @@ import com.naaammme.bbspace.core.model.VideoDownloadKind
 import com.naaammme.bbspace.core.model.VideoDownloadOption
 import com.naaammme.bbspace.core.model.VideoDownloadOptions
 import com.naaammme.bbspace.core.model.VideoDownloadRequest
-import com.naaammme.bbspace.core.model.VideoRoute
 import com.naaammme.bbspace.feature.video.detail.VideoDetailPage
 import com.naaammme.bbspace.feature.video.player.VideoPlayerPane
 import java.util.Locale
@@ -72,11 +70,10 @@ internal val speedOps = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
 @Composable
 fun VideoScreen(
     onBack: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onOpenDownloadCache: () -> Unit,
     onStartDownload: (VideoDownloadRequest) -> Unit,
-    viewModel: VideoViewModel = hiltViewModel()
+    viewModel: VideoViewModel
 ) {
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
     val playerState by viewModel.playerState.collectAsStateWithLifecycle()
@@ -93,8 +90,10 @@ fun VideoScreen(
     val handleBack = {
         if (isFull) {
             isFull = false
-        } else {
+        } else if (!viewModel.popPage()) {
             onBack()
+        } else {
+            Unit
         }
     }
 
@@ -178,10 +177,10 @@ fun VideoScreen(
                 isExpanded = isExpanded,
                 playerSpaceWidth = expandedPlayerW,
                 playerSpaceHeight = if (isExpanded) expandedPlayerH else compactPlayerSpaceH,
-                onOpenVideo = onOpenVideo,
+                onOpenVideo = viewModel::openTarget,
                 onOpenSpace = onOpenSpace,
                 onDownloadClick = { downloadSheetOn = true },
-                onOpenEpisode = { onOpenVideo(it) },
+                onOpenEpisode = viewModel::openTarget,
                 onSwitchPage = viewModel::switchPage
             )
         }

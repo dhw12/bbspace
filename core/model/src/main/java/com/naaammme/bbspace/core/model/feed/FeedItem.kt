@@ -15,7 +15,7 @@ data class FeedItem(
     val coverLeftText2: String?,
     val coverRightText: String?,
     val idx: Long,
-    val route: VideoRoute?,
+    val target: VideoTarget?,
     val liveRoute: LiveRoute?,
     val descButton: DescButton?,
     val rcmdReason: RcmdReason?,

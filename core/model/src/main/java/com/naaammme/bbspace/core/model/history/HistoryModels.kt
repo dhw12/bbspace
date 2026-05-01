@@ -48,7 +48,7 @@ data class HistoryItem(
 
 sealed interface HistoryTarget {
     @Immutable
-    data class Video(val route: VideoRoute) : HistoryTarget
+    data class Video(val target: VideoTarget) : HistoryTarget
 
     @Immutable
     data class Live(val route: LiveRoute) : HistoryTarget

@@ -1,6 +1,5 @@
 package com.naaammme.bbspace.feature.video
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
@@ -14,21 +13,20 @@ import com.naaammme.bbspace.core.model.DanmakuConfig
 import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.PlaybackError
 import com.naaammme.bbspace.core.model.PlaybackHistoryMeta
-import com.naaammme.bbspace.core.model.PlaybackRequest
 import com.naaammme.bbspace.core.model.PlaybackViewState
 import com.naaammme.bbspace.core.model.PlayerBufferSettings
 import com.naaammme.bbspace.core.model.PlayerPlaybackPrefs
+import com.naaammme.bbspace.core.model.StreamPlaybackTarget
 import com.naaammme.bbspace.core.model.VideoDetail
 import com.naaammme.bbspace.core.model.VideoDownloadKind
 import com.naaammme.bbspace.core.model.VideoDownloadMeta
 import com.naaammme.bbspace.core.model.VideoDownloadRequest
-import com.naaammme.bbspace.core.model.VideoRoute
-import com.naaammme.bbspace.core.model.VideoRouteTool
-import com.naaammme.bbspace.core.model.toPlayableParams
+import com.naaammme.bbspace.core.model.VideoSrc
+import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.isSameEntry
 import com.naaammme.bbspace.feature.video.player.VodDanmakuSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,71 +38,75 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class VideoViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
     private val playbackSession: StreamPlaybackSession,
     private val playerSettings: PlayerSettings,
     private val detailRepo: VideoDetailRepository,
     vodDanmakuRepository: VodDanmakuRepository
 ) : ViewModel() {
 
-    private val src = VideoRouteTool.custom(
-        from = savedStateHandle.get<String>("from"),
-        fromSpmid = savedStateHandle.get<String>("fromSpmid"),
-        trackId = savedStateHandle.get<String>("trackId"),
-        reportFlowData = savedStateHandle.get<String>("report")
-    )
-    private val route = savedStateHandle.toVideoRoute(src)
-    private val ugcRoute = route as? VideoRoute.Ugc
+    private val _targetStack = MutableStateFlow<List<VideoTarget>>(emptyList())
     private val _detail = MutableStateFlow<VideoDetail?>(null)
-    private val _detailLoading = MutableStateFlow(
-        route is VideoRoute.Ugc || route is VideoRoute.Pgc || route is VideoRoute.Pugv
-    )
-    private val _detailError = MutableStateFlow(
-        when (route) {
-            null -> "视频路由无效"
-            else -> null
-        }
-    )
-    private val initReq = route
-        ?.toPlayableParams()
-        ?.getResolveParams()
-    private val _req = MutableStateFlow(initReq)
+    private val _detailLoading = MutableStateFlow(false)
+    private val _detailError = MutableStateFlow<String?>(null)
     private val danmakuSession = VodDanmakuSession(
         scope = viewModelScope,
         repository = vodDanmakuRepository
     )
-    private var startJob: Job? = null
-    private var openingRequest: PlaybackRequest? = null
 
     val player: StateFlow<Player?> = playbackSession.player
     val playerState: StateFlow<PlaybackViewState> = playbackSession.videoState
+    private val currentTarget = playbackSession.currentTarget
     val settingsState = playerSettings.state
+    val currentPageTarget: StateFlow<VideoTarget?> = _targetStack
+        .map { it.lastOrNull() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
 
     val pageState = combine(
-        playerState,
-        _req,
-        _detail,
-        _detailLoading,
+        combine(
+            playerState,
+            currentTarget,
+            currentPageTarget,
+            _detail,
+            _detailLoading
+        ) { playbackState, activeTarget, pageTarget, detail, detailLoading ->
+            PageStateSnapshot(
+                playbackState = playbackState,
+                activeTarget = activeTarget,
+                pageTarget = pageTarget,
+                detail = detail,
+                detailLoading = detailLoading
+            )
+        },
         _detailError
-    ) { playbackState, req, detail, detailLoading, detailError ->
+    ) { snap, detailError ->
+        val activeCid = (pageSessionTarget(snap.pageTarget, snap.activeTarget) as? VideoTarget.Ugc)?.cid
+        val curCid = snap.playbackState.playbackSource?.videoId?.cid
+            ?: activeCid
+            ?: (snap.pageTarget as? VideoTarget.Ugc)?.cid
         VideoPageState(
-            detail = detail,
-            detailLoading = detailLoading,
+            detail = snap.detail,
+            detailLoading = snap.detailLoading,
             detailError = detailError,
-            curCid = playbackState.playbackSource?.videoId?.cid ?: req?.videoId?.cid
+            curCid = curCid
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = VideoPageState(curCid = initReq?.videoId?.cid)
+        initialValue = VideoPageState()
     )
 
     val commentSubject: CommentSubject?
         get() {
-            val targetAid = playerState.value.playbackSource?.videoId?.aid?.takeIf { it > 0L }
-                ?: ugcRoute?.aid
+            val pageTarget = currentPageTarget.value
+            val src = pageTarget?.src ?: return null
+            val aid = playerState.value.playbackSource?.videoId?.aid?.takeIf { it > 0L }
+                ?: (pageTarget as? VideoTarget.Ugc)?.aid
                 ?: return null
-            return CommentSubjectTool.video(targetAid, src)
+            return CommentSubjectTool.video(aid, src)
         }
 
     internal val danmakuState = danmakuSession.state
@@ -112,7 +114,57 @@ class VideoViewModel @Inject constructor(
     init {
         bindPlaybackMeta()
         bindPgcDetail()
-        loadInitialDetail()
+        syncWithPlaybackTarget()
+    }
+
+    fun openRoot(target: VideoTarget) {
+        _targetStack.value = listOf(target)
+        loadTargetDetail(target)
+        playbackSession.openVideo(target)
+    }
+
+    fun openTarget(target: VideoTarget) {
+        val current = currentPageTarget.value
+        if (current == target) return
+        _targetStack.value = when {
+            current == null -> listOf(target)
+            current.isSameEntry(target) -> _targetStack.value.dropLast(1) + target
+            else -> _targetStack.value + target
+        }
+        loadTargetDetail(target)
+        playbackSession.openVideo(target)
+    }
+
+    fun syncToPlayback(target: VideoTarget) {
+        val current = currentPageTarget.value
+        if (current == null) {
+            _targetStack.value = listOf(target)
+            loadTargetDetail(target)
+            return
+        }
+        if (!current.isSameEntry(target) || current != target) {
+            _targetStack.value = _targetStack.value.dropLast(1) + target
+            loadTargetDetail(target)
+        }
+    }
+
+    fun popPage(): Boolean {
+        val stack = _targetStack.value
+        if (stack.size <= 1) return false
+        val nextStack = stack.dropLast(1)
+        val nextTarget = nextStack.last()
+        _targetStack.value = nextStack
+        loadTargetDetail(nextTarget)
+        playbackSession.openVideo(nextTarget)
+        return true
+    }
+
+    private fun clearContent() {
+        _targetStack.value = emptyList()
+        _detail.value = null
+        _detailLoading.value = false
+        _detailError.value = null
+        danmakuSession.clear()
     }
 
     fun ensureStarted() {
@@ -120,9 +172,9 @@ class VideoViewModel @Inject constructor(
             playbackStateFlow = playerState,
             enabledFlow = settingsState.map { it.danmaku.enabled }
         )
-        val request = _req.value ?: return
-        if (openingRequest == request && startJob?.isActive == true) return
-        startPlayback(routeFor(request), request)
+        val pageTarget = currentPageTarget.value ?: return
+        if (hasActivePageSession(pageTarget)) return
+        playbackSession.openVideo(pageTarget)
     }
 
     fun togglePlayPause() {
@@ -208,16 +260,17 @@ class VideoViewModel @Inject constructor(
     }
 
     fun switchPage(cid: Long) {
-        val request = _req.value ?: return
-        if (request.videoId.cid == cid) return
-        val next = request.copy(
-            playable = request.playable.copy(
-                videoId = request.videoId.copy(cid = cid)
-            ),
-            seekToMs = null
-        )
-        _req.value = next
-        startPlayback(routeFor(next), next)
+        val pageTarget = currentPageTarget.value as? VideoTarget.Ugc ?: return
+        val activeTarget = pageSessionTarget(pageTarget) as? VideoTarget.Ugc
+        if (activeTarget != null) {
+            if (activeTarget.cid == cid) return
+            playbackSession.switchVideoPage(cid)
+            return
+        }
+        if (pageTarget.cid == cid) return
+        val nextTarget = pageTarget.copy(cid = cid)
+        _targetStack.value = _targetStack.value.dropLast(1) + nextTarget
+        playbackSession.openVideo(nextTarget)
     }
 
     fun currentDownloadRequest(
@@ -225,19 +278,19 @@ class VideoViewModel @Inject constructor(
         videoQuality: Int,
         audioQuality: Int
     ): VideoDownloadRequest? {
-        val curRoute = route ?: return null
-        val id = playerState.value.playbackSource?.videoId ?: _req.value?.videoId
+        val pageTarget = currentPageTarget.value ?: return null
+        val id = playerState.value.playbackSource?.videoId
         val meta = buildDownloadMeta()
-        return when (curRoute) {
-            is VideoRoute.Ugc -> {
-                val aid = id?.aid?.takeIf { it > 0L } ?: curRoute.aid
-                val cid = id?.cid?.takeIf { it > 0L } ?: curRoute.cid
+        return when (pageTarget) {
+            is VideoTarget.Ugc -> {
+                val aid = id?.aid?.takeIf { it > 0L } ?: pageTarget.aid
+                val cid = id?.cid?.takeIf { it > 0L } ?: pageTarget.cid
                 if (aid <= 0L || cid <= 0L) return null
                 VideoDownloadRequest(
                     biz = PlayBiz.UGC,
                     aid = aid,
                     cid = cid,
-                    bvid = id?.bvid?.takeIf(String::isNotBlank) ?: curRoute.bvid,
+                    bvid = id?.bvid?.takeIf(String::isNotBlank) ?: pageTarget.bvid,
                     kind = kind,
                     videoQuality = videoQuality,
                     audioQuality = audioQuality,
@@ -245,20 +298,20 @@ class VideoViewModel @Inject constructor(
                 )
             }
 
-            is VideoRoute.Pgc -> VideoDownloadRequest(
+            is VideoTarget.Pgc -> VideoDownloadRequest(
                 biz = PlayBiz.PGC,
-                epId = curRoute.epId,
-                seasonId = curRoute.seasonId ?: 0L,
+                epId = pageTarget.epId,
+                seasonId = pageTarget.seasonId ?: 0L,
                 kind = kind,
                 videoQuality = videoQuality,
                 audioQuality = audioQuality,
                 meta = meta
             )
 
-            is VideoRoute.Pugv -> VideoDownloadRequest(
+            is VideoTarget.Pugv -> VideoDownloadRequest(
                 biz = PlayBiz.PUGV,
-                epId = curRoute.epId,
-                seasonId = curRoute.seasonId ?: 0L,
+                epId = pageTarget.epId,
+                seasonId = pageTarget.seasonId ?: 0L,
                 kind = kind,
                 videoQuality = videoQuality,
                 audioQuality = audioQuality,
@@ -272,27 +325,24 @@ class VideoViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        startJob?.cancel()
-        startJob = null
-        openingRequest = null
         danmakuSession.clear()
         super.onCleared()
     }
 
-    private fun startPlayback(
-        targetRoute: VideoRoute?,
-        request: PlaybackRequest
-    ) {
-        val videoRoute = targetRoute ?: return
-        if (openingRequest == request && startJob?.isActive == true) return
-        startJob?.cancel()
-        openingRequest = request
-        startJob = viewModelScope.launch {
-            try {
-                playbackSession.openVideo(videoRoute, request)
-            } finally {
-                if (openingRequest == request) {
-                    openingRequest = null
+    private fun syncWithPlaybackTarget() {
+        viewModelScope.launch {
+            currentTarget.collect { target ->
+                val active = (target as? StreamPlaybackTarget.Video)?.target
+                if (active == null) {
+                    if (_targetStack.value.isNotEmpty()) {
+                        clearContent()
+                    }
+                    return@collect
+                }
+                val pageTarget = currentPageTarget.value ?: return@collect
+                if (!active.isSameEntry(pageTarget)) return@collect
+                if (pageTarget != active) {
+                    _targetStack.value = _targetStack.value.dropLast(1) + active
                 }
             }
         }
@@ -300,22 +350,30 @@ class VideoViewModel @Inject constructor(
 
     private fun bindPlaybackMeta() {
         viewModelScope.launch {
-            combine(_detail, _req, playerState) { detail, req, playbackState ->
+            combine(_detail, currentPageTarget, currentTarget, playerState) { detail, pageTarget, activeTarget, playbackState ->
+                val activeCid = (pageSessionTarget(pageTarget, activeTarget) as? VideoTarget.Ugc)?.cid
                 detail.toPlaybackHistoryMeta(
-                    playbackState.playbackSource?.videoId?.cid ?: req?.videoId?.cid
+                    playbackState.playbackSource?.videoId?.cid
+                        ?: activeCid
+                        ?: (pageTarget as? VideoTarget.Ugc)?.cid
                 )
             }.collect { meta ->
-                playbackSession.updatePlaybackMeta(meta)
+                if (meta != null) {
+                    playbackSession.updatePlaybackMeta(meta)
+                }
             }
         }
     }
 
     private fun bindPgcDetail() {
-        if (route !is VideoRoute.Pgc && route !is VideoRoute.Pugv) return
         viewModelScope.launch {
-            var loadedAid = _detail.value?.aid?.takeIf { it > 0L } ?: 0L
-            var loadedBvid = _detail.value?.bvid.orEmpty()
-            playerState.collect { playbackState ->
+            var loadedAid = 0L
+            var loadedBvid = ""
+            combine(currentPageTarget, currentTarget, playerState) { pageTarget, activeTarget, playbackState ->
+                Triple(pageTarget, activeTarget, playbackState)
+            }.collect { (pageTarget, activeTarget, playbackState) ->
+                if (pageTarget !is VideoTarget.Pgc && pageTarget !is VideoTarget.Pugv) return@collect
+                if (pageSessionTarget(pageTarget, activeTarget) == null) return@collect
                 val videoId = playbackState.playbackSource?.videoId
                 val aid = videoId?.aid?.takeIf { it > 0L }
                 if (aid != null) {
@@ -323,7 +381,7 @@ class VideoViewModel @Inject constructor(
                     if (aid == loadedAid && bvid == loadedBvid) return@collect
                     loadedAid = aid
                     loadedBvid = bvid
-                    fetchDetail(aid, videoId.bvid, route.src)
+                    fetchDetail(aid, videoId.bvid, pageTarget.src)
                     return@collect
                 }
                 val error = playbackState.error
@@ -335,16 +393,19 @@ class VideoViewModel @Inject constructor(
         }
     }
 
-    private fun loadInitialDetail() {
-        when (val route = route) {
-            is VideoRoute.Ugc -> {
+    private fun loadTargetDetail(target: VideoTarget) {
+        when (target) {
+            is VideoTarget.Ugc -> {
                 viewModelScope.launch {
-                    fetchDetail(route.aid, route.bvid, route.src)
+                    fetchDetail(target.aid, target.bvid, target.src)
                 }
             }
 
-            is VideoRoute.Pgc, is VideoRoute.Pugv -> Unit
-            else -> _detailLoading.value = false
+            is VideoTarget.Pgc, is VideoTarget.Pugv -> {
+                _detail.value = null
+                _detailError.value = null
+                _detailLoading.value = true
+            }
         }
     }
 
@@ -362,8 +423,11 @@ class VideoViewModel @Inject constructor(
 
     private fun buildDownloadMeta(): VideoDownloadMeta {
         val detail = _detail.value
-        val cid = playerState.value.playbackSource?.videoId?.cid ?: _req.value?.videoId?.cid
-        val part = cid?.let { target -> detail?.pages?.firstOrNull { it.cid == target } }
+        val pageTarget = currentPageTarget.value
+        val cid = playerState.value.playbackSource?.videoId?.cid
+            ?: (pageSessionTarget(pageTarget) as? VideoTarget.Ugc)?.cid
+            ?: (pageTarget as? VideoTarget.Ugc)?.cid
+        val part = cid?.let { targetCid -> detail?.pages?.firstOrNull { it.cid == targetCid } }
         val title = detail?.let {
             listOfNotNull(
                 it.title.takeIf(String::isNotBlank),
@@ -381,7 +445,7 @@ class VideoViewModel @Inject constructor(
     private suspend fun fetchDetail(
         aid: Long,
         bvid: String?,
-        src: com.naaammme.bbspace.core.model.VideoSrc
+        src: VideoSrc
     ) {
         _detailError.value = null
         _detailLoading.value = true
@@ -398,61 +462,19 @@ class VideoViewModel @Inject constructor(
         _detailLoading.value = false
     }
 
-    private fun routeFor(request: PlaybackRequest): VideoRoute? {
-        val base = route ?: return null
-        return when (base) {
-            is VideoRoute.Ugc -> base.copy(
-                aid = request.videoId.aid,
-                cid = request.videoId.cid,
-                bvid = request.videoId.bvid ?: base.bvid
-            )
-            is VideoRoute.Pgc -> base
-            is VideoRoute.Pugv -> base
-        }
+    private fun pageSessionTarget(
+        pageTarget: VideoTarget? = currentPageTarget.value,
+        activeTarget: StreamPlaybackTarget? = currentTarget.value
+    ): VideoTarget? {
+        val page = pageTarget ?: return null
+        val active = (activeTarget as? StreamPlaybackTarget.Video)?.target ?: return null
+        return active.takeIf { it.isSameEntry(page) }
     }
-}
 
-private fun SavedStateHandle.optLong(key: String): Long? {
-    return get<Long>(key)?.takeIf { it > 0L }
-}
-
-private fun SavedStateHandle.optInt(key: String): Int? {
-    return get<Int>(key)?.takeIf { it >= 0 }
-}
-
-private fun SavedStateHandle.toVideoRoute(src: com.naaammme.bbspace.core.model.VideoSrc): VideoRoute? {
-    return when (PlayBiz.from(get<String>("biz"))) {
-        PlayBiz.UGC -> {
-            val aid = get<Long>("aid")?.takeIf { it > 0L } ?: return null
-            val cid = get<Long>("cid") ?: 0L
-            VideoRoute.Ugc(
-                aid = aid,
-                cid = cid,
-                bvid = get<String>("bvid")?.takeIf(String::isNotBlank),
-                src = src
-            )
-        }
-
-        PlayBiz.PGC -> {
-            optLong("epId")?.let {
-                VideoRoute.Pgc(
-                    epId = it,
-                    seasonId = optLong("seasonId"),
-                    subType = optInt("subType"),
-                    src = src
-                )
-            }
-        }
-
-        PlayBiz.PUGV -> {
-            optLong("epId")?.let {
-                VideoRoute.Pugv(
-                    epId = it,
-                    seasonId = optLong("seasonId"),
-                    src = src
-                )
-            }
-        }
+    private fun hasActivePageSession(pageTarget: VideoTarget): Boolean {
+        if (pageSessionTarget(pageTarget) == null) return false
+        return playerState.value.error == null &&
+            (playerState.value.playbackSource != null || playerState.value.isPreparing)
     }
 }
 
@@ -462,6 +484,14 @@ private fun PlaybackError.toUiMsg(): String {
         is PlaybackError.NoPlayableStream -> message
     }
 }
+
+private data class PageStateSnapshot(
+    val playbackState: PlaybackViewState,
+    val activeTarget: StreamPlaybackTarget?,
+    val pageTarget: VideoTarget?,
+    val detail: VideoDetail?,
+    val detailLoading: Boolean
+)
 
 private fun VideoDetail?.toPlaybackHistoryMeta(cid: Long?): PlaybackHistoryMeta? {
     this ?: return null

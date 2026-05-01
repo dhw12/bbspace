@@ -68,7 +68,7 @@ import com.naaammme.bbspace.core.model.VideoDetail
 import com.naaammme.bbspace.core.model.VideoOwner
 import com.naaammme.bbspace.core.model.VideoPagePart
 import com.naaammme.bbspace.core.model.VideoRelate
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoSeason
 import com.naaammme.bbspace.core.model.VideoSeasonEpisode
 import com.naaammme.bbspace.core.model.VideoStat
@@ -84,10 +84,10 @@ internal fun VideoDetailPage(
     isExpanded: Boolean,
     playerSpaceWidth: Dp,
     playerSpaceHeight: Dp,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
-    onOpenEpisode: (VideoRoute.Ugc) -> Unit,
+    onOpenEpisode: (VideoTarget.Ugc) -> Unit,
     onSwitchPage: (Long) -> Unit
 ) {
     val detail = pageState.detail
@@ -193,7 +193,7 @@ private fun DetailPager(
     onToggleTag: () -> Unit,
     onSeasonClick: () -> Unit,
     onPageClick: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit
 ) {
@@ -250,7 +250,7 @@ private fun VideoInfoList(
     onToggleTag: () -> Unit,
     onSeasonClick: () -> Unit,
     onPageClick: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit
 ) {
@@ -284,7 +284,7 @@ private fun LazyListScope.detailItems(
     onToggleTag: () -> Unit,
     onSeasonClick: () -> Unit,
     onPageClick: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit
 ) {
@@ -367,7 +367,7 @@ private fun LazyListScope.detailItems(
             if (detail.relates.isNotEmpty()) {
                 items(
                     items = detail.relates,
-                    key = { "${it.route.aid}_${it.route.cid}" },
+                    key = { "${it.target.aid}_${it.target.cid}" },
                     contentType = { "relate" }
                 ) { relate ->
                     RelateRow(
@@ -800,7 +800,7 @@ private fun SeasonSheet(
     season: VideoSeason,
     curCid: Long?,
     onDismiss: () -> Unit,
-    onOpenEpisode: (VideoRoute.Ugc) -> Unit
+    onOpenEpisode: (VideoTarget.Ugc) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -853,15 +853,15 @@ private fun SeasonSheet(
 
                 items(
                     items = sec.eps,
-                    key = { "ep_${it.route.aid}_${it.route.cid}" },
+                    key = { "ep_${it.target.aid}_${it.target.cid}" },
                     contentType = { "episode" }
                 ) { ep ->
                     SeasonEpisodeRow(
                         ep = ep,
-                        selected = ep.route.cid == curCid,
+                        selected = ep.target.cid == curCid,
                         onClick = {
-                            if (ep.route.cid != curCid) {
-                                onOpenEpisode(ep.route)
+                            if (ep.target.cid != curCid) {
+                                onOpenEpisode(ep.target)
                             }
                         }
                     )
@@ -1040,7 +1040,7 @@ private fun PageSheetRow(
 @Composable
 private fun RelateRow(
     relate: VideoRelate,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1058,7 +1058,7 @@ private fun RelateRow(
     ).joinToString(" · ")
 
     Card(
-        onClick = { onOpenVideo(relate.route) },
+        onClick = { onOpenVideo(relate.target) },
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
@@ -1225,7 +1225,7 @@ private fun seasonEntryText(
     val curEp = season.sections
         .asSequence()
         .flatMap { it.eps.asSequence() }
-        .firstOrNull { it.route.cid == curCid }
+        .firstOrNull { it.target.cid == curCid }
     return Triple(
         curEp?.title ?: season.title,
         curEp?.subTitle.orEmpty().ifBlank { season.subTitle.orEmpty() },

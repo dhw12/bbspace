@@ -20,8 +20,8 @@ import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.RcmdReason
 import com.naaammme.bbspace.core.model.ThreePointItem
 import com.naaammme.bbspace.core.model.ThreePointReason
-import com.naaammme.bbspace.core.model.VideoRoute
-import com.naaammme.bbspace.core.model.VideoRouteTool
+import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import java.net.URI
 import com.naaammme.bbspace.infra.network.BiliRestClient
 import com.naaammme.bbspace.infra.network.BiliRestParamBuilder
@@ -202,7 +202,7 @@ class FeedRepoImpl @Inject constructor(
             .takeIf { it.isNotEmpty() }
             ?: obj.optString("report_flow_data")
             .takeIf { it.isNotEmpty() }
-            ?: VideoRouteTool.arg(uri, "report_flow_data")
+            ?: VideoTargetTool.arg(uri, "report_flow_data")
         val cardGoto = card.optString("card_goto").ifBlank { obj.optString("card_goto") }
         val goto = card.optString("goto").ifBlank { obj.optString("goto") }
         val param = card.optString("param").ifBlank { obj.optString("param") }
@@ -226,26 +226,26 @@ class FeedRepoImpl @Inject constructor(
             else -> PlayBiz.UGC
         }
         val aid = if (biz == PlayBiz.UGC) {
-            param.toLongOrNull() ?: VideoRouteTool.aid(uri)
+            param.toLongOrNull() ?: VideoTargetTool.aid(uri)
         } else {
-            VideoRouteTool.aid(uri)
+            VideoTargetTool.aid(uri)
         }
         val cid = player?.optLong("cid")
             ?.takeIf { it > 0L }
-            ?: VideoRouteTool.cid(uri)
+            ?: VideoTargetTool.cid(uri)
         val seasonId = player?.optLong("season_id")
             ?.takeIf { it > 0L }
-            ?: VideoRouteTool.arg(uri, "season_id")?.toLongOrNull()
+            ?: VideoTargetTool.arg(uri, "season_id")?.toLongOrNull()
         val epId = when (biz) {
             PlayBiz.PGC -> param.toLongOrNull()
-                ?: VideoRouteTool.epId(uri)
-            PlayBiz.PUGV -> VideoRouteTool.epId(uri)
+                ?: VideoTargetTool.epId(uri)
+            PlayBiz.PUGV -> VideoTargetTool.epId(uri)
             PlayBiz.UGC -> null
         }
-        val route = if (isLiveCard(cardGoto, goto, uri, player)) {
+        val target = if (isLiveCard(cardGoto, goto, uri, player)) {
             null
         } else {
-            val src = VideoRouteTool.feed(
+            val src = VideoTargetTool.feed(
                 trackId = card.optString("track_id")
                     .takeIf { value -> value.isNotEmpty() }
                     ?: obj.optString("track_id").takeIf { value -> value.isNotEmpty() },
@@ -254,11 +254,11 @@ class FeedRepoImpl @Inject constructor(
             when (biz) {
                 PlayBiz.UGC -> {
                     if (aid != null) {
-                        VideoRoute.Ugc(
+                        VideoTarget.Ugc(
                             aid = aid,
                             cid = cid ?: 0L,
                             bvid = player?.optString("bvid")?.takeIf { value -> value.isNotEmpty() }
-                                ?: VideoRouteTool.bvid(uri),
+                                ?: VideoTargetTool.bvid(uri),
                             src = src
                         )
                     } else {
@@ -268,7 +268,7 @@ class FeedRepoImpl @Inject constructor(
 
                 PlayBiz.PGC -> {
                     epId?.let {
-                        VideoRoute.Pgc(
+                        VideoTarget.Pgc(
                             epId = it,
                             seasonId = seasonId,
                             subType = player?.optInt("sub_type")?.takeIf { value -> value >= 0 },
@@ -279,7 +279,7 @@ class FeedRepoImpl @Inject constructor(
 
                 PlayBiz.PUGV -> {
                     epId?.let {
-                        VideoRoute.Pugv(
+                        VideoTarget.Pugv(
                             epId = it,
                             seasonId = seasonId,
                             src = src
@@ -323,7 +323,7 @@ class FeedRepoImpl @Inject constructor(
                 .takeIf { it.isNotEmpty() }
                 ?: obj.optString("cover_right_text").takeIf { it.isNotEmpty() },
             idx = obj.optLong("idx"),
-            route = route,
+            target = target,
             liveRoute = liveRoute,
             descButton = descBtn?.let {
                 DescButton(
@@ -430,7 +430,7 @@ class FeedRepoImpl @Inject constructor(
         return player?.optLong("room_id")?.takeIf { it > 0L }
             ?: args?.optLong("room_id")?.takeIf { it > 0L }
             ?: param.toLongOrNull()
-            ?: VideoRouteTool.arg(uri, "room_id")?.toLongOrNull()
+            ?: VideoTargetTool.arg(uri, "room_id")?.toLongOrNull()
             ?: runCatching {
                 URI(uri).path
                     .orEmpty()

@@ -10,7 +10,7 @@ import com.naaammme.bbspace.core.model.VideoDownloadMeta
 import com.naaammme.bbspace.core.model.VideoDownloadRequest
 import com.naaammme.bbspace.core.model.VideoDownloadTask
 import com.naaammme.bbspace.core.model.PlayBiz
-import com.naaammme.bbspace.core.model.VideoRouteTool
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.core.model.fallbackTitle
 import com.naaammme.bbspace.feature.download.DownloadExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -237,11 +237,11 @@ class DownloadViewModel @Inject constructor(
 
     private suspend fun parseInput(input: String): VideoDownloadRequest {
         val state = _formState.value
-        val epId = VideoRouteTool.epId(input)
+        val epId = VideoTargetTool.epId(input)
             ?: EP_REGEX.find(input)?.groupValues?.get(1)?.toLongOrNull()
-        val seasonId = VideoRouteTool.arg(input, "season_id")
+        val seasonId = VideoTargetTool.arg(input, "season_id")
             ?.toLongOrNull()
-            ?: VideoRouteTool.arg(input, "seasonId")?.toLongOrNull()
+            ?: VideoTargetTool.arg(input, "seasonId")?.toLongOrNull()
             ?: SS_REGEX.find(input)?.groupValues?.get(1)?.toLongOrNull()
         if ((epId != null && epId > 0L) || (seasonId != null && seasonId > 0L)) {
             val title = when {
@@ -260,16 +260,16 @@ class DownloadViewModel @Inject constructor(
             )
         }
 
-        val bvid = VideoRouteTool.bvid(input) ?: BV_REGEX.find(input)?.value
-        val aid = VideoRouteTool.aid(input)
+        val bvid = VideoTargetTool.bvid(input) ?: BV_REGEX.find(input)?.value
+        val aid = VideoTargetTool.aid(input)
             ?: AV_REGEX.find(input)?.groupValues?.get(1)?.toLongOrNull()
             ?: input.toLongOrNull()
-        val cid = VideoRouteTool.cid(input)
+        val cid = VideoTargetTool.cid(input)
         if (aid == null && bvid == null) error("请输入链接、av号或BV号")
         val detail = detailRepository.fetchVideoDetail(
             aid = aid ?: 0L,
             bvid = bvid,
-            src = VideoRouteTool.feed()
+            src = VideoTargetTool.feed()
         )
         val targetCid = cid?.takeIf { it > 0L }
             ?: detail.pages.firstOrNull()?.cid

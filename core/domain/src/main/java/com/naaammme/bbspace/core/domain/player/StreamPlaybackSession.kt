@@ -4,11 +4,10 @@ import androidx.media3.common.Player
 import com.naaammme.bbspace.core.model.LivePlaybackViewState
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.PlaybackHistoryMeta
-import com.naaammme.bbspace.core.model.PlaybackRequest
 import com.naaammme.bbspace.core.model.PlaybackViewState
 import com.naaammme.bbspace.core.model.StreamPlaybackSessionState
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import kotlinx.coroutines.flow.StateFlow
 
 interface StreamPlaybackSession {
@@ -21,10 +20,7 @@ interface StreamPlaybackSession {
 
     suspend fun prepare()
 
-    suspend fun openVideo(
-        route: VideoRoute,
-        request: PlaybackRequest
-    )
+    fun openVideo(target: VideoTarget)
 
     suspend fun openLive(
         route: LiveRoute,

@@ -29,7 +29,7 @@ enum class SearchHistoryOrder {
 data class SearchVideo(
     val aid: Long,
     val cid: Long,
-    val route: VideoRoute.Ugc,
+    val target: VideoTarget.Ugc,
     val title: String,
     val cover: String,
     val author: String,

@@ -42,7 +42,7 @@ import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
 import com.naaammme.bbspace.core.designsystem.component.VideoListCardSkeleton
 import com.naaammme.bbspace.core.model.SearchFilter
 import com.naaammme.bbspace.core.model.SearchTime
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.search.filter.SearchFiltersSheet
 import com.naaammme.bbspace.feature.search.history.SearchHistoryPanel
 import com.naaammme.bbspace.feature.search.result.SearchCard
@@ -51,7 +51,7 @@ import com.naaammme.bbspace.feature.search.result.SearchCard
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val videos by viewModel.videos.collectAsStateWithLifecycle()
@@ -190,7 +190,7 @@ fun SearchScreen(
                         ) { video ->
                             SearchCard(
                                 video = video,
-                                onClick = { onOpenVideo(video.route) }
+                                onClick = { onOpenVideo(video.target) }
                             )
                         }
 

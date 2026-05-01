@@ -46,7 +46,7 @@ import com.naaammme.bbspace.core.model.FeedItem
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.ThreePointItem
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +57,7 @@ fun HomeVideoPage(
     errorMessage: String?,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
-    onOpenVideo: (VideoRoute) -> Unit,
+    onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onOpenLive: (LiveRoute) -> Unit
 ) {
@@ -80,7 +80,7 @@ fun HomeVideoPage(
             onOpenSpace = onOpenSpace,
             onClick = {
                 item.liveRoute?.let(onOpenLive)
-                    ?: item.route?.let(onOpenVideo)
+                    ?: item.target?.let(onOpenVideo)
             }
         )
     }
@@ -102,7 +102,7 @@ private fun FeedCard(
     }
     Card(
         onClick = onClick,
-        enabled = item.route != null || item.liveRoute != null,
+        enabled = item.target != null || item.liveRoute != null,
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -157,7 +157,7 @@ private fun FeedCard(
                             mid = args.upId,
                             name = args.upName,
                             fromViewAid = args.aid.takeIf { it > 0L }
-                                ?: (item.route as? VideoRoute.Ugc)?.aid?.takeIf { it > 0L }
+                                ?: (item.target as? VideoTarget.Ugc)?.aid?.takeIf { it > 0L }
                         )
                     }
                 }

@@ -10,8 +10,8 @@ import com.naaammme.bbspace.core.model.SpaceOrderOption
 import com.naaammme.bbspace.core.model.SpaceProfile
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.SpaceVideo
-import com.naaammme.bbspace.core.model.VideoRoute
-import com.naaammme.bbspace.core.model.VideoRouteTool
+import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.infra.network.BiliRestClient
 import com.naaammme.bbspace.infra.network.BiliRestParamBuilder
 import com.naaammme.bbspace.infra.network.BiliRestProfile
@@ -198,26 +198,26 @@ class SpaceRepoImpl @Inject constructor(
                 val uri = item.optString("uri")
                 val aid = item.optLongCompat("param")
                     .takeIf { it > 0L }
-                    ?: VideoRouteTool.aid(uri)
+                    ?: VideoTargetTool.aid(uri)
                     ?: continue
                 val cid = item.optLong("first_cid")
                     .takeIf { it > 0L }
-                    ?: VideoRouteTool.cid(uri)
+                    ?: VideoTargetTool.cid(uri)
                     ?: continue
                 val title = item.optString("title").ifBlank { continue }
                 val cover = item.optString("cover").toHttps().ifBlank { continue }
-                val route = VideoRoute.Ugc(
+                val target = VideoTarget.Ugc(
                     aid = aid,
                     cid = cid,
                     bvid = item.optString("bvid").ifBlank { null }
-                        ?: VideoRouteTool.bvid(uri),
-                    src = VideoRouteTool.space()
+                        ?: VideoTargetTool.bvid(uri),
+                    src = VideoTargetTool.space()
                 )
                 add(
                     SpaceVideo(
                         aid = aid,
                         cid = cid,
-                        route = route,
+                        target = target,
                         title = title,
                         cover = cover,
                         author = item.optString("author").ifBlank { null },

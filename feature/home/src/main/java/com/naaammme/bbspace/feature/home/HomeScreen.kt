@@ -36,7 +36,7 @@ import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
-import com.naaammme.bbspace.core.model.VideoRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.home.interest.InterestDialog
 import com.naaammme.bbspace.feature.home.live.HomeLivePage
 import com.naaammme.bbspace.feature.home.video.HomeVideoPage
@@ -50,7 +50,7 @@ private val homeTabs = listOf("推荐", "直播")
 fun HomeScreen(
     onNavigateToSearch: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    onOpenVideo: (VideoRoute) -> Unit = {},
+    onOpenVideo: (VideoTarget) -> Unit = {},
     onOpenSpace: (SpaceRoute) -> Unit = {},
     onOpenLive: (LiveRoute) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
