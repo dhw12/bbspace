@@ -17,7 +17,8 @@ data class PlayerPlaybackPrefs(
     val inAppMiniPlayer: Boolean = true,
     val reportPlayback: Boolean = true,
     val preferSoftwareDecode: Boolean = false,
-    val decoderFallback: Boolean = true
+    val decoderFallback: Boolean = true,
+    val autoRotateFullscreen: Boolean = true
 )
 
 @Immutable

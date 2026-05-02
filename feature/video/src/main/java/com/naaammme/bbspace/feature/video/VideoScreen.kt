@@ -3,6 +3,7 @@ package com.naaammme.bbspace.feature.video
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -125,6 +126,16 @@ fun VideoScreen(
                 ctrl.show(WindowInsetsCompat.Type.systemBars())
             }
         }
+    }
+
+    DisposableEffect(act, isFull, settingsState.playback.autoRotateFullscreen) {
+        val a = act ?: return@DisposableEffect onDispose { }
+        a.requestedOrientation = if (isFull && settingsState.playback.autoRotateFullscreen) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        onDispose { }
     }
 
     DisposableEffect(owner, viewModel) {

@@ -12,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 @Singleton
@@ -21,89 +20,7 @@ class PlayerSettingsImpl @Inject constructor(
 ) : PlayerSettings {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    override val state: StateFlow<PlayerSettingsState> = combine(
-        combine(
-            store.playerMinBufferMs,
-            store.playerMaxBufferMs,
-            store.playerPlaybackBufferMs,
-            store.playerRebufferMs,
-            store.playerBackBufferMs
-        ) { minBufferMs, maxBufferMs, playbackBufferMs, rebufferMs, backBufferMs ->
-            PlayerBufferSettings(
-                minBufferMs = minBufferMs,
-                maxBufferMs = maxBufferMs,
-                playbackBufferMs = playbackBufferMs,
-                rebufferMs = rebufferMs,
-                backBufferMs = backBufferMs
-            )
-        },
-        combine(
-            store.backgroundPlayback,
-            store.inAppMiniPlayer,
-            store.reportPlayback,
-            store.preferSoftwareDecode,
-            store.decoderFallback
-        ) { backgroundPlayback, inAppMiniPlayer, reportPlayback, preferSoftwareDecode, decoderFallback ->
-            PlayerPlaybackPrefs(
-                backgroundPlayback = backgroundPlayback,
-                inAppMiniPlayer = inAppMiniPlayer,
-                reportPlayback = reportPlayback,
-                preferSoftwareDecode = preferSoftwareDecode,
-                decoderFallback = decoderFallback
-            )
-        },
-        combine(
-            combine(
-                store.danmakuEnabled,
-                store.danmakuAreaPercent,
-                store.danmakuOpacity,
-                store.danmakuTextScale,
-                store.danmakuSpeed
-            ) { enabled, areaPercent, opacity, textScale, speed ->
-                DanmakuDisplay(
-                    enabled = enabled,
-                    areaPercent = areaPercent,
-                    opacity = opacity,
-                    textScale = textScale,
-                    speed = speed
-                )
-            },
-            combine(
-                store.danmakuDensity,
-                store.danmakuMergeDuplicates,
-                store.danmakuShowTop,
-                store.danmakuShowBottom,
-                store.danmakuShowScrollRl
-            ) { densityLevel, mergeDuplicates, showTop, showBottom, showScrollRl ->
-                DanmakuBehavior(
-                    densityLevel = densityLevel,
-                    mergeDuplicates = mergeDuplicates,
-                    showTop = showTop,
-                    showBottom = showBottom,
-                    showScrollRl = showScrollRl
-                )
-            }
-        ) { display, behavior ->
-            DanmakuConfig(
-                enabled = display.enabled,
-                areaPercent = display.areaPercent,
-                opacity = display.opacity,
-                textScale = display.textScale,
-                speed = display.speed,
-                densityLevel = behavior.densityLevel,
-                mergeDuplicates = behavior.mergeDuplicates,
-                showTop = behavior.showTop,
-                showBottom = behavior.showBottom,
-                showScrollRl = behavior.showScrollRl
-            )
-        }
-    ) { buffer, playback, danmaku ->
-        PlayerSettingsState(
-            buffer = buffer,
-            playback = playback,
-            danmaku = danmaku
-        )
-    }.stateIn(
+    override val state: StateFlow<PlayerSettingsState> = store.state.stateIn(
         scope = scope,
         started = SharingStarted.Eagerly,
         initialValue = PlayerSettingsState()
@@ -123,6 +40,7 @@ class PlayerSettingsImpl @Inject constructor(
         store.updateReportPlayback(settings.reportPlayback)
         store.updatePreferSoftwareDecode(settings.preferSoftwareDecode)
         store.updateDecoderFallback(settings.decoderFallback)
+        store.updateAutoRotateFullscreen(settings.autoRotateFullscreen)
     }
 
     override suspend fun updateDanmaku(config: DanmakuConfig) {
@@ -138,19 +56,3 @@ class PlayerSettingsImpl @Inject constructor(
         store.updateDanmakuShowScrollRl(config.showScrollRl)
     }
 }
-
-private data class DanmakuDisplay(
-    val enabled: Boolean,
-    val areaPercent: Int,
-    val opacity: Float,
-    val textScale: Float,
-    val speed: Float
-)
-
-private data class DanmakuBehavior(
-    val densityLevel: Int,
-    val mergeDuplicates: Boolean,
-    val showTop: Boolean,
-    val showBottom: Boolean,
-    val showScrollRl: Boolean
-)

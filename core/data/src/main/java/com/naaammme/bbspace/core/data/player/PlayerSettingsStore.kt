@@ -6,6 +6,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import com.naaammme.bbspace.core.data.appSettingsDataStore
+import com.naaammme.bbspace.core.model.DanmakuConfig
+import com.naaammme.bbspace.core.model.PlayerBufferSettings
+import com.naaammme.bbspace.core.model.PlayerPlaybackPrefs
+import com.naaammme.bbspace.core.model.PlayerSettingsState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,6 +30,7 @@ class PlayerSettingsStore @Inject constructor(
     private val decFallbackKey = booleanPreferencesKey("dec_fallback")
     private val bgPlayKey = booleanPreferencesKey("bg_play")
     private val inAppMiniPlayerKey = booleanPreferencesKey("in_app_mini_player")
+    private val autoRotateFullscreenKey = booleanPreferencesKey("auto_rotate_fullscreen")
     private val reportPlaybackKey = booleanPreferencesKey("report_playback")
     private val danmakuEnabledKey = booleanPreferencesKey("danmaku_enabled")
     private val danmakuAreaPercentKey = intPreferencesKey("danmaku_area_percent")
@@ -38,6 +43,38 @@ class PlayerSettingsStore @Inject constructor(
     private val danmakuShowBottomKey = booleanPreferencesKey("danmaku_show_bottom")
     private val danmakuShowScrollRlKey = booleanPreferencesKey("danmaku_show_scroll_rl")
 
+    val state: Flow<PlayerSettingsState> = context.appSettingsDataStore.data.map { prefs ->
+        PlayerSettingsState(
+            buffer = PlayerBufferSettings(
+                minBufferMs = prefs[playerMinBufMsKey] ?: 2_000,
+                maxBufferMs = prefs[playerMaxBufMsKey] ?: 15_000,
+                playbackBufferMs = prefs[playerPlayBufMsKey] ?: 250,
+                rebufferMs = prefs[playerRebufMsKey] ?: 500,
+                backBufferMs = prefs[playerBackBufMsKey] ?: 5_000
+            ),
+            playback = PlayerPlaybackPrefs(
+                backgroundPlayback = prefs[bgPlayKey] ?: false,
+                inAppMiniPlayer = prefs[inAppMiniPlayerKey] ?: true,
+                reportPlayback = prefs[reportPlaybackKey] ?: true,
+                preferSoftwareDecode = prefs[preferSoftDecKey] ?: false,
+                decoderFallback = prefs[decFallbackKey] ?: true,
+                autoRotateFullscreen = prefs[autoRotateFullscreenKey] ?: true
+            ),
+            danmaku = DanmakuConfig(
+                enabled = prefs[danmakuEnabledKey] ?: true,
+                areaPercent = prefs[danmakuAreaPercentKey] ?: 100,
+                opacity = prefs[danmakuOpacityKey] ?: 1f,
+                textScale = prefs[danmakuTextScaleKey] ?: 1f,
+                speed = prefs[danmakuSpeedKey] ?: 1f,
+                densityLevel = prefs[danmakuDensityKey] ?: 1,
+                mergeDuplicates = prefs[danmakuMergeDuplicatesKey] ?: false,
+                showTop = prefs[danmakuShowTopKey] ?: true,
+                showBottom = prefs[danmakuShowBottomKey] ?: true,
+                showScrollRl = prefs[danmakuShowScrollRlKey] ?: true
+            )
+        )
+    }
+
     val playerMinBufferMs: Flow<Int> = context.appSettingsDataStore.data.map { it[playerMinBufMsKey] ?: 2_000 }
     val playerMaxBufferMs: Flow<Int> = context.appSettingsDataStore.data.map { it[playerMaxBufMsKey] ?: 15_000 }
     val playerPlaybackBufferMs: Flow<Int> = context.appSettingsDataStore.data.map { it[playerPlayBufMsKey] ?: 250 }
@@ -48,6 +85,7 @@ class PlayerSettingsStore @Inject constructor(
     val decoderFallback: Flow<Boolean> = context.appSettingsDataStore.data.map { it[decFallbackKey] ?: true }
     val backgroundPlayback: Flow<Boolean> = context.appSettingsDataStore.data.map { it[bgPlayKey] ?: false }
     val inAppMiniPlayer: Flow<Boolean> = context.appSettingsDataStore.data.map { it[inAppMiniPlayerKey] ?: true }
+    val autoRotateFullscreen: Flow<Boolean> = context.appSettingsDataStore.data.map { it[autoRotateFullscreenKey] ?: true }
     val reportPlayback: Flow<Boolean> = context.appSettingsDataStore.data.map { it[reportPlaybackKey] ?: true }
     val danmakuEnabled: Flow<Boolean> = context.appSettingsDataStore.data.map { it[danmakuEnabledKey] ?: true }
     val danmakuAreaPercent: Flow<Int> = context.appSettingsDataStore.data.map { it[danmakuAreaPercentKey] ?: 100 }
@@ -101,6 +139,10 @@ class PlayerSettingsStore @Inject constructor(
 
     suspend fun updateInAppMiniPlayer(enabled: Boolean) {
         context.appSettingsDataStore.edit { it[inAppMiniPlayerKey] = enabled }
+    }
+
+    suspend fun updateAutoRotateFullscreen(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[autoRotateFullscreenKey] = enabled }
     }
 
     suspend fun updateReportPlayback(enabled: Boolean) {

@@ -253,6 +253,10 @@ class VideoViewModel @Inject constructor(
         updatePlayback { copy(decoderFallback = enabled) }
     }
 
+    fun updateAutoRotateFullscreen(enabled: Boolean) {
+        updatePlayback { copy(autoRotateFullscreen = enabled) }
+    }
+
     fun updateDanmaku(config: DanmakuConfig) {
         viewModelScope.launch {
             playerSettings.updateDanmaku(config)

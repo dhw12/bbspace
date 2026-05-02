@@ -1,6 +1,11 @@
 package com.naaammme.bbspace.feature.live
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,10 +30,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -47,10 +58,23 @@ fun LiveScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
     val owner = LocalLifecycleOwner.current
     val procOwner = remember { ProcessLifecycleOwner.get() }
+    val ctx = LocalContext.current
+    val act = remember(ctx) { ctx.findActivity() }
+    var isFull by rememberSaveable { mutableStateOf(false) }
 
-    BackHandler(onBack = onBack)
+    val toggleFull = { isFull = !isFull }
+    val handleBack = {
+        if (isFull) {
+            isFull = false
+        } else {
+            onBack()
+        }
+    }
+
+    BackHandler(onBack = handleBack)
 
     DisposableEffect(owner, viewModel) {
         val lifecycle = owner.lifecycle
@@ -81,46 +105,98 @@ fun LiveScreen(
         }
     }
 
-    Column(
+    DisposableEffect(act, isFull) {
+        val activity = act
+        if (activity == null) {
+            onDispose { }
+        } else {
+            val win = activity.window
+            val ctrl = WindowInsetsControllerCompat(win, win.decorView)
+            if (isFull) {
+                ctrl.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                ctrl.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                ctrl.show(WindowInsetsCompat.Type.systemBars())
+            }
+            onDispose {
+                ctrl.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
+
+    DisposableEffect(act, isFull, settingsState.playback.autoRotateFullscreen) {
+        val activity = act ?: return@DisposableEffect onDispose { }
+        activity.requestedOrientation = if (isFull && settingsState.playback.autoRotateFullscreen) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        onDispose { }
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        TopAppBar(
-            title = {
-                Text(
-                    text = state.route?.title ?: "直播"
+        if (isFull) {
+            LivePlayerPane(
+                route = state.route,
+                player = player,
+                playbackState = state.playbackState,
+                isFull = true,
+                onToggleFull = toggleFull,
+                onTogglePlay = viewModel::togglePlayPause,
+                onRetry = viewModel::retry,
+                onSwitchQuality = viewModel::switchQuality,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = state.route?.title ?: "直播"
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = handleBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回"
+                            )
+                        }
+                    }
                 )
-            },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "返回"
-                    )
-                }
+
+                LivePlayerPane(
+                    route = state.route,
+                    player = player,
+                    playbackState = state.playbackState,
+                    isFull = false,
+                    onToggleFull = toggleFull,
+                    onTogglePlay = viewModel::togglePlayPause,
+                    onRetry = viewModel::retry,
+                    onSwitchQuality = viewModel::switchQuality,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                )
+
+                LiveDetailSection(
+                    route = state.route,
+                    playbackState = state.playbackState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
             }
-        )
-
-        LivePlayerPane(
-            route = state.route,
-            player = player,
-            playbackState = state.playbackState,
-            onTogglePlay = viewModel::togglePlayPause,
-            onRetry = viewModel::retry,
-            onSwitchQuality = viewModel::switchQuality,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-        )
-
-        LiveDetailSection(
-            route = state.route,
-            playbackState = state.playbackState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        )
+        }
     }
 }
 
@@ -198,5 +274,13 @@ private fun MetaTag(text: String) {
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         )
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? {
+    return when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
     }
 }

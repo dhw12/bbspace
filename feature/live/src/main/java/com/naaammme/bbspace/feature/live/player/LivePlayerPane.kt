@@ -58,6 +58,8 @@ internal fun LivePlayerPane(
     route: LiveRoute?,
     player: Player?,
     playbackState: LivePlaybackViewState,
+    isFull: Boolean,
+    onToggleFull: () -> Unit,
     onTogglePlay: () -> Unit,
     onRetry: () -> Unit,
     onSwitchQuality: (Int) -> Unit,
@@ -148,6 +150,7 @@ internal fun LivePlayerPane(
             LivePlayerCtrlBar(
                 playText = if (playbackState.isPlaying) "暂停" else "播放",
                 qualityText = qualityText,
+                fullText = if (isFull) "退出全屏" else "全屏",
                 playOn = playbackState.playbackSource != null,
                 qualityOn = (playbackState.playbackSource?.qualityOptions?.size ?: 0) > 1,
                 onTogglePlay = {
@@ -161,6 +164,10 @@ internal fun LivePlayerPane(
                 onInfoClick = {
                     showCtrl = true
                     showInfoDialog = true
+                },
+                onFullClick = {
+                    showCtrl = true
+                    onToggleFull()
                 },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -216,11 +223,13 @@ internal fun LivePlayerPane(
 private fun LivePlayerCtrlBar(
     playText: String,
     qualityText: String,
+    fullText: String,
     playOn: Boolean,
     qualityOn: Boolean,
     onTogglePlay: () -> Unit,
     onQualityClick: () -> Unit,
     onInfoClick: () -> Unit,
+    onFullClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -258,6 +267,12 @@ private fun LivePlayerCtrlBar(
                 text = "信息",
                 enabled = true,
                 onClick = onInfoClick,
+                modifier = Modifier.weight(1f)
+            )
+            LiveCtrlBtn(
+                text = fullText,
+                enabled = true,
+                onClick = onFullClick,
                 modifier = Modifier.weight(1f)
             )
         }

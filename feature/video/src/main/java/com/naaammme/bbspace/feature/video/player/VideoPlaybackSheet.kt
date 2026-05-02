@@ -235,6 +235,13 @@ private fun PlaybackSettingsSection(
         checked = settingsState.playback.decoderFallback,
         onCheckedChange = viewModel::updateDecoderFallback
     )
+
+    SheetSwitchCard(
+        title = "全屏自动横屏",
+        subtitle = "点击全屏按钮时自动强制横屏",
+        checked = settingsState.playback.autoRotateFullscreen,
+        onCheckedChange = viewModel::updateAutoRotateFullscreen
+    )
 }
 
 @Composable
