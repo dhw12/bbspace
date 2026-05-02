@@ -67,10 +67,7 @@ fun InAppMiniPlayer(
     }
     val subtitle = when (target) {
         is StreamPlaybackTarget.Video -> {
-            listOfNotNull(
-                pageMeta?.ownerName?.takeIf(String::isNotBlank),
-                pageMeta?.partTitle?.takeIf(String::isNotBlank)
-            ).joinToString(" · ")
+            pageMeta?.ownerName.orEmpty()
         }
 
         is StreamPlaybackTarget.Live -> {

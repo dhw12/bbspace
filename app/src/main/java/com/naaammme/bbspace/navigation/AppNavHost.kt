@@ -3,7 +3,6 @@
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -20,13 +19,11 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.naaammme.bbspace.core.designsystem.theme.ThemeConfig
 import com.naaammme.bbspace.core.designsystem.theme.buildNavTransitions
@@ -75,8 +72,6 @@ fun AppNavHost(themeConfig: ThemeConfig = ThemeConfig()) {
     val sessionState by playbackHostViewModel.sessionState.collectAsStateWithLifecycle()
     val pageMeta by playbackHostViewModel.pageMeta.collectAsStateWithLifecycle()
     val miniPlayerAvailable by playbackHostViewModel.miniPlayerAvailable.collectAsStateWithLifecycle()
-    val navBackStackEntry by rootNavController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route.orEmpty()
     val hostMode = playbackHostViewModel.hostMode
     var forcedDismissMode by remember { mutableStateOf<PlaybackHostMode?>(null) }
     val playbackMode = when {
@@ -237,15 +232,7 @@ fun AppNavHost(themeConfig: ThemeConfig = ThemeConfig()) {
             onStartDownload = downloadViewModel::enqueueDownload,
             videoViewModel = videoViewModel,
             liveViewModel = liveViewModel,
-            miniPlayerModifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(
-                    end = 16.dp,
-                    top = 16.dp,
-                    start = 16.dp,
-                    bottom = if (currentRoute == MAIN_ROUTE) 88.dp else 16.dp
-                )
+            miniPlayerModifier = Modifier.align(Alignment.BottomEnd)
         )
     }
 }
