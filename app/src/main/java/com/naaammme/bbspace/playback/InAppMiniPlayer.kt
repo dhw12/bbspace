@@ -16,7 +16,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -33,6 +32,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
+import com.naaammme.bbspace.core.designsystem.icon.AppIcons
 import com.naaammme.bbspace.core.model.PlaybackHistoryMeta
 import com.naaammme.bbspace.core.model.StreamPlaybackSessionState
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
@@ -159,7 +159,7 @@ fun InAppMiniPlayer(
                 ) {
                     IconButton(onClick = onTogglePlay) {
                         Icon(
-                            imageVector = if (sessionState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            imageVector = if (sessionState.isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (sessionState.isPlaying) "暂停" else "播放",
                             tint = Color.White
                         )
