@@ -32,10 +32,7 @@ class DownloadPlayerViewModel @Inject constructor(
     private var closed = false
 
     init {
-        danmakuSession.bind(
-            taskId = taskId,
-            playbackStateFlow = state
-        )
+        danmakuSession.bind(taskId)
         viewModelScope.launch {
             playbackController.open(taskId)
         }

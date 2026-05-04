@@ -4,16 +4,13 @@ import com.naaammme.bbspace.core.domain.download.VideoDownloadRepository
 import com.naaammme.bbspace.core.model.DanmakuItem
 import com.naaammme.bbspace.core.model.DanmakuSessionState
 import com.naaammme.bbspace.core.model.DanmakuWindow
-import com.naaammme.bbspace.core.model.DownloadPlaybackState
 import com.naaammme.bbspace.core.model.toDanmakuWindowId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -24,32 +21,18 @@ internal class OfflineDanmakuSession(
     private val _state = MutableStateFlow(DanmakuSessionState())
     val state: StateFlow<DanmakuSessionState> = _state.asStateFlow()
 
-    private var observerJob: Job? = null
-    private var sourceKey: String? = null
-    private var groupedItems: Map<Long, List<DanmakuItem>> = emptyMap()
-    private var maxItemWindowId = 1L
-    private var centerWindowId = -1L
-    private var taskDurationMs = 0L
+    private var loadJob: Job? = null
 
-    fun bind(
-        taskId: Long,
-        playbackStateFlow: Flow<DownloadPlaybackState>
-    ) {
-        if (observerJob?.isActive == true) return
-        observerJob = scope.launch {
+    fun bind(taskId: Long) {
+        if (loadJob?.isActive == true) return
+        loadJob = scope.launch {
             load(taskId)
-            playbackStateFlow.collect { playback ->
-                publishWindows(
-                    durationMs = playback.durationMs,
-                    positionMs = playback.positionMs
-                )
-            }
         }
     }
 
     fun clear() {
-        observerJob?.cancel()
-        observerJob = null
+        loadJob?.cancel()
+        loadJob = null
         reset()
     }
 
@@ -59,7 +42,6 @@ internal class OfflineDanmakuSession(
             return
         }
         val task = repository.getTask(taskId)
-        taskDurationMs = task?.durationMs ?: 0L
         val fallbackKey = buildSourceKey(
             taskId = taskId,
             aid = task?.aid ?: 0L,
@@ -75,65 +57,25 @@ internal class OfflineDanmakuSession(
             )
             return
         } ?: run {
-            sourceKey = fallbackKey
+            _state.value = DanmakuSessionState(sourceKey = fallbackKey)
             return
         }
 
-        sourceKey = buildSourceKey(
+        val sourceKey = buildSourceKey(
             taskId = taskId,
             aid = cache.aid,
             cid = cache.cid
         )
-        groupedItems = withContext(Dispatchers.Default) {
-            cache.items.groupByWindowId()
+        val windows = withContext(Dispatchers.Default) {
+            cache.items.toWindows()
         }
-        maxItemWindowId = groupedItems.keys.maxOrNull() ?: 1L
-        centerWindowId = -1L
-    }
-
-    private fun publishWindows(
-        durationMs: Long,
-        positionMs: Long
-    ) {
-        val sourceKey = sourceKey ?: return
-        val maxWindowId = maxOf(
-            maxItemWindowId,
-            taskDurationMs.toDanmakuWindowId(),
-            durationMs.toDanmakuWindowId(),
-            positionMs.toDanmakuWindowId(),
-            1L
-        )
-        val centerWindowId = positionMs.toDanmakuWindowId().coerceIn(1L, maxWindowId)
-        val startWindowId = (centerWindowId - 1L).coerceAtLeast(1L)
-        val endWindowId = (centerWindowId + 1L).coerceAtMost(maxWindowId)
-        val current = _state.value
-        if (
-            current.sourceKey == sourceKey &&
-            this.centerWindowId == centerWindowId &&
-            current.windows.keys.firstOrNull() == startWindowId &&
-            current.windows.keys.lastOrNull() == endWindowId &&
-            current.lastError == null
-        ) {
-            return
-        }
-        this.centerWindowId = centerWindowId
         _state.value = DanmakuSessionState(
             sourceKey = sourceKey,
-            windows = (startWindowId..endWindowId).associateWith { windowId ->
-                DanmakuWindow(
-                    id = windowId,
-                    items = groupedItems[windowId].orEmpty()
-                )
-            }
+            windows = windows
         )
     }
 
     private fun reset() {
-        sourceKey = null
-        groupedItems = emptyMap()
-        maxItemWindowId = 1L
-        centerWindowId = -1L
-        taskDurationMs = 0L
         _state.value = DanmakuSessionState()
     }
 
@@ -145,12 +87,19 @@ internal class OfflineDanmakuSession(
         return "download:$taskId:$aid:$cid"
     }
 
-    private fun List<DanmakuItem>.groupByWindowId(): Map<Long, List<DanmakuItem>> {
+    private fun List<DanmakuItem>.toWindows(): Map<Long, DanmakuWindow> {
         val grouped = linkedMapOf<Long, MutableList<DanmakuItem>>()
         sortedBy { it.progressMs }.forEach { item ->
             val windowId = item.progressMs.coerceAtLeast(0).toLong().toDanmakuWindowId()
             grouped.getOrPut(windowId) { mutableListOf() }.add(item)
         }
-        return grouped
+        val windows = linkedMapOf<Long, DanmakuWindow>()
+        grouped.forEach { (windowId, items) ->
+            windows[windowId] = DanmakuWindow(
+                id = windowId,
+                items = items
+            )
+        }
+        return windows
     }
 }
