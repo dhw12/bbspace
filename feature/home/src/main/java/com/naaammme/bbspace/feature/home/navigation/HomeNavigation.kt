@@ -7,9 +7,9 @@ import com.naaammme.bbspace.feature.home.HomeScreen
 const val HOME_ROUTE = "home"
 
 fun NavGraphBuilder.homeScreen(
-    onNavigateToSettings: () -> Unit
+    onNavigateToProfile: () -> Unit
 ) {
     composable(HOME_ROUTE) {
-        HomeScreen(onNavigateToSettings = onNavigateToSettings)
+        HomeScreen(onNavigateToProfile = onNavigateToProfile)
     }
 }

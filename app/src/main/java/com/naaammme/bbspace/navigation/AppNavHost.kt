@@ -57,6 +57,7 @@ import com.naaammme.bbspace.feature.settings.navigation.settingsScreen
 import com.naaammme.bbspace.feature.webview.navigation.webViewScreen
 import com.naaammme.bbspace.feature.download.DownloadViewModel
 import com.naaammme.bbspace.feature.user.UserScreen
+import com.naaammme.bbspace.feature.user.UserViewModel
 import com.naaammme.bbspace.feature.video.VideoViewModel
 import com.naaammme.bbspace.playback.PlaybackHost
 import com.naaammme.bbspace.playback.PlaybackHostMode
@@ -278,6 +279,8 @@ private fun MainTabsScaffold(
 ) {
     var currentTab by rememberSaveable { mutableStateOf(TopLevelRoute.HOME) }
     val saveableStateHolder = rememberSaveableStateHolder()
+    val userViewModel: UserViewModel = hiltViewModel()
+    val userState by userViewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -301,7 +304,8 @@ private fun MainTabsScaffold(
                         when (tab) {
                             TopLevelRoute.HOME -> HomeScreen(
                                 onNavigateToSearch = onNavigateToSearch,
-                                onNavigateToSettings = onNavigateToSettings,
+                                onNavigateToProfile = { currentTab = TopLevelRoute.PROFILE },
+                                profileAvatar = userState.user?.avatar,
                                 onOpenVideo = onNavigateToVideo,
                                 onOpenSpace = onNavigateToSpace,
                                 onOpenLive = onNavigateToLive
@@ -310,6 +314,7 @@ private fun MainTabsScaffold(
                             TopLevelRoute.MESSAGE -> PlaceholderScreen("消息")
                             TopLevelRoute.PROFILE -> UserScreen(
                                 onNavigateToAccount = onNavigateToAccount,
+                                onNavigateToSettings = onNavigateToSettings,
                                 onNavigateToBbSpace = onNavigateToBbSpace,
                                 onNavigateToHistory = onNavigateToHistory,
                                 onNavigateToDownload = onNavigateToDownload,

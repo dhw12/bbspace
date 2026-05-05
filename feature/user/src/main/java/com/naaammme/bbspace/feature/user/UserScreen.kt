@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +31,7 @@ import com.naaammme.bbspace.feature.user.profile.UserProfileSection
 @Composable
 fun UserScreen(
     onNavigateToAccount: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onNavigateToBbSpace: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToDownload: () -> Unit,
@@ -43,6 +45,12 @@ fun UserScreen(
             TopAppBar(
                 title = { Text("我的") },
                 actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "设置"
+                        )
+                    }
                     IconButton(onClick = onNavigateToAccount) {
                         Icon(
                             Icons.Default.Person,

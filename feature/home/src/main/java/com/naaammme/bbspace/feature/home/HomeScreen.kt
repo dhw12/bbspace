@@ -1,6 +1,8 @@
 package com.naaammme.bbspace.feature.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,13 +10,14 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,11 +30,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import com.naaammme.bbspace.core.common.media.thumbnailUrl
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
 import com.naaammme.bbspace.core.model.LiveRoute
@@ -44,12 +51,15 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private val homeTabs = listOf("推荐", "直播")
+private val homeProfileAvatarSize = 36.dp
+private val homeProfileIconSize = 20.dp
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToSearch: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {},
+    profileAvatar: String? = null,
     onOpenVideo: (VideoTarget) -> Unit = {},
     onOpenSpace: (SpaceRoute) -> Unit = {},
     onOpenLive: (LiveRoute) -> Unit = {},
@@ -74,7 +84,8 @@ fun HomeScreen(
                 scrollBehavior = scrollBehavior,
                 selectedIndex = pagerState.currentPage,
                 onNavigateToSearch = onNavigateToSearch,
-                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToProfile = onNavigateToProfile,
+                profileAvatar = profileAvatar,
                 onSelectTab = { page ->
                     scope.launch { pagerState.animateScrollToPage(page) }
                 }
@@ -116,7 +127,8 @@ private fun HomeTopBar(
     scrollBehavior: TopAppBarScrollBehavior,
     selectedIndex: Int,
     onNavigateToSearch: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onNavigateToProfile: () -> Unit,
+    profileAvatar: String?,
     onSelectTab: (Int) -> Unit
 ) {
     Column(
@@ -171,8 +183,8 @@ private fun HomeTopBar(
                     )
                 }
             }
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(Icons.Default.Settings, "设置")
+            IconButton(onClick = onNavigateToProfile) {
+                HomeProfileAvatar(profileAvatar)
             }
         }
         FilledTabRow(
@@ -182,4 +194,34 @@ private fun HomeTopBar(
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 0.dp, bottom = 3.dp)
         )
     }
+}
+
+@Composable
+private fun HomeProfileAvatar(avatar: String?) {
+    if (avatar.isNullOrBlank()) {
+        Box(
+            modifier = Modifier
+                .size(homeProfileAvatarSize)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = "我的",
+                modifier = Modifier.size(homeProfileIconSize),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    AsyncImage(
+        model = thumbnailUrl(avatar),
+        contentDescription = "我的",
+        modifier = Modifier
+            .size(homeProfileAvatarSize)
+            .clip(androidx.compose.foundation.shape.CircleShape),
+        contentScale = ContentScale.Crop
+    )
 }

@@ -371,7 +371,8 @@ private fun CommentHeader(
     ) {
         Text(
             text = headerCount(state.count),
-            style = MaterialTheme.typography.titleSmall
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface
         )
         if (state.canSwitchSort) {
             SortSwitch(
