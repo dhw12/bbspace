@@ -1,8 +1,8 @@
 package com.naaammme.bbspace.feature.video.player
 
+import android.media.AudioManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,19 +76,24 @@ internal fun VideoPlayerPane(
     val player by viewModel.player.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
     val danmakuState by viewModel.danmakuState.collectAsStateWithLifecycle()
-    val tapSrc = remember { MutableInteractionSource() }
+    val gestureState = remember { VideoGestureState() }
+    var dragStartBrightness by remember { mutableStateOf(0.5f) }
+    var dragStartVolume by remember { mutableStateOf(0) }
     var showQ by remember { mutableStateOf(false) }
     var showA by remember { mutableStateOf(false) }
     var showSp by remember { mutableStateOf(false) }
     var showPlaybackSheet by remember { mutableStateOf(false) }
     var showCtrl by remember { mutableStateOf(true) }
     var dragMs by remember { mutableStateOf<Long?>(null) }
+    var speedBeforeGesture by remember { mutableStateOf(1f) }
 
-    LaunchedEffect(showCtrl, state.isPlaying, dragMs, showA, showQ, showSp, showPlaybackSheet) {
+    LaunchedEffect(showCtrl, state.isPlaying, dragMs, gestureState.dragType, gestureState.showSpeedBadge, showA, showQ, showSp, showPlaybackSheet) {
         if (
             showCtrl &&
             state.isPlaying &&
             dragMs == null &&
+            gestureState.dragType == DragType.None &&
+            !gestureState.showSpeedBadge &&
             !showA &&
             !showQ &&
             !showSp &&
@@ -106,7 +111,8 @@ internal fun VideoPlayerPane(
         ?: state.playbackSource?.durationMs?.coerceAtLeast(0L)
         ?: 0L
     val danmakuOn = settingsState.danmaku.enabled
-    val barMs = dragMs ?: state.positionMs
+    val gestureSeekMs = gestureState.dragSeekPosMs
+    val barMs = dragMs ?: gestureSeekMs ?: state.positionMs
     val sliderVal = if (durationMs > 0) {
         (barMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     } else {
@@ -174,16 +180,51 @@ internal fun VideoPlayerPane(
             manageLifecycle = externalOverlay == null
         )
 
+        val act = remember(context) { context.findActivity() }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(
-                    interactionSource = tapSrc,
-                    indication = null
-                ) {
-                    showCtrl = !showCtrl
-                }
-        )
+                .videoGestures(
+                    state = gestureState,
+                    onToggleControls = {
+                        showCtrl = !showCtrl
+                    },
+                    onTogglePlay = viewModel::togglePlayPause,
+                    onSeekTo = viewModel::seekTo,
+                    onStartSpeedUp = {
+                        speedBeforeGesture = state.speed
+                        viewModel.setSpeed(2f)
+                    },
+                    onStopSpeedUp = { viewModel.setSpeed(speedBeforeGesture) },
+                    onBrightnessDelta = { frac ->
+                        adjustWindowBrightness(act, dragStartBrightness + frac)
+                    },
+                    onVolumeDelta = { frac ->
+                        val am = context.getSystemService(AudioManager::class.java)
+                        val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                        adjustStreamVolume(context, frac, dragStartVolume, maxVol)
+                    },
+                    onDragStart = { dragType ->
+                        when (dragType) {
+                            DragType.Brightness -> {
+                                act?.window?.attributes?.screenBrightness?.let {
+                                    dragStartBrightness = it
+                                }
+                            }
+                            DragType.Volume -> {
+                                val am = context.getSystemService(AudioManager::class.java)
+                                dragStartVolume = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+                            }
+                            else -> {}
+                        }
+                    },
+                    isPlaying = { state.isPlaying },
+                    positionMs = { barMs },
+                    durationMs = { durationMs }
+                )
+        ) {
+            VideoGestureFeedback(gestureState)
+        }
 
         if (showCtrl) {
             Row(
