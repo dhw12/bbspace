@@ -24,13 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
 import com.naaammme.bbspace.core.designsystem.component.AvatarImage
+import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.designsystem.component.DynamicCardSkeleton
 import com.naaammme.bbspace.core.designsystem.component.UpListRow
 import com.naaammme.bbspace.core.model.DynamicBody
@@ -403,22 +401,6 @@ private fun DynamicText(text: String) {
         color = MaterialTheme.colorScheme.onSurface,
         maxLines = 8,
         overflow = TextOverflow.Ellipsis
-    )
-}
-
-@Composable
-private fun CoverImage(
-    url: String,
-    modifier: Modifier,
-    contentDescription: String? = null,
-    shape: Shape? = null
-) {
-    val imageModifier = if (shape == null) modifier else modifier.clip(shape)
-    BiliAsyncImage(
-        url = url,
-        contentDescription = contentDescription,
-        modifier = imageModifier,
-        contentScale = ContentScale.Crop
     )
 }
 

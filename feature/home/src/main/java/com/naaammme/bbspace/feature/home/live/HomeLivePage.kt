@@ -21,14 +21,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.AdaptiveMediaGrid
-import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
+import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.designsystem.component.UpListRow
 import com.naaammme.bbspace.core.designsystem.component.VideoGridCardSkeleton
 import com.naaammme.bbspace.core.model.LiveRecommendItem
@@ -126,18 +125,14 @@ private fun LiveRecommendCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
-            Box(
+            CoverImage(
+                url = item.cover,
+                contentDescription = item.title,
+                shape = null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 10f)
             ) {
-                BiliAsyncImage(
-                    url = item.cover,
-                    contentDescription = item.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
                 item.onlineText?.let { text ->
                     Text(
                         text = text,

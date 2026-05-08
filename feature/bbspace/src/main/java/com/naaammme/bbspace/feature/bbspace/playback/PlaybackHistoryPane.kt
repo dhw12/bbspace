@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
+import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.model.PlaybackHistory
 import com.naaammme.bbspace.feature.bbspace.rememberExportJson
 
@@ -317,13 +317,11 @@ private fun PlaybackHistoryCard(
 @Composable
 private fun PlaybackHistoryCover(item: PlaybackHistory) {
     if (!item.cover.isNullOrBlank()) {
-        BiliAsyncImage(
+        CoverImage(
             url = item.cover,
             contentDescription = item.title,
             modifier = Modifier
                 .size(width = 96.dp, height = 60.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
         )
     } else {
         Box(

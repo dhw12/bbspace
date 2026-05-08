@@ -30,12 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
+import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.model.SearchFeedbackSec
 import com.naaammme.bbspace.core.model.SearchVideo
 
@@ -60,19 +58,13 @@ fun SearchCard(
                 .padding(10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
+            CoverImage(
+                url = video.cover,
+                contentDescription = video.title,
                 modifier = Modifier
                     .weight(0.38f)
                     .aspectRatio(16f / 10f)
-                    .clip(MaterialTheme.shapes.medium)
             ) {
-                BiliAsyncImage(
-                    url = video.cover,
-                    contentDescription = video.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
                 Text(
                     text = video.duration,
                     modifier = Modifier
@@ -84,7 +76,6 @@ fun SearchCard(
                     color = Color.White
                 )
             }
-
             Column(
                 modifier = Modifier.weight(0.62f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)

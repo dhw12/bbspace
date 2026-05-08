@@ -32,11 +32,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.AdaptiveMediaGrid
-import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
+import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.designsystem.component.VideoGridCardSkeleton
 import com.naaammme.bbspace.core.model.FeedItem
 import com.naaammme.bbspace.core.model.LiveRoute
@@ -95,18 +94,14 @@ private fun FeedCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
-            Box(
+            CoverImage(
+                url = item.cover,
+                contentDescription = item.title,
+                shape = null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 10f)
             ) {
-                BiliAsyncImage(
-                    url = item.cover,
-                    contentDescription = item.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
                 val hasLeftText = item.coverLeftText1 != null
                 if (hasLeftText) {
                     Row(
@@ -135,7 +130,6 @@ private fun FeedCard(
                     )
                 }
             }
-
             Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                 val spaceRoute = item.args?.let { args ->
                     if (args.upId <= 0L && args.upName.isNullOrBlank()) {

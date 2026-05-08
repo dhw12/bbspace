@@ -34,16 +34,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
 import com.naaammme.bbspace.core.designsystem.component.BiliPullToRefreshBox
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
+import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
 import com.naaammme.bbspace.core.designsystem.component.VideoListCardSkeleton
 import com.naaammme.bbspace.core.model.HistoryItem
@@ -368,21 +366,11 @@ private fun HistoryCover(
     item: HistoryItem,
     modifier: Modifier = Modifier
 ) {
-    val cover = item.cover
-    Box(
-        modifier = modifier
-            .aspectRatio(16f / 10f)
-            .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        if (!cover.isNullOrBlank()) {
-            BiliAsyncImage(
-                url = cover,
-                contentDescription = item.title,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        } else {
+    CoverImage(
+        url = item.cover,
+        contentDescription = item.title,
+        modifier = modifier.aspectRatio(16f / 10f),
+        fallbackContent = {
             Text(
                 text = item.typeLabel,
                 modifier = Modifier.align(Alignment.Center),
@@ -390,7 +378,7 @@ private fun HistoryCover(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-
+    ) {
         Text(
             text = item.typeLabel,
             modifier = Modifier
