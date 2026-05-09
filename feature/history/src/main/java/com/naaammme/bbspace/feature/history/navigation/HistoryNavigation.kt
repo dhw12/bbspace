@@ -16,13 +16,15 @@ fun NavController.navigateToHistory() {
 fun NavGraphBuilder.historyScreen(
     onBack: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
-    onOpenLive: (LiveRoute) -> Unit
+    onOpenLive: (LiveRoute) -> Unit,
+    onOpenDynamicDetail: (String, Int) -> Unit
 ) {
     composable(HISTORY_ROUTE) {
         HistoryScreen(
             onBack = onBack,
             onOpenVideo = onOpenVideo,
-            onOpenLive = onOpenLive
+            onOpenLive = onOpenLive,
+            onOpenDynamicDetail = onOpenDynamicDetail
         )
     }
 }

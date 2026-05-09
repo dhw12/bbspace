@@ -201,7 +201,8 @@ fun AppNavHost(themeConfig: ThemeConfig = ThemeConfig()) {
             historyScreen(
                 onBack = { rootNavController.popBackStack() },
                 onOpenVideo = openVideo,
-                onOpenLive = openLive
+                onOpenLive = openLive,
+                onOpenDynamicDetail = rootNavController::navigateToDynamicDetail
             )
             spaceScreen(
                 onBack = { rootNavController.popBackStack() },

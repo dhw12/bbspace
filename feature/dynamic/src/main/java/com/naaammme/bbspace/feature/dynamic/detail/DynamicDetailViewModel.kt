@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.domain.dynamic.DynamicRepository
 import com.naaammme.bbspace.feature.dynamic.navigation.DYNAMIC_DETAIL_OPUS_ID_ARG
+import com.naaammme.bbspace.feature.dynamic.navigation.DYNAMIC_DETAIL_OPUS_TYPE_ARG
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ class DynamicDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val opusId: String = savedStateHandle.get<String>(DYNAMIC_DETAIL_OPUS_ID_ARG) ?: ""
+    private val opusType: Int = savedStateHandle.get<Int>(DYNAMIC_DETAIL_OPUS_TYPE_ARG) ?: 0
 
     private val _uiState = MutableStateFlow(DynamicDetailUiState())
     val uiState: StateFlow<DynamicDetailUiState> = _uiState.asStateFlow()
@@ -42,7 +44,7 @@ class DynamicDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             try {
-                val detail = repo.fetchOpusDetail(opusId)
+                val detail = repo.fetchOpusDetail(opusId, opusType)
                 _uiState.update {
                     it.copy(detail = detail, isLoading = false, errorMessage = null)
                 }

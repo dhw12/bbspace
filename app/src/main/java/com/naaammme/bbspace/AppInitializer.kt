@@ -88,6 +88,7 @@ class AppInitializer @Inject constructor(
                 Logger.d(TAG) { "开始初始化应用..." }
 
                 appSettings.themeConfig.first()
+                appSettings.updateNeedTrial(false)
 
                 val ticket = ticketGenerator.getValidTicket() ?: ticketGenerator.getCachedTicket()
                 Logger.d(TAG) { "Ticket 初始化完成: ${if (ticket.isEmpty()) "空" else "已缓存"}" }

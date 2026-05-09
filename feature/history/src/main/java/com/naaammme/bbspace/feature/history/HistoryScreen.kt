@@ -58,6 +58,7 @@ fun HistoryScreen(
     onBack: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenLive: (LiveRoute) -> Unit,
+    onOpenDynamicDetail: (String, Int) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -162,6 +163,7 @@ fun HistoryScreen(
                                         when (val target = item.target) {
                                             is HistoryTarget.Video -> onOpenVideo(target.target)
                                             is HistoryTarget.Live -> onOpenLive(target.route)
+                                            is HistoryTarget.Article -> onOpenDynamicDetail(target.opusId, 1)
                                             null -> Unit
                                         }
                                     }

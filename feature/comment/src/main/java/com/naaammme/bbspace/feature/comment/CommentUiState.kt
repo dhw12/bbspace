@@ -1,11 +1,13 @@
 package com.naaammme.bbspace.feature.comment
 
+import androidx.compose.runtime.Immutable
 import com.naaammme.bbspace.core.model.COMMENT_FILTER_ALL
 import com.naaammme.bbspace.core.model.CommentFilterTag
 import com.naaammme.bbspace.core.model.CommentReply
 import com.naaammme.bbspace.core.model.CommentSort
 import com.naaammme.bbspace.core.model.CommentSubject
 
+@Immutable
 data class CommentUiState(
     val subject: CommentSubject? = null,
     val currentMid: Long = 0L,
@@ -28,6 +30,7 @@ data class CommentUiState(
     val endText: String? = null
 )
 
+@Immutable
 data class CommentThreadState(
     val title: String = "回复详情",
     val root: CommentReply,
@@ -43,6 +46,7 @@ data class CommentThreadState(
     val hasMore: Boolean = false
 )
 
+@Immutable
 data class CommentEditorState(
     val visible: Boolean = false,
     val loading: Boolean = false,
@@ -53,6 +57,7 @@ data class CommentEditorState(
         get() = !loading && input.isNotBlank()
 }
 
+@Immutable
 data class CommentEditorTarget(
     val rootRpid: Long = 0L,
     val parentRpid: Long = 0L,

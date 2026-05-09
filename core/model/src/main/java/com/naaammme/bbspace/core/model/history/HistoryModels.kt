@@ -52,4 +52,7 @@ sealed interface HistoryTarget {
 
     @Immutable
     data class Live(val route: LiveRoute) : HistoryTarget
+
+    @Immutable
+    data class Article(val opusId: String) : HistoryTarget
 }

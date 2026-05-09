@@ -69,8 +69,9 @@ class DynamicRepoImpl @Inject constructor(
         }
     }
 
-    override suspend fun fetchOpusDetail(opusId: String): DynamicDetail {
+    override suspend fun fetchOpusDetail(opusId: String, opusType: Int): DynamicDetail {
         val req = OpusDetailReq.newBuilder()
+            .setOpusTypeValue(opusType)
             .setOid(opusId.toLong())
             .setShareId("dt.opus-detail.0.0.pv")
             .setShareMode(3)

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -24,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -146,30 +149,44 @@ fun DynamicDetailScreen(
                             contentPadding = PaddingValues(vertical = 12.dp)
                         )
                     }
+                } else if (commentSubject != null) {
+                    CommentPanel(
+                        subject = commentSubject,
+                        onOpenSpace = onOpenSpace,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                        contentPadding = PaddingValues(vertical = 12.dp),
+                        header = {
+                            DetailContent(detail)
+                        }
+                    )
                 } else {
-                    LazyColumn(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding)
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        detailContentItems(detail)
-                        if (commentSubject != null) {
-                            item(key = "detail_comments", contentType = "comments") {
-                                CommentPanel(
-                                    subject = commentSubject,
-                                    onOpenSpace = onOpenSpace,
-                                    modifier = Modifier.fillParentMaxSize(),
-                                    contentPadding = PaddingValues(
-                                        horizontal = 16.dp,
-                                        vertical = 12.dp
-                                    )
-                                )
-                            }
-                        }
+                        DetailContent(detail)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DetailContent(detail: DynamicDetail) {
+    DynamicDetailHeader(
+        author = detail.author,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+    )
+    detail.paragraphs.forEach { paragraph ->
+        DynamicDetailParagraphItem(paragraph)
+    }
+    detail.stats?.let { stats ->
+        DynamicDetailStats(stats)
     }
 }
 
@@ -233,16 +250,20 @@ private fun DynamicDetailParagraphItem(paragraph: DynamicDetailParagraph) {
 
 @Composable
 private fun DynamicDetailImageGrid(images: List<DynamicImage>, modifier: Modifier = Modifier) {
-    val columns = when (images.size) {
-        1 -> 1
-        2, 4 -> 2
-        else -> 3
+    val columns = remember(images.size) {
+        when (images.size) {
+            1 -> 1
+            2, 4 -> 2
+            else -> 3
+        }
+    }
+    val rows = remember(images, columns) {
+        images.chunked(columns)
     }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        val rows = images.chunked(columns)
         rows.forEach { rowImages ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -273,15 +294,17 @@ private fun DynamicDetailImageGrid(images: List<DynamicImage>, modifier: Modifie
 
 @Composable
 private fun DynamicDetailStats(stats: DynamicStats) {
-    val text = buildString {
-        if (stats.repost > 0) append("转发 ${formatCount(stats.repost)}")
-        if (stats.reply > 0) {
-            if (isNotEmpty()) append("  ")
-            append("评论 ${formatCount(stats.reply)}")
-        }
-        if (stats.like > 0) {
-            if (isNotEmpty()) append("  ")
-            append("点赞 ${formatCount(stats.like)}")
+    val text = remember(stats) {
+        buildString {
+            if (stats.repost > 0) append("转发 ${formatCount(stats.repost)}")
+            if (stats.reply > 0) {
+                if (isNotEmpty()) append("  ")
+                append("评论 ${formatCount(stats.reply)}")
+            }
+            if (stats.like > 0) {
+                if (isNotEmpty()) append("  ")
+                append("点赞 ${formatCount(stats.like)}")
+            }
         }
     }
     if (text.isNotEmpty()) {

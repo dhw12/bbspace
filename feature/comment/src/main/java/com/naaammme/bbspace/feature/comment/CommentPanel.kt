@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,6 +69,7 @@ fun CommentPanel(
     onOpenSpace: (SpaceRoute) -> Unit = {},
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+    header: (@Composable () -> Unit)? = null,
     viewModel: CommentViewModel = hiltViewModel()
 ) {
     LaunchedEffect(subject) {
@@ -106,6 +108,9 @@ fun CommentPanel(
                     ).show()
                 }
         }
+    }
+    val isBusy = remember(uiState.busyReplyIds) {
+        { rpid: Long -> rpid in uiState.busyReplyIds }
     }
     val listState = rememberLazyListState()
     val threadListState = rememberLazyListState()
@@ -171,6 +176,12 @@ fun CommentPanel(
             contentPadding = listContentPadding,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (header != null) {
+                item(key = "panel_header", contentType = "panel_header") {
+                    header()
+                }
+            }
+
             item(
                 key = "comment_header",
                 contentType = "header"
@@ -243,7 +254,7 @@ fun CommentPanel(
                         CommentCard(
                             reply = reply,
                             currentMid = uiState.currentMid,
-                            isBusy = { rpid -> rpid in uiState.busyReplyIds },
+                            isBusy = isBusy,
                             onTranslate = viewModel::translateReply,
                             onDelete = viewModel::deleteReply,
                             onReply = viewModel::replyTo,
@@ -307,7 +318,7 @@ fun CommentPanel(
                     state = threadPane,
                     listState = threadListState,
                     currentMid = uiState.currentMid,
-                    isBusy = { rpid -> rpid in uiState.busyReplyIds },
+                    isBusy = isBusy,
                     onReply = viewModel::replyTo,
                     onSaveImage = onSaveImage,
                     onDismiss = viewModel::closeReplyThread,
@@ -365,7 +376,7 @@ private fun CommentHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -426,6 +437,7 @@ private fun headerCount(count: Long): String {
 @Composable
 internal fun StateCard(text: String) {
     Card(
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -434,7 +446,10 @@ internal fun StateCard(text: String) {
             text = text,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            textAlign = TextAlign.Center
         )
     }
 }

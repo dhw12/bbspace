@@ -11,5 +11,5 @@ interface DynamicRepository {
         refresh: DynamicRefresh
     ): DynamicPage
 
-    suspend fun fetchOpusDetail(opusId: String): DynamicDetail
+    suspend fun fetchOpusDetail(opusId: String, opusType: Int = 0): DynamicDetail
 }

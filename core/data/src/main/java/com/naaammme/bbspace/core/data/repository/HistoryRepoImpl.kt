@@ -153,7 +153,7 @@ class HistoryRepoImpl @Inject constructor(
                     viewedAtSec = item.viewAt,
                     progressSec = null,
                     durationSec = null,
-                    target = null
+                    target = parseArticleTarget(item.uri)
                 )
             }
 
@@ -274,6 +274,13 @@ class HistoryRepoImpl @Inject constructor(
         }
     }
 
+    private fun parseArticleTarget(uri: String): HistoryTarget.Article? {
+        val id = ARTICLE_URI_REGEX.find(uri)?.groupValues?.getOrNull(1)
+            ?: OPUS_DETAIL_URI_REGEX.find(uri)?.groupValues?.getOrNull(1)
+            ?: return null
+        return HistoryTarget.Article(opusId = id)
+    }
+
     private fun String.blankToNull(): String? {
         return takeIf { it.isNotBlank() }
     }
@@ -307,5 +314,7 @@ class HistoryRepoImpl @Inject constructor(
         const val SHORT_EDGE = "1080"
         const val LONG_EDGE = "1920"
         val HISTORY_VIDEO_SRC = VideoTargetTool.history()
+        val ARTICLE_URI_REGEX = Regex("bilibili://article/(\\d+)")
+        val OPUS_DETAIL_URI_REGEX = Regex("bilibili://opus/detail/(\\d+)")
     }
 }

@@ -13,10 +13,11 @@ import com.naaammme.bbspace.feature.dynamic.detail.DynamicDetailScreen
 const val DYNAMIC_ROUTE = "dynamic"
 
 const val DYNAMIC_DETAIL_OPUS_ID_ARG = "opusId"
-private const val DYNAMIC_DETAIL_ROUTE = "dynamic_detail/{${DYNAMIC_DETAIL_OPUS_ID_ARG}}"
+const val DYNAMIC_DETAIL_OPUS_TYPE_ARG = "opusType"
+private const val DYNAMIC_DETAIL_ROUTE = "dynamic_detail/{${DYNAMIC_DETAIL_OPUS_ID_ARG}}/{${DYNAMIC_DETAIL_OPUS_TYPE_ARG}}"
 
-fun NavController.navigateToDynamicDetail(opusId: String) {
-    navigate("dynamic_detail/$opusId")
+fun NavController.navigateToDynamicDetail(opusId: String, opusType: Int = 0) {
+    navigate("dynamic_detail/$opusId/$opusType")
 }
 
 fun NavGraphBuilder.dynamicDetailScreen(
@@ -29,6 +30,10 @@ fun NavGraphBuilder.dynamicDetailScreen(
             navArgument(DYNAMIC_DETAIL_OPUS_ID_ARG) {
                 type = NavType.StringType
                 defaultValue = ""
+            },
+            navArgument(DYNAMIC_DETAIL_OPUS_TYPE_ARG) {
+                type = NavType.IntType
+                defaultValue = 0
             }
         )
     ) {
