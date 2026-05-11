@@ -80,6 +80,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateSwapBaseColors(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettings.updateSwapBaseColors(enabled)
+        }
+    }
+
     fun updateFontScale(scale: Float) {
         viewModelScope.launch {
             appSettings.updateFontScale(scale)

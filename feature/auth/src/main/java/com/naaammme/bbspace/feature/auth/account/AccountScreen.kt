@@ -155,7 +155,7 @@ private fun GuestCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = if (isCurrent) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         } else {
             CardDefaults.cardColors()
         }
@@ -244,7 +244,7 @@ private fun AccountCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = if (isCurrent) {
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         } else {
             CardDefaults.cardColors()
         }

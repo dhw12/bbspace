@@ -154,8 +154,8 @@ fun ListenDetailScreen(
                     enabled = state.audioUrl != null && !state.isPreparing,
                     shape = MaterialTheme.shapes.extraLarge,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     ),
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
                 ) {

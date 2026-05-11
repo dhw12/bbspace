@@ -31,6 +31,7 @@ class AppSettings @Inject constructor(
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val seedColorKey = intPreferencesKey("seed_color")
     private val useDynamicColorKey = booleanPreferencesKey("use_dynamic_color")
+    private val swapBaseColorsKey = booleanPreferencesKey("swap_base_colors")
     private val fontScaleKey = floatPreferencesKey("font_scale")
     private val pullRefreshDistanceKey = floatPreferencesKey("pull_refresh_distance")
     private val animationSpeedKey = stringPreferencesKey("animation_speed")
@@ -50,6 +51,7 @@ class AppSettings @Inject constructor(
             themeMode = prefs[themeModeKey]?.let { ThemeMode.valueOf(it) } ?: ThemeMode.SYSTEM,
             seedColor = Color(prefs[seedColorKey] ?: 0xFFFB7299.toInt()),
             useDynamicColor = prefs[useDynamicColorKey] ?: true,
+            swapBaseColors = prefs[swapBaseColorsKey] ?: false,
             fontScale = prefs[fontScaleKey] ?: 1.0f,
             pullRefreshDistanceDp = (prefs[pullRefreshDistanceKey] ?: DEFAULT_PULL_REFRESH_DISTANCE_DP)
                 .coerceIn(MIN_PULL_REFRESH_DISTANCE_DP, MAX_PULL_REFRESH_DISTANCE_DP),
@@ -71,6 +73,10 @@ class AppSettings @Inject constructor(
 
     suspend fun updateUseDynamicColor(use: Boolean) {
         context.appSettingsDataStore.edit { it[useDynamicColorKey] = use }
+    }
+
+    suspend fun updateSwapBaseColors(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[swapBaseColorsKey] = enabled }
     }
 
     suspend fun updateFontScale(scale: Float) {

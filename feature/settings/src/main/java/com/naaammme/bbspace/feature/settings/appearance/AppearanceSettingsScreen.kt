@@ -77,6 +77,15 @@ fun AppearanceSettingsScreen(
             }
 
             item {
+                SettingSwitch(
+                    title = "反转颜色",
+                    subtitle = "交换页面背景和低饱和容器色，强调色保持不变",
+                    checked = config.swapBaseColors,
+                    onCheckedChange = viewModel::updateSwapBaseColors
+                )
+            }
+
+            item {
                 ColorPaletteSelector(
                     selected = config.seedColor,
                     onSelect = viewModel::updateSeedColor
@@ -86,7 +95,7 @@ fun AppearanceSettingsScreen(
             item {
                 SettingSwitch(
                     title = "纯色背景",
-                    subtitle = "深色用纯黑，浅色用纯白",
+                    subtitle = "深色用纯黑，浅色用纯白，会参与背景层级反转",
                     checked = config.isPureBlack,
                     onCheckedChange = viewModel::updateIsPureBlack
                 )

@@ -8,6 +8,7 @@ data class ThemeConfig(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val seedColor: Color = Color(0xFFFB7299),
     val useDynamicColor: Boolean = false,
+    val swapBaseColors: Boolean = false,
     val fontScale: Float = 1.0f,
     val pullRefreshDistanceDp: Float = DEFAULT_PULL_REFRESH_DISTANCE_DP,
     val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
@@ -75,5 +76,6 @@ val PresetColors = listOf(
     Color(0xFF673AB7) to "深紫",
     Color(0xFF607D8B) to "蓝灰",
     Color(0xFF795548) to "棕色",
-    Color(0xFF9E9E9E) to "灰色"
+    Color(0xFF9E9E9E) to "灰色",
+    Color(0xFF000000) to "黑色"
 )
