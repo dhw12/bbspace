@@ -129,7 +129,7 @@ fun InterestScreen(
                                 title = response.pageMaterial?.myInterestTitle
                                     ?.takeIf { it.isNotBlank() }
                                     ?: "我的内容偏好",
-                                subtitle = response.pageMaterial?.subtitle
+                                subtitle = null
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             FlowRow(
