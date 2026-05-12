@@ -26,9 +26,9 @@ class FeedDislikeRepoImpl @Inject constructor(
         context: FeedDislikeContext,
         reason: ThreePointReason
     ): FeedActionResult {
-        val profile = BiliRestProfile.APP
+        val profile = context.restProfile()
         val ts = System.currentTimeMillis() / 1000
-        val params = restParamBuilder.app(profile, ts, authStore.accessToken) + buildMap {
+        val params = restParamBuilder.app(profile, ts, context.accessKey()) + buildMap {
             putBaseContext(context)
             put("action_id", pageActionTracker.currentActionId())
             putReason(reason)
@@ -46,9 +46,9 @@ class FeedDislikeRepoImpl @Inject constructor(
     }
 
     override suspend fun cancelDislike(context: FeedDislikeContext): FeedActionResult {
-        val profile = BiliRestProfile.APP
+        val profile = context.restProfile()
         val ts = System.currentTimeMillis() / 1000
-        val params = restParamBuilder.app(profile, ts, authStore.accessToken) + buildMap {
+        val params = restParamBuilder.app(profile, ts, context.accessKey()) + buildMap {
             putBaseContext(context)
             put("action_id", pageActionTracker.currentActionId())
         }
@@ -78,6 +78,18 @@ class FeedDislikeRepoImpl @Inject constructor(
         when (reason.kind) {
             ThreePointReasonKind.DISLIKE -> put("reason_id", reason.id.toString())
             ThreePointReasonKind.FEEDBACK -> put("feedback_id", reason.id.toString())
+        }
+    }
+
+    private fun FeedDislikeContext.restProfile(): BiliRestProfile {
+        return if (useHdProfile) BiliRestProfile.HD else BiliRestProfile.APP
+    }
+
+    private fun FeedDislikeContext.accessKey(): String {
+        return if (useHdProfile) {
+            authStore.getHdAccessKeyForCurrent()
+        } else {
+            authStore.accessToken
         }
     }
 

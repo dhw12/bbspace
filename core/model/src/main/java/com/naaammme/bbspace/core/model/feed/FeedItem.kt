@@ -75,6 +75,7 @@ enum class ThreePointReasonKind {
 data class FeedDislikeContext(
     val id: String,
     val goto: String,
+    val useHdProfile: Boolean,
     val spmid: String,
     val fromSpmid: String,
     val fromModule: String?,

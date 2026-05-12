@@ -60,7 +60,7 @@ class FeedRepoImpl @Inject constructor(
             profile = profile
         )
 
-        return parseResponse(json)
+        return parseResponse(json, hdFeed)
     }
 
     override suspend fun fetchFeedWithInterest(
@@ -83,12 +83,12 @@ class FeedRepoImpl @Inject constructor(
             profile = profile
         )
 
-        return parseResponse(json)
+        return parseResponse(json, hdFeed)
     }
 
-    private fun parseResponse(json: JSONObject): FeedResult {
+    private fun parseResponse(json: JSONObject, useHdProfile: Boolean): FeedResult {
         val data = json.optJSONObject("data")
-        val items = parseItems(data?.optJSONArray("items"))
+        val items = parseItems(data?.optJSONArray("items"), useHdProfile)
         val toast = data?.optJSONObject("toast")?.let { t ->
             if (t.optBoolean("has_toast")) {
                 val msg = FeedToast(true, t.optString("toast_message"))
@@ -184,18 +184,18 @@ class FeedRepoImpl @Inject constructor(
 
     private val adCardGotos = setOf("banner", "ad_web_s", "ad_web", "ad", "ad_player")
 
-    private fun parseItems(arr: org.json.JSONArray?): List<FeedItem> {
+    private fun parseItems(arr: org.json.JSONArray?, useHdProfile: Boolean): List<FeedItem> {
         if (arr == null) return emptyList()
         val result = mutableListOf<FeedItem>()
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
             if (obj.optString("card_goto") in adCardGotos) continue
-            result.add(parseFeedItem(obj))
+            result.add(parseFeedItem(obj, useHdProfile))
         }
         return result
     }
 
-    private fun parseFeedItem(obj: JSONObject): FeedItem {
+    private fun parseFeedItem(obj: JSONObject, useHdProfile: Boolean): FeedItem {
         val item = obj.optJSONObject("item")
         val inline = item?.optJSONObject("inline_pgc")
         val card = inline ?: obj
@@ -382,6 +382,7 @@ class FeedRepoImpl @Inject constructor(
             dislikeContext = buildDislikeContext(
                 param = param,
                 goto = goto,
+                useHdProfile = useHdProfile,
                 src = target?.src,
                 reportData = reportData,
                 trackId = target?.src?.trackId,
@@ -410,6 +411,7 @@ class FeedRepoImpl @Inject constructor(
     private fun buildDislikeContext(
         param: String,
         goto: String,
+        useHdProfile: Boolean,
         src: VideoSrc?,
         reportData: String?,
         trackId: String?,
@@ -422,6 +424,7 @@ class FeedRepoImpl @Inject constructor(
         return FeedDislikeContext(
             id = param,
             goto = goto,
+            useHdProfile = useHdProfile,
             spmid = src?.fromSpmid?.takeIf(String::isNotBlank) ?: VideoTargetTool.FROM_SPMID_FEED,
             fromSpmid = src?.fromSpmid?.takeIf(String::isNotBlank) ?: VideoTargetTool.FROM_SPMID_FEED,
             fromModule = null,
