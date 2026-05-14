@@ -16,10 +16,10 @@ enum class BiliImageVariant(
     val q: Int = BILI_IMAGE_DEFAULT_Q,
     val original: Boolean = false
 ) {
-    Avatar(),
-    CardCover(),
-    PreviewThumb(),
-    Banner(),
+    Avatar,
+    CardCover,
+    PreviewThumb,
+    Banner,
     Original(original = true)
 }
 

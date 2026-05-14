@@ -152,13 +152,6 @@ class VideoViewModel @Inject constructor(
         return true
     }
 
-    private fun clearContent() {
-        _targetStack.value = emptyList()
-        _detail.value = null
-        _detailLoading.value = false
-        _detailError.value = null
-    }
-
     fun ensureStarted() {
         val pageTarget = currentPageTarget.value ?: return
         if (hasActivePageSession(pageTarget)) return
@@ -295,12 +288,11 @@ class VideoViewModel @Inject constructor(
     private fun syncWithPlaybackTarget() {
         viewModelScope.launch {
             currentTarget.collect { target ->
-                val active = target
-                if (active == null) return@collect
+                if (target == null) return@collect
                 val pageTarget = currentPageTarget.value ?: return@collect
-                if (!active.isSameEntry(pageTarget)) return@collect
-                if (pageTarget != active) {
-                    _targetStack.value = _targetStack.value.dropLast(1) + active
+                if (!target.isSameEntry(pageTarget)) return@collect
+                if (pageTarget != target) {
+                    _targetStack.value = _targetStack.value.dropLast(1) + target
                 }
             }
         }

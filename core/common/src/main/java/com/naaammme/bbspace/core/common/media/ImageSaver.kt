@@ -45,10 +45,11 @@ object ImageSaver {
                     put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
             }
-            outUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            val savedUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 ?: error("创建图片失败")
+            outUri = savedUri
             conn.inputStream.use { input ->
-                resolver.openOutputStream(outUri, "w")?.use { output ->
+                resolver.openOutputStream(savedUri, "w")?.use { output ->
                     input.copyTo(output)
                 } ?: error("打开图片文件失败")
             }
@@ -56,9 +57,9 @@ object ImageSaver {
                 val done = ContentValues().apply {
                     put(MediaStore.MediaColumns.IS_PENDING, 0)
                 }
-                resolver.update(outUri, done, null, null)
+                resolver.update(savedUri, done, null, null)
             }
-            outUri!!
+            savedUri
         }.onFailure {
             outUri?.let { resolver.delete(it, null, null) }
         }.also {

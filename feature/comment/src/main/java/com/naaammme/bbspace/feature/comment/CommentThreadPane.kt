@@ -181,7 +181,7 @@ private fun CommentThreadContent(
                         contentType = "state"
                     ) {
                         RetryCard(
-                            text = state.error.orEmpty(),
+                            text = state.error,
                             button = "重试",
                             onRetry = onRetry
                         )
@@ -230,7 +230,7 @@ private fun CommentThreadContent(
                     contentType = "footer"
                 ) {
                     RetryCard(
-                        text = state.loadMoreError.orEmpty(),
+                        text = state.loadMoreError,
                         button = "重试加载更多",
                         onRetry = onLoadMore
                     )

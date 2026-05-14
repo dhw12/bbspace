@@ -6,7 +6,6 @@ import com.naaammme.bbspace.core.model.DanmakuItem
 import com.naaammme.bbspace.core.model.DanmakuSessionState
 import com.naaammme.bbspace.core.model.DanmakuWindow
 import com.naaammme.bbspace.core.model.toDanmakuWindowId
-import master.flame.danmaku.danmaku.model.BaseDanmaku
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import master.flame.danmaku.api.DanmakuSegmentData
@@ -76,7 +75,7 @@ class DanmakuOverlayState internal constructor(
             hasSpeedChange ||
             !canPlay ||
             !hasSource ||
-            (canPlay && lastPlayState?.isPlaying != true)
+            lastPlayState?.isPlaying != true
         if (needStateOverride) {
             val anchorMs = if (hasSeek) {
                 clampedPositionMs
@@ -103,22 +102,21 @@ class DanmakuOverlayState internal constructor(
         val hasSpeedChange = lastPlaybackSpeed != clampedSpeed
         lastPlaybackSpeed = clampedSpeed
         applyConfig(config)
-        val canPlay = isPlaying
         val needStateOverride = hasSpeedChange ||
-            !canPlay ||
+            !isPlaying ||
             !hasSource ||
-            (canPlay && lastPlayState?.isPlaying != true)
+            lastPlayState?.isPlaying != true
         if (needStateOverride) {
             timeProvider.overrideState(
                 positionMs = timeProvider.getCurrentTimeMs(),
-                isPlaying = canPlay,
+                isPlaying = isPlaying,
                 speed = clampedSpeed
             )
         }
         syncPlayback(
             enabled = config.enabled,
             hasSource = hasSource,
-            isPlaying = canPlay
+            isPlaying = isPlaying
         )
     }
 

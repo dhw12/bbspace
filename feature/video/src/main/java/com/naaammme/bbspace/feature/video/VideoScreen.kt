@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -92,10 +93,9 @@ fun VideoScreen(
     val isPortraitVideo = remember(playerState.currentStream) {
         val width = playerState.currentStream?.width ?: return@remember false
         val height = playerState.currentStream?.height ?: return@remember false
-        width > 0 && height > width
+        width in 1..<height
     }
 
-    val toggleFull = { isFull = !isFull }
     val handleBack = {
         if (fullOn) {
             isFull = false
@@ -119,11 +119,10 @@ fun VideoScreen(
     }
 
     DisposableEffect(act, fullOn) {
-        val a = act
-        if (a == null) {
+        if (act == null) {
             onDispose { }
         } else {
-            val win = a.window
+            val win = act.window
             val ctrl = WindowInsetsControllerCompat(win, win.decorView)
             if (fullOn) {
                 ctrl.systemBarsBehavior =
@@ -139,8 +138,8 @@ fun VideoScreen(
     }
 
     DisposableEffect(act, fullOn, settingsState.playback.autoRotateFullscreen, isPortraitVideo) {
-        val a = act ?: return@DisposableEffect onDispose { }
-        a.requestedOrientation = if (
+        act ?: return@DisposableEffect onDispose { }
+        act.requestedOrientation = if (
             fullOn &&
             settingsState.playback.autoRotateFullscreen &&
             !isPortraitVideo
@@ -226,7 +225,7 @@ fun VideoScreen(
                 modifier = playerPaneMod,
                 viewModel = viewModel,
                 isFull = fullOn,
-                onToggleFull = toggleFull,
+                onToggleFull = { isFull = !isFull },
                 onBackClick = handleBack,
                 danmakuOverlayState = danmakuOverlayState
             )
@@ -274,10 +273,10 @@ private fun DownloadTaskSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var kind by rememberSaveable { mutableStateOf(VideoDownloadKind.VIDEO) }
     var videoQuality by rememberSaveable {
-        mutableStateOf(currentVideoQuality.takeIf { it > 0 } ?: 80)
+        mutableIntStateOf(currentVideoQuality.takeIf { it > 0 } ?: 80)
     }
     var audioQuality by rememberSaveable {
-        mutableStateOf(currentAudioQuality.takeIf { it > 0 } ?: 0)
+        mutableIntStateOf(currentAudioQuality.takeIf { it > 0 } ?: 0)
     }
 
     ModalBottomSheet(

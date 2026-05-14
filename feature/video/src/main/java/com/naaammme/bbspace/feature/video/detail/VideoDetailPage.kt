@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,7 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -112,7 +110,6 @@ internal fun VideoDetailPage(
 
             DetailPager(
                 modifier = Modifier
-                    .fillMaxHeight()
                     .weight(1f),
                 pageState = pageState,
                 commentSubject = commentSubject,
@@ -151,9 +148,9 @@ internal fun VideoDetailPage(
         )
     }
 
-    if (sheetTp == SHEET_SEASON && detail?.season != null) {
+    detail?.season?.takeIf { sheetTp == SHEET_SEASON }?.let { season ->
         SeasonSheet(
-            season = detail.season!!,
+            season = season,
             curCid = pageState.curCid,
             onDismiss = { sheetTp = null },
             onOpenEpisode = { route ->
@@ -167,9 +164,8 @@ internal fun VideoDetailPage(
         PageSheet(
             pages = detail.pages,
             curCid = pageState.curCid,
-            onDismiss = { sheetTp = null },
+            onDismiss = {},
             onSwitchPage = { cid ->
-                sheetTp = null
                 onSwitchPage(cid)
             }
         )
@@ -208,7 +204,7 @@ private fun DetailPager(
         when (page) {
             0 -> VideoInfoList(
                 pageState = pageState,
-                itemMod = itemMod,
+                modifier = itemMod,
                 topPad = infoTopPad,
                 descOn = descOn,
                 tagOn = tagOn,
@@ -239,7 +235,7 @@ private fun DetailPager(
 @Composable
 private fun VideoInfoList(
     pageState: VideoPageState,
-    itemMod: Modifier,
+    modifier: Modifier,
     topPad: Dp,
     descOn: Boolean,
     tagOn: Boolean,
@@ -258,7 +254,7 @@ private fun VideoInfoList(
     ) {
         detailItems(
             pageState = pageState,
-            itemMod = itemMod,
+            itemMod = modifier,
             descOn = descOn,
             tagOn = tagOn,
             onToggleDesc = onToggleDesc,
@@ -308,7 +304,7 @@ private fun LazyListScope.detailItems(
                 contentType = "state"
             ) {
                 StateCard(
-                    text = pageState.detailError.orEmpty(),
+                    text = pageState.detailError,
                     modifier = itemMod,
                     isError = true
                 )
@@ -316,7 +312,7 @@ private fun LazyListScope.detailItems(
         }
 
         pageState.detail != null -> {
-            val detail = pageState.detail!!
+            val detail = pageState.detail
             item(
                 key = "summary",
                 contentType = "summary"
@@ -394,13 +390,13 @@ private fun LazyListScope.detailItems(
 @Composable
 private fun VideoSummarySection(
     detail: VideoDetail,
+    modifier: Modifier = Modifier,
     descOn: Boolean,
     tagOn: Boolean,
     onToggleDesc: () -> Unit,
     onToggleTag: () -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onDownloadClick: () -> Unit
 ) {
     val spaceRoute = detail.toSpaceRouteOrNull()
     Column(
@@ -432,8 +428,8 @@ private fun VideoSummarySection(
 @Composable
 private fun OwnerCapsule(
     owner: VideoOwner,
-    onClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
     CapsuleCard(
         modifier = modifier,
@@ -565,8 +561,8 @@ private fun InfoCapsule(
 @Composable
 private fun ActionCapsule(
     stat: VideoStat?,
-    onDownloadClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDownloadClick: () -> Unit
 ) {
     CapsuleCard(modifier = modifier) {
         FlowRow(
@@ -705,8 +701,8 @@ private fun ActionChip(
 private fun SeasonEntryCard(
     season: VideoSeason,
     curCid: Long?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     val (title, subTitle, countText) = seasonEntryText(season, curCid)
 
@@ -746,8 +742,8 @@ private fun SeasonEntryCard(
 private fun PageEntryCard(
     pages: List<VideoPagePart>,
     curCid: Long?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     val (title, subTitle, countText) = pageEntryText(pages, curCid)
 
@@ -965,7 +961,7 @@ private fun SeasonEpisodeRow(
                     modifier = Modifier.weight(1f)
                 )
                 if (selected) {
-                    CurBadge("当前播放")
+                    CurBadge()
                 }
             }
             ep.subTitle?.takeIf(String::isNotBlank)?.let {
@@ -1010,7 +1006,7 @@ private fun PageSheetRow(
                 modifier = Modifier.weight(1f)
             )
             if (selected) {
-                CurBadge("当前播放")
+                CurBadge()
             }
         }
         subTitle?.takeIf(String::isNotBlank)?.let {
@@ -1126,13 +1122,13 @@ private fun StateCard(
 }
 
 @Composable
-private fun CurBadge(text: String) {
+private fun CurBadge() {
     Surface(
         color = MaterialTheme.colorScheme.primary,
         shape = MaterialTheme.shapes.extraSmall
     ) {
         Text(
-            text = text,
+            text = "当前播放",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)

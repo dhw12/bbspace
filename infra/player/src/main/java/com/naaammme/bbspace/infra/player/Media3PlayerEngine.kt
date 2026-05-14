@@ -1,7 +1,6 @@
 ﻿package com.naaammme.bbspace.infra.player
 
 import android.content.Context
-import android.os.SystemClock
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -23,7 +22,6 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import com.naaammme.bbspace.core.common.UserAgentBuilder
 import com.naaammme.bbspace.core.common.log.Logger
-import com.naaammme.bbspace.infra.crypto.DeviceIdentity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +42,6 @@ import kotlin.math.max
 @Singleton
 class Media3PlayerEngine @Inject constructor(
     @ApplicationContext context: Context,
-    deviceIdentity: DeviceIdentity,
     okHttpClient: OkHttpClient
 ) : PlayerEngine {
 

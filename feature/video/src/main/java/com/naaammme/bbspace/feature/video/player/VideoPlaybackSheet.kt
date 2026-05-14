@@ -31,7 +31,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,18 +71,14 @@ internal fun VideoPlaybackSheet(
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var section by rememberSaveable { mutableStateOf(PlaybackSheetSection.Info) }
-    val configuration = LocalConfiguration.current
-    val shouldLimitHeight = limitUnderPlayer && configuration.screenHeightDp > configuration.screenWidthDp
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val shouldLimitHeight = limitUnderPlayer && windowInfo.containerSize.height > windowInfo.containerSize.width
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val maxContentHeight = remember(
-        shouldLimitHeight,
-        configuration.screenHeightDp,
-        configuration.screenWidthDp,
-        statusBarHeight
-    ) {
+    val maxContentHeight = remember(shouldLimitHeight, windowInfo.containerSize, statusBarHeight, density) {
         if (shouldLimitHeight) {
-            val screenHeight = configuration.screenHeightDp.dp
-            val screenWidth = configuration.screenWidthDp.dp
+            val screenHeight = with(density) { windowInfo.containerSize.height.toDp() }
+            val screenWidth = with(density) { windowInfo.containerSize.width.toDp() }
             val playerHeight = statusBarHeight + (screenWidth * (9f / 16f))
             val sheetTopPadding = 24.dp
             (screenHeight - playerHeight - sheetTopPadding).coerceAtLeast(240.dp)

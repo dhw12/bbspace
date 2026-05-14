@@ -5,10 +5,9 @@ import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import com.naaammme.bbspace.core.model.DanmakuConfig
 import com.naaammme.bbspace.core.model.DanmakuSessionState
@@ -64,6 +63,8 @@ fun rememberDanmakuOverlayState(
     }
 }
 
+@Suppress("UnsafeOptInUsageError")
+@UnstableApi
 @Composable
 fun DanmakuLayer(
     playerView: PlayerView,
