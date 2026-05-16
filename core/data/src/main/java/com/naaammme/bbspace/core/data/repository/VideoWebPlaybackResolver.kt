@@ -1,5 +1,6 @@
 package com.naaammme.bbspace.core.data.repository
 
+import com.naaammme.bbspace.core.data.AppSettings
 import com.naaammme.bbspace.core.model.PlaybackAudio
 import com.naaammme.bbspace.core.model.PlaybackRequest
 import com.naaammme.bbspace.core.model.PlaybackSource
@@ -9,15 +10,18 @@ import com.naaammme.bbspace.infra.web.WebPlayUrlClient
 import com.naaammme.bbspace.infra.web.WebPlayUrlRequest
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
 
 @Singleton
 class VideoWebPlaybackResolver @Inject constructor(
+    private val appSettings: AppSettings,
     private val webPlayUrlClient: WebPlayUrlClient
 ) {
     suspend fun fetchPlaybackSource(request: PlaybackRequest): PlaybackSource {
         val videoId = request.videoId
+        val preferredCodecId = appSettings.preferredCodec.first().toVideoCodecId()
         val json = webPlayUrlClient.fetchPlayback(
             WebPlayUrlRequest(
                 aid = videoId.aid,
@@ -25,18 +29,19 @@ class VideoWebPlaybackResolver @Inject constructor(
                 cid = videoId.cid
             )
         )
-        return mapPlaybackSource(request, json)
+        return mapPlaybackSource(request, json, preferredCodecId)
     }
 
     private fun mapPlaybackSource(
         request: PlaybackRequest,
-        json: JSONObject
+        json: JSONObject,
+        preferredCodecId: Int
     ): PlaybackSource {
         val data = json.optJSONObject("data") ?: error("web 取流缺少 data")
         val dash = data.optJSONObject("dash") ?: error("web 取流缺少 dash")
         val descriptions = buildQualityDescriptions(data)
         val audios = buildAudios(dash)
-        val streams = buildStreams(dash, descriptions)
+        val streams = buildStreams(dash, descriptions, preferredCodecId)
         if (streams.isEmpty()) error("web 取流没有可用视频流")
 
         return PlaybackSource(
@@ -56,39 +61,55 @@ class VideoWebPlaybackResolver @Inject constructor(
 
     private fun buildStreams(
         dash: JSONObject,
-        descriptions: Map<Int, String>
+        descriptions: Map<Int, String>,
+        preferredCodecId: Int
     ): List<PlaybackStream> {
         val videos = dash.optJSONArray("video") ?: return emptyList()
-        return buildList {
-            for (i in 0 until videos.length()) {
-                val item = videos.optJSONObject(i) ?: continue
-                val videoUrl = item.optString("baseUrl").ifBlank { item.optString("base_url") }
-                if (videoUrl.isBlank()) continue
-                val quality = item.optInt("id")
-                add(
-                    PlaybackStream.Dash(
-                        quality = quality,
-                        format = "dash",
-                        description = descriptions[quality] ?: "画质 $quality",
-                        width = item.optInt("width").takeIf { it > 0 },
-                        height = item.optInt("height").takeIf { it > 0 },
-                        mimeType = item.optString("mimeType").ifBlank {
-                            item.optString("mime_type").ifBlank { "video/mp4" }
-                        },
-                        needVip = false,
-                        needLogin = false,
-                        supportDrm = false,
-                        videoUrl = videoUrl,
-                        videoBackupUrls = item.optStringList("backupUrl", "backup_url"),
-                        audioId = null,
-                        bandwidth = item.optInt("bandwidth"),
-                        codecId = item.optInt("codecid"),
-                        frameRate = item.optString("frameRate").ifBlank {
-                            item.optString("frame_rate").takeIf(String::isNotBlank)
-                        }
-                    )
+        val byQuality = linkedMapOf<Int, MutableList<PlaybackStream.Dash>>()
+        for (i in 0 until videos.length()) {
+            val item = videos.optJSONObject(i) ?: continue
+            val videoUrl = item.optString("baseUrl").ifBlank { item.optString("base_url") }
+            if (videoUrl.isBlank()) continue
+            val quality = item.optInt("id")
+            byQuality.getOrPut(quality) { mutableListOf() }.add(
+                PlaybackStream.Dash(
+                    quality = quality,
+                    format = "dash",
+                    description = descriptions[quality] ?: "画质 $quality",
+                    width = item.optInt("width").takeIf { it > 0 },
+                    height = item.optInt("height").takeIf { it > 0 },
+                    mimeType = item.optString("mimeType").ifBlank {
+                        item.optString("mime_type").ifBlank { "video/mp4" }
+                    },
+                    needVip = false,
+                    needLogin = false,
+                    supportDrm = false,
+                    videoUrl = videoUrl,
+                    videoBackupUrls = item.optStringList("backupUrl", "backup_url"),
+                    audioId = null,
+                    bandwidth = item.optInt("bandwidth"),
+                    codecId = item.optInt("codecid"),
+                    frameRate = item.optString("frameRate").ifBlank {
+                        item.optString("frame_rate").takeIf(String::isNotBlank)
+                    }
                 )
+            )
+        }
+        return buildList {
+            byQuality.values.forEach { group ->
+                val (preferred, others) = group.partition { it.codecId == preferredCodecId }
+                addAll(preferred)
+                addAll(others)
             }
+        }
+    }
+
+    private fun Int.toVideoCodecId(): Int {
+        return when (this) {
+            1 -> CODECID_AVC
+            2 -> CODECID_HEVC
+            3 -> CODECID_AV1
+            else -> CODECID_HEVC
         }
     }
 
@@ -158,5 +179,11 @@ class VideoWebPlaybackResolver @Inject constructor(
                 if (value.isNotBlank()) add(value)
             }
         }.distinct()
+    }
+
+    private companion object {
+        const val CODECID_AVC = 7
+        const val CODECID_HEVC = 12
+        const val CODECID_AV1 = 13
     }
 }

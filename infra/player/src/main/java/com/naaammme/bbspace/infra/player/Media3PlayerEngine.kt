@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -46,9 +47,10 @@ class Media3PlayerEngine @Inject constructor(
 ) : PlayerEngine {
 
     private val appContext = context.applicationContext
-    private val appOkHttpClient = okHttpClient
-    private val plainOkHttpClient = OkHttpClient.Builder().build()
-    private val webRequestHeaders = mapOf("Referer" to "https://www.bilibili.com/")
+    private val videoOkHttpClient = okHttpClient.newBuilder()
+        .dns(Dns.SYSTEM)
+        .build()
+    private val webRequestHeaders = mapOf("Referer" to "https://www.bilibili.com")
 
     private val _player = MutableStateFlow<Player?>(null)
     override val player: StateFlow<Player?> = _player.asStateFlow()
@@ -346,16 +348,16 @@ class Media3PlayerEngine @Inject constructor(
     }
 
     private fun buildMediaSourceFactory(source: EngineSource): ProgressiveMediaSource.Factory {
-        val isWebPlayback = source.usesWebPlaybackHeaders()
-        val userAgent = if (isWebPlayback) {
-            UserAgentBuilder.buildWebUserAgent()
-        } else {
-            UserAgentBuilder.buildPlayerUserAgent()
-        }
-        val upstreamFactory = OkHttpDataSource.Factory(
-            if (isWebPlayback) plainOkHttpClient else appOkHttpClient
-        ).setUserAgent(userAgent)
-        if (isWebPlayback) {
+        val useWebPlaybackHeaders = source.usesWebPlaybackHeaders()
+        val upstreamFactory = OkHttpDataSource.Factory(videoOkHttpClient)
+            .setUserAgent(
+                if (useWebPlaybackHeaders) {
+                    UserAgentBuilder.buildWebUserAgent()
+                } else {
+                    UserAgentBuilder.buildPlayerUserAgent()
+                }
+            )
+        if (useWebPlaybackHeaders) {
             upstreamFactory.setDefaultRequestProperties(webRequestHeaders)
         }
         return ProgressiveMediaSource.Factory(
