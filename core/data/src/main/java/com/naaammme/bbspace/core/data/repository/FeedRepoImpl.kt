@@ -182,7 +182,7 @@ class FeedRepoImpl @Inject constructor(
         }
     }
 
-    private val adCardGotos = setOf("banner", "ad_web_s", "ad_web", "ad", "ad_player")
+    private val adCardGotos = setOf("banner", "ad_web_s", "ad_web", "ad_web_gif", "ad", "ad_player")
 
     private fun parseItems(arr: org.json.JSONArray?, useHdProfile: Boolean): List<FeedItem> {
         if (arr == null) return emptyList()

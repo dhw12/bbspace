@@ -37,85 +37,52 @@ class GaiaReporter @Inject constructor(
         private const val FETCH_KEY_EP = "bilibili.gaia.gw.Gaia/ExGetAxe"
         private const val UPLOAD_EP = "bilibili.gaia.gw.Gaia/ExClimbAppleTrees"
 
-        private val SENSITIVE_PREFIXES = listOf(
-            "de.robv.android.xposed",
+        private val APP_LIST_BLACKLIST = setOf(
+            "com.bilibili.app.blue",
+            "tv.danmaku.bili",
             "com.topjohnwu.magisk",
+            "com.topjohnwu.magisk.lite",
+            "io.github.huskydg.magisk",
+            "me.weishu.kernelsu",
+            "me.bmax.apatch",
+            "me.bmax.apatch.next",
+            "de.robv.android.xposed.installer",
+            "org.lsposed.manager",
+            "org.meowcat.edxposed.manager",
+            "com.saurik.substrate",
+            "com.devadvance.rootcloak",
+            "com.devadvance.rootcloak2",
+            "com.koushikdutta.superuser",
+            "eu.chainfire.supersu",
+            "com.noshufou.android.su",
+            "com.kingroot.kinguser",
+            "com.kingo.root",
+            "com.chelpus.lackypatch",
+            "com.android.vending.billing.InAppBillingService.COIN",
+            "com.dimonvideo.luckypatcher",
+            "com.lbe.parallel",
+            "com.bly.dkplat",
+            "io.va.exposed",
+            "com.excelliance.dualaid",
+            "com.lody.virtual",
+            "com.qihoo.magic"
+        )
+
+        private val APP_LIST_BLACKLIST_PREFIXES = listOf(
+            "de.robv.android.xposed",
+            "org.lsposed",
+            "org.meowcat.edxposed",
+            "com.topjohnwu.magisk",
+            "io.github.huskydg.magisk",
+            "me.weishu.kernelsu",
+            "me.bmax.apatch",
             "com.bly.dkplat",
             "com.lbe.parallel",
-            "com.ludashi.superboost",
-            "com.excelliance.dualaid"
+            "com.excelliance.dualaid",
+            "com.lody.virtual"
         )
 
-        private val MOCK_SYS_APPS = listOf(
-            "com.android.settings",
-            "com.android.phone",
-            "com.android.camera",
-            "com.android.gallery3d",
-            "com.android.contacts",
-            "com.android.mms",
-            "com.android.calendar",
-            "com.android.deskclock",
-            "com.android.calculator2",
-            "com.android.chrome",
-            "com.google.android.gms",
-            "com.google.android.gsf",
-            "com.android.systemui",
-            "com.android.launcher3",
-            "com.android.inputmethod.latin",
-            "com.android.bluetooth",
-            "com.android.nfc",
-            "com.android.wifi",
-            "com.android.providers.media",
-            "com.android.providers.contacts",
-            "com.android.providers.calendar",
-            "com.android.providers.downloads",
-            "com.android.packageinstaller",
-            "com.android.certinstaller",
-            "com.android.keychain",
-            "com.android.vpndialogs",
-            "com.android.shell",
-            "com.android.statementservice",
-            "com.android.storagemanager",
-            "com.android.externalstorage",
-            "com.android.documentsui",
-            "com.android.printspooler",
-            "com.android.musicfx",
-            "com.android.soundrecorder",
-            "com.android.filemanager",
-            "com.android.browser",
-            "com.android.email",
-            "com.android.exchange",
-            "com.android.backupconfirm",
-            "com.android.companiondevicemanager",
-            "com.google.android.gsf.login",
-            "com.google.android.syncadapters.contacts",
-            "com.google.android.syncadapters.calendar",
-            "com.google.android.backuptransport",
-            "com.google.android.feedback",
-            "com.google.android.onetimeinitializer",
-            "com.google.android.partnersetup"
-        )
-
-        private val MOCK_USER_APPS = listOf(
-            "tv.danmaku.bili",
-            "com.tencent.mm",
-            "com.eg.android.AlipayGphone",
-            "com.tencent.mobileqq",
-            "com.taobao.taobao",
-            "com.jingdong.app.mall",
-            "com.netease.cloudmusic",
-            "com.ss.android.ugc.aweme",
-            "com.sina.weibo",
-            "com.zhihu.android",
-            "com.baidu.BaiduMap",
-            "com.dianping.v1",
-            "com.meituan.android.takeaway",
-            "com.autonavi.minimap",
-            "com.xunmeng.pinduoduo",
-            "me.ele"
-        )
-
-        private const val MIN_APP_COUNT = 10
+        private const val MAX_APP_COUNT = 100
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -142,7 +109,8 @@ class GaiaReporter @Inject constructor(
                 return
             }
 
-            val (sysApps, userApps) = collectApps()
+            val userApps = collectApps()
+            val sysApps = emptyList<String>()
             Logger.d(TAG) { "应用列表收集完成 sys=${sysApps.size} user=${userApps.size}" }
 
             val source = if (isFirst) "first_installation" else "first_open"
@@ -201,33 +169,34 @@ class GaiaReporter @Inject constructor(
         )
     }
 
-    private fun collectApps(): Pair<List<String>, List<String>> {
-        try {
+    private fun collectApps(): List<String> {
+        return try {
             val packages = context.packageManager
                 .getInstalledApplications(PackageManager.GET_META_DATA)
-            val sys = mutableListOf<String>()
             val user = mutableListOf<String>()
 
             for (app in packages) {
                 val pkg = app.packageName
-                if (SENSITIVE_PREFIXES.any { pkg.startsWith(it) }) continue
-                if ((app.flags and ApplicationInfo.FLAG_SYSTEM) != 0) {
-                    sys.add(pkg)
-                } else {
+                if (
+                    (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 &&
+                    pkg.isNotBlank() &&
+                    !isBlacklistedApp(pkg)
+                ) {
                     user.add(pkg)
+                    if (user.size >= MAX_APP_COUNT) break
                 }
             }
 
-            if (sys.size + user.size < MIN_APP_COUNT) {
-                Logger.w(TAG) { "应用列表过少(sys=${sys.size} user=${user.size}) 降级使用mock数据" }
-                return Pair(MOCK_SYS_APPS, MOCK_USER_APPS)
-            }
-
-            return Pair(sys, user)
+            user
         } catch (e: Exception) {
-            Logger.w(TAG) { "收集应用列表失败 使用mock数据" }
-            return Pair(MOCK_SYS_APPS, MOCK_USER_APPS)
+            Logger.w(TAG) { "收集应用列表失败 使用空列表" }
+            emptyList()
         }
+    }
+
+    private fun isBlacklistedApp(pkg: String): Boolean {
+        return pkg in APP_LIST_BLACKLIST ||
+                APP_LIST_BLACKLIST_PREFIXES.any { prefix -> pkg.startsWith(prefix) }
     }
 
     private fun markUploaded() {
