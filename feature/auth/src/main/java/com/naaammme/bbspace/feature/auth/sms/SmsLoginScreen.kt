@@ -92,6 +92,7 @@ fun SmsLoginScreen(
                     value = phone,
                     onValueChange = { phone = it.filter { c -> c.isDigit() } },
                     label = { Text("手机号") },
+                    shape = MaterialTheme.shapes.medium,
                     prefix = {
                         Row(
                             modifier = Modifier.clickable {
@@ -151,6 +152,7 @@ fun SmsLoginScreen(
                     value = smsCode,
                     onValueChange = { smsCode = it.filter { c -> c.isDigit() }.take(6) },
                     label = { Text("验证码") },
+                    shape = MaterialTheme.shapes.medium,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f)

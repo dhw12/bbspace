@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,7 +29,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.AvatarImage
 import com.naaammme.bbspace.core.designsystem.component.CoverImage
-import com.naaammme.bbspace.core.designsystem.component.DynamicCardSkeleton
 import com.naaammme.bbspace.core.designsystem.component.UpListRow
 import com.naaammme.bbspace.core.model.DynamicBody
 import com.naaammme.bbspace.core.model.DynamicImage
@@ -93,12 +93,18 @@ fun DynamicFeed(
         }
 
         if (isLoadingMore) {
-            items(
-                count = LOAD_MORE_SKELETON_COUNT,
-                key = { index -> "dynamic_loading_$index" },
-                contentType = { "loading" }
+            item(
+                key = "dynamic_loading_more",
+                contentType = "loading"
             ) {
-                DynamicCardSkeleton()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
         }
 
@@ -460,4 +466,3 @@ private fun formatCount(value: Long): String {
     }
 }
 
-private const val LOAD_MORE_SKELETON_COUNT = 3

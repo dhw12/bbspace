@@ -313,6 +313,7 @@ private fun InputCard(
                 onValueChange = onInputChange,
                 enabled = enabled,
                 singleLine = true,
+                shape = MaterialTheme.shapes.medium,
                 label = { Text("链接、av号或BV号") },
                 modifier = Modifier.fillMaxWidth()
             )

@@ -51,7 +51,7 @@ class AppSettings @Inject constructor(
             themeMode = prefs[themeModeKey]?.let { ThemeMode.valueOf(it) } ?: ThemeMode.SYSTEM,
             seedColor = Color(prefs[seedColorKey] ?: 0xFFFB7299.toInt()),
             useDynamicColor = prefs[useDynamicColorKey] ?: true,
-            swapBaseColors = prefs[swapBaseColorsKey] ?: false,
+            swapBaseColors = prefs[swapBaseColorsKey] ?: true,
             fontScale = prefs[fontScaleKey] ?: 1.0f,
             pullRefreshDistanceDp = (prefs[pullRefreshDistanceKey] ?: DEFAULT_PULL_REFRESH_DISTANCE_DP)
                 .coerceIn(MIN_PULL_REFRESH_DISTANCE_DP, MAX_PULL_REFRESH_DISTANCE_DP),
