@@ -91,15 +91,18 @@ private fun parseCommentText(
     val emoteMap = emotes.associateBy(CommentEmote::text)
     val builder = AnnotatedString.Builder()
     val parsedEmotes = mutableListOf<ParsedCommentEmote>()
+    val seenEmoteIds = mutableSetOf<String>()
     var lastIndex = 0
     COMMENT_EMOTE_REGEX.findAll(text).forEach { match ->
         val emote = emoteMap[match.value] ?: return@forEach
         if (match.range.first > lastIndex) {
             builder.append(text.substring(lastIndex, match.range.first))
         }
-        val id = "comment_emote_${parsedEmotes.size}"
+        val id = "comment_emote_${emote.text}"
         builder.appendInlineContent(id, emote.text)
-        parsedEmotes += ParsedCommentEmote(id = id, emote = emote)
+        if (seenEmoteIds.add(id)) {
+            parsedEmotes += ParsedCommentEmote(id = id, emote = emote)
+        }
         lastIndex = match.range.last + 1
     }
     if (parsedEmotes.isEmpty()) {
