@@ -1,12 +1,13 @@
 package com.naaammme.bbspace
 
 import android.content.Intent
-import android.net.Uri
+import android.hardware.display.DisplayManager
 import android.os.Bundle
 import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.net.toUri
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,6 +24,8 @@ import com.naaammme.bbspace.core.designsystem.component.AppUpdateDialogState
 import com.naaammme.bbspace.core.designsystem.theme.BiliTheme
 import com.naaammme.bbspace.core.designsystem.theme.FrameRateMode
 import com.naaammme.bbspace.core.designsystem.theme.ThemeConfig
+import com.naaammme.bbspace.core.model.WebLinkParser
+import com.naaammme.bbspace.core.model.WebLinkTarget
 import com.naaammme.bbspace.navigation.AppNavHost
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
@@ -43,11 +46,14 @@ class MainActivity : ComponentActivity() {
 
     private var cachedDisplayModes: Array<Display.Mode>? = null
 
+    private var pendingAppLink by mutableStateOf<WebLinkTarget?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {
             autoCheckUpdate()
         }
+        pendingAppLink = toAppLink(intent)
         enableEdgeToEdge()
         setContent {
             val themeConfig by appSettings.themeConfig.collectAsState(initial = ThemeConfig())
@@ -55,10 +61,13 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(themeConfig.preferredFrameRate) {
                 applyFrameRate(themeConfig.preferredFrameRate)
             }
-            // 全局文本选择
             BiliTheme(config = themeConfig) {
                 SelectionContainer {
-                    AppNavHost(themeConfig = themeConfig)
+                    AppNavHost(
+                        themeConfig = themeConfig,
+                        appLink = pendingAppLink,
+                        onAppLinkConsumed = { pendingAppLink = null }
+                    )
                 }
                 updateDialog?.let { release ->
                     AppUpdateDialog(
@@ -66,12 +75,18 @@ class MainActivity : ComponentActivity() {
                         onDismiss = { updateDialog = null },
                         onOpenUrl = {
                             updateDialog = null
-                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it)))
+                            startActivity(Intent(Intent.ACTION_VIEW, it.toUri()))
                         }
                     )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingAppLink = toAppLink(intent)
     }
 
     private fun autoCheckUpdate() {
@@ -100,13 +115,29 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun findBestDisplayMode(targetHz: Float): Display.Mode? {
-        val currentMode = display?.mode ?: return null
+        val display = getSystemService(DisplayManager::class.java)
+            ?.getDisplay(Display.DEFAULT_DISPLAY)
+            ?: return null
+        val currentMode = display.mode
         val w = currentMode.physicalWidth
         val h = currentMode.physicalHeight
-        val modes = cachedDisplayModes ?: display?.supportedModes?.also { cachedDisplayModes = it } ?: return null
+        val modes = cachedDisplayModes ?: display.supportedModes
+            ?.also { cachedDisplayModes = it }
+            ?: return null
         return modes
             .filter { it.physicalWidth == w && it.physicalHeight == h }
             .minByOrNull { abs(it.refreshRate - targetHz) }
             ?.takeIf { abs(it.refreshRate - targetHz) < 5f }
+    }
+
+    private fun toAppLink(intent: Intent?): WebLinkTarget? {
+        val url = intent?.dataString ?: return null
+        return when (val target = WebLinkParser.parse(url)) {
+            is WebLinkTarget.ToVideo,
+            is WebLinkTarget.ToSpace,
+            is WebLinkTarget.ToLive -> target
+            is WebLinkTarget.External,
+            is WebLinkTarget.Stay -> null
+        }
     }
 }

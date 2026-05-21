@@ -31,6 +31,7 @@ import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
 import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.WebLinkTarget
 import com.naaammme.bbspace.feature.dynamic.DynamicScreen
 import com.naaammme.bbspace.feature.dynamic.navigation.dynamicDetailScreen
 import com.naaammme.bbspace.feature.dynamic.navigation.navigateToDynamicDetail
@@ -73,7 +74,11 @@ import com.naaammme.bbspace.playback.PlaybackHostViewModel
 private const val MAIN_ROUTE = "main"
 
 @Composable
-fun AppNavHost(themeConfig: ThemeConfig = ThemeConfig()) {
+fun AppNavHost(
+    themeConfig: ThemeConfig = ThemeConfig(),
+    appLink: WebLinkTarget? = null,
+    onAppLinkConsumed: () -> Unit = {}
+) {
     val rootNavController = rememberNavController()
     val downloadViewModel: DownloadViewModel = hiltViewModel()
     val playbackHostViewModel: PlaybackHostViewModel = hiltViewModel()
@@ -156,6 +161,21 @@ fun AppNavHost(themeConfig: ThemeConfig = ThemeConfig()) {
         if (forcedDismissMode != null && hostMode != PlaybackHostMode.Expanded) {
             forcedDismissMode = null
         }
+    }
+
+    LaunchedEffect(appLink) {
+        when (val target = appLink ?: return@LaunchedEffect) {
+            is WebLinkTarget.ToVideo -> openVideo(target.target)
+            is WebLinkTarget.ToSpace -> rootNavController.navigateToSpace(
+                SpaceRoute(mid = target.mid)
+            )
+            is WebLinkTarget.ToLive -> openLive(
+                LiveRoute(roomId = target.roomId)
+            )
+            is WebLinkTarget.External,
+            is WebLinkTarget.Stay -> Unit
+        }
+        onAppLinkConsumed()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
