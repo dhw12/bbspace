@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.media.MediaDrm
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.edit
 import java.net.NetworkInterface
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
@@ -18,8 +19,9 @@ import kotlin.random.Random
  * 生成本地 buvid: DRM ID(XU) > MAC(XY) > Android ID(XX) > UUID(XW)
  */
 class DeviceIdentity(context: Context) {
+    private val appContext = context.applicationContext
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("device_identity", Context.MODE_PRIVATE)
+        appContext.getSharedPreferences("device_identity", Context.MODE_PRIVATE)
 
     val brand: String = Build.BRAND
     val model: String = Build.MODEL
@@ -73,9 +75,8 @@ class DeviceIdentity(context: Context) {
             return encodeBuvid("XU", drmId)
         }
 
-        val realMac = mac.replace(":", "")
-        if (realMac.length == 12 && realMac != "020000000000") {
-            return encodeBuvid("XY", realMac)
+        if (isValidMac(mac)) {
+            return encodeBuvid("XY", mac)
         }
 
         if (isValidAndroidId(realAndroidId)) {
@@ -87,7 +88,7 @@ class DeviceIdentity(context: Context) {
     }
 
     private fun save(key: String, value: String) {
-        prefs.edit().putString(key, value).apply()
+        prefs.edit { putString(key, value) }
     }
 
     private fun getRealMac(): String {
@@ -95,13 +96,24 @@ class DeviceIdentity(context: Context) {
             NetworkInterface.getNetworkInterfaces()?.toList()
                 ?.firstOrNull { it.name.equals("wlan0", ignoreCase = true) }
                 ?.hardwareAddress
-                ?.joinToString(":") { "%02x".format(it) }
+                ?.joinToString(":") { "%02x".format(it.toInt() and 0xff) }
                 ?: ""
         }.getOrDefault("")
     }
 
     companion object {
         private val FAKE_ANDROID_ID = setOf("0000000000000000")
+
+        private val FAKE_MAC = setOf(
+            "00:90:4C:11:22:33",
+            "02:00:00:00:00:00",
+            "02:00:00:44:55:66",
+            "00:00:00:00:00:00",
+            "64:CC:2E:6A:F3:A3",
+            "98:B8:BA:15:D7:BB",
+            "48:60:5F:86:24:8E",
+            "AC:F6:F7:B6:1A:4F"
+        )
 
         private val FAKE_DRM_ID = setOf(
             "430c4b46038ccdae0cd7a8eb3acb21b1",
@@ -171,18 +183,23 @@ class DeviceIdentity(context: Context) {
         }
 
         fun isValidDrmId(id: String): Boolean {
-            return id.isNotEmpty() && id !in FAKE_DRM_ID
+            return id.isNotEmpty() && id.lowercase(Locale.US) !in FAKE_DRM_ID
         }
 
-        /**
-         * 获取 Widevine DRM ID 的 MD5
-         */
+        fun isValidMac(mac: String): Boolean {
+            return mac.isNotEmpty() && mac.uppercase(Locale.US) !in FAKE_MAC
+        }
+
+        @Suppress("DEPRECATION")
         fun getDrmId(): String {
             return runCatching {
                 val drm = MediaDrm(WIDEVINE_UUID)
-                val deviceId = drm.getPropertyByteArray(MediaDrm.PROPERTY_DEVICE_UNIQUE_ID)
-                drm.close()
-                md5Upper(deviceId)
+                try {
+                    val deviceId = drm.getPropertyByteArray(MediaDrm.PROPERTY_DEVICE_UNIQUE_ID)
+                    md5Lower(deviceId)
+                } finally {
+                    drm.release()
+                }
             }.getOrDefault("")
         }
 
@@ -220,12 +237,17 @@ class DeviceIdentity(context: Context) {
 
         private fun md5Upper(input: ByteArray): String {
             val digest = MessageDigest.getInstance("MD5").digest(input)
-            return digest.joinToString("") { "%02X".format(it) }
+            return digest.joinToString("") { "%02X".format(it.toInt() and 0xff) }
+        }
+
+        private fun md5Lower(input: ByteArray): String {
+            val digest = MessageDigest.getInstance("MD5").digest(input)
+            return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
         }
 
         private fun md5Lower(input: String): String {
             val digest = MessageDigest.getInstance("MD5").digest(input.toByteArray())
-            return digest.joinToString("") { "%02x".format(it) }
+            return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
         }
     }
 }

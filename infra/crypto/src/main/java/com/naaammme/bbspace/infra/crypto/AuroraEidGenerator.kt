@@ -15,7 +15,7 @@ object AuroraEidGenerator {
     /**
      * 根据 UID 生成 aurora-eid
      * @param uid 用户 ID，<= 0 时返回空字符串
-     * @return Base64 编码的 eid（无 padding），未登录时返回 ""
+     * @return Base64 编码的 eid，未登录时返回 ""
      */
     fun generate(uid: Long): String {
         if (uid <= 0) {
@@ -26,9 +26,9 @@ object AuroraEidGenerator {
         val bArr = ByteArray(midStr.length)
 
         for (i in midStr.indices) {
-            bArr[i] = (midStr[i].code xor XOR_KEY[i % 12].code).toByte()
+            bArr[i] = (midStr[i].code xor XOR_KEY[i % XOR_KEY.length].code).toByte()
         }
 
-        return Base64.encodeToString(bArr, Base64.NO_WRAP or Base64.NO_PADDING)
+        return Base64.encodeToString(bArr, Base64.URL_SAFE or Base64.NO_WRAP)
     }
 }

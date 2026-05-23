@@ -6,8 +6,8 @@ import bilibili.metadata.fawkes.Fawkes
 import bilibili.metadata.locale.LocaleOuterClass
 import bilibili.metadata.network.NetworkOuterClass
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.infra.crypto.BiliSessionId
 import com.naaammme.bbspace.infra.crypto.DeviceIdentity
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,6 +15,48 @@ import javax.inject.Singleton
 class BiliMetadataBuilder @Inject constructor(
     private val deviceIdentity: DeviceIdentity
 ) {
+    private val fawkesBytes by lazy {
+        val sessionId = BiliSessionId.header()
+        Fawkes.FawkesReq.newBuilder().apply {
+            appkey = BiliConstants.APP_KEY_NAME
+            env = BiliConstants.ENV
+            this.sessionId = sessionId
+        }.build().toByteArray()
+    }
+
+    private val localeBytes by lazy {
+        val cLocale = LocaleOuterClass.LocaleIds.newBuilder()
+            .setLanguage("zh")
+            .setScript("Hans")
+            .setRegion("CN")
+            .build()
+        val sLocale = LocaleOuterClass.LocaleIds.newBuilder()
+            .setLanguage("zh")
+            .setScript("Hans")
+            .setRegion("CN")
+            .build()
+
+        LocaleOuterClass.Locale.newBuilder().apply {
+            this.cLocale = cLocale
+            this.sLocale = sLocale
+            timezone = "Asia/Shanghai"
+            utcOffset = "+08:00"
+        }.build().toByteArray()
+    }
+
+    private val networkBytes by lazy {
+        val quality = NetworkOuterClass.NetQuality.newBuilder()
+            .setSuccessRate(-1.0f)
+            .build()
+
+        NetworkOuterClass.Network.newBuilder().apply {
+            type = NetworkOuterClass.NetworkType.WIFI
+            tf = NetworkOuterClass.TFType.TF_UNKNOWN
+            oid = "46000"
+            this.quality = quality
+        }.build().toByteArray()
+    }
+
     fun buildMetadata(accessKey: String = ""): ByteArray {
         return MetadataOuterClass.Metadata.newBuilder().apply {
             if (accessKey.isNotEmpty()) {
@@ -49,50 +91,12 @@ class BiliMetadataBuilder @Inject constructor(
             this.fts = fts
         }.build().toByteArray()
     }
-    // TODO 动态化 type用ConnectivityManager检测WiFi或蜂窝 oid用TelephonyManager.getNetworkOperator读运营商 cellular读蜂窝代数 tf等免流模块实现后接入
-    fun buildNetwork(): ByteArray {
-        val quality = NetworkOuterClass.NetQuality.newBuilder()
-            .setSuccessRate(-1.0f)
-            .build()
-
-        return NetworkOuterClass.Network.newBuilder().apply {
-            type = NetworkOuterClass.NetworkType.WIFI
-            tf = NetworkOuterClass.TFType.TF_UNKNOWN
-            oid = "46000"
-            this.quality = quality
-        }.build().toByteArray()
-    }
-
     fun buildLocale(): ByteArray {
-        val cLocale = LocaleOuterClass.LocaleIds.newBuilder()
-            .setLanguage("zh")
-            .setScript("Hans")
-            .setRegion("CN")
-            .build()
-        val sLocale = LocaleOuterClass.LocaleIds.newBuilder()
-            .setLanguage("zh")
-            .setScript("Hans")
-            .setRegion("CN")
-            .build()
-
-        return LocaleOuterClass.Locale.newBuilder().apply {
-            this.cLocale = cLocale
-            this.sLocale = sLocale
-            // simCode = ""
-            timezone = "Asia/Shanghai"
-            utcOffset = "+08:00"
-            // is_daylight_time = 0 // 是否夏令时
-            // always_translate = 0 // 是否始终翻译
-
-        }.build().toByteArray()
+        return localeBytes
     }
 
-    fun buildFawkes(): ByteArray {
-        val sessionId = UUID.randomUUID().toString().replace("-", "").substring(0, 8)
-        return Fawkes.FawkesReq.newBuilder().apply {
-            appkey = BiliConstants.APP_KEY_NAME
-            env = BiliConstants.ENV
-            this.sessionId = sessionId
-        }.build().toByteArray()
-    }
+    fun buildFawkes(): ByteArray = fawkesBytes
+
+    // TODO 动态化 type用ConnectivityManager检测WiFi或蜂窝 oid用TelephonyManager.getNetworkOperator读运营商 cellular读蜂窝代数 tf等免流模块实现后接入
+    fun buildNetwork(): ByteArray = networkBytes
 }
