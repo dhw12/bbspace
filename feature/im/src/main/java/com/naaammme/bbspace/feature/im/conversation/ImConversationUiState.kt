@@ -11,5 +11,9 @@ data class ImConversationUiState(
     val hasMoreHistory: Boolean = false,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
-    val isLoadingMore: Boolean = false
+    val isLoadingMore: Boolean = false,
+    val draftText: String = "",
+    val isSending: Boolean = false,
+    val sendErrorMessage: String? = null,
+    val lastSentMessageKey: Long? = null
 )

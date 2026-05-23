@@ -1,6 +1,7 @@
 package com.naaammme.bbspace.core.domain
 
 import com.naaammme.bbspace.core.model.ImConversationPage
+import com.naaammme.bbspace.core.model.ImMessage
 import com.naaammme.bbspace.core.model.ImPage
 import com.naaammme.bbspace.core.model.ImPaginationParams
 import com.naaammme.bbspace.core.model.ImSessionTab
@@ -22,6 +23,12 @@ interface ImRepository {
         beforeSeqNo: Long,
         size: Int = 20
     ): ImConversationPage
+
+    suspend fun sendConversationMessage(
+        talkerId: Long,
+        sessionType: Int,
+        text: String
+    ): ImMessage
 
     suspend fun updateAck(
         talkerId: Long,

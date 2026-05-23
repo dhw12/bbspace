@@ -18,8 +18,10 @@ import com.bapis.bilibili.app.im.v1.Unread
 import com.bapis.bilibili.app.im.v1.UnreadStyle
 import com.bapis.bilibili.dagw.component.avatar.common.ResourceSource
 import com.bapis.bilibili.dagw.component.avatar.v1.AvatarItem
+import com.bapis.bilibili.im.interfaces.v1.ReqSendMsg
 import com.bapis.bilibili.im.interfaces.v1.ReqSessionMsg
 import com.bapis.bilibili.im.interfaces.v1.ReqUpdateAck
+import com.bapis.bilibili.im.interfaces.v1.RspSendMsg
 import com.bapis.bilibili.im.interfaces.v1.RspSessionMsg
 import com.bapis.bilibili.im.type.Msg
 import com.google.protobuf.MessageLite
@@ -40,7 +42,9 @@ import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.StringReader
+import java.util.Random
 import java.util.UUID
 
 @Singleton
@@ -120,6 +124,45 @@ class ImRepoImpl @Inject constructor(
         )
         return withContext(Dispatchers.Default) {
             reply.toConversationPage()
+        }
+    }
+
+    override suspend fun sendConversationMessage(
+        talkerId: Long,
+        sessionType: Int,
+        text: String
+    ): ImMessage {
+        val mid = authProvider.mid
+        require(mid > 0L) { "请先登录" }
+        val cliMsgId = buildCliMsgId()
+        val req = ReqSendMsg.newBuilder()
+            .setMsg(
+                Msg.newBuilder()
+                    .setSenderUid(mid)
+                    .setReceiverType(sessionType)
+                    .setReceiverId(talkerId)
+                    .setCliMsgId(cliMsgId)
+                    .setMsgType(ImMsgType.TEXT)
+                    .setContent(buildTextContent(text))
+                    .setNewFaceVersion(1)
+                    .build()
+            )
+            .setCookie("")
+            .setCookie2("")
+            .setErrorCode(0)
+            .setDevId(imDevId(authProvider.mid))
+            .build()
+        val reply = grpcClient.call(
+            endpoint = SEND_MSG_ENDPOINT,
+            requestBytes = req.toByteArray(),
+            parser = RspSendMsg.parser()
+        )
+        return withContext(Dispatchers.Default) {
+            reply.toSentMessage(
+                talkerId = talkerId,
+                fallbackText = text,
+                cliMsgId = cliMsgId
+            )
         }
     }
 
@@ -282,11 +325,21 @@ class ImRepoImpl @Inject constructor(
         )
     }
 
+    private fun buildTextContent(text: String): String {
+        return JSONObject()
+            .put("content", text)
+            .toString()
+    }
+
     private fun imDevId(mid: Long): String {
         val prefs = context.getSharedPreferences("IMFieldsCache$mid", Context.MODE_PRIVATE)
         return prefs.getString("key_device_id_v2", null) ?: UUID.randomUUID().toString().also {
             prefs.edit { putString("key_device_id_v2", it) }
         }
+    }
+
+    private fun buildCliMsgId(): Long {
+        return Random(System.nanoTime()).nextInt(Int.MAX_VALUE - 1).toLong() + 1L
     }
 
     private data class ImMessageContent(
@@ -304,6 +357,24 @@ class ImRepoImpl @Inject constructor(
         return ImConversationPage(
             messages = toMessages(),
             hasMoreHistory = hasMore == 1
+        )
+    }
+
+    private fun RspSendMsg.toSentMessage(
+        talkerId: Long,
+        fallbackText: String,
+        cliMsgId: Long
+    ): ImMessage {
+        return ImMessage(
+            key = msgKey.takeIf { it > 0L } ?: cliMsgId,
+            seqNo = seqno.takeIf { it > 0L } ?: cliMsgId,
+            senderUid = authProvider.mid,
+            receiverId = talkerId,
+            msgType = ImMsgType.TEXT,
+            content = fallbackText,
+            timestampSec = System.currentTimeMillis() / 1000L,
+            isSelf = true,
+            isRecalled = false
         )
     }
 
@@ -448,6 +519,7 @@ class ImRepoImpl @Inject constructor(
         const val MAIN_ENDPOINT = "bilibili.app.im.v1.im/SessionMain"
         const val SECONDARY_ENDPOINT = "bilibili.app.im.v1.im/SessionSecondary"
         const val FETCH_SESSION_MSGS_ENDPOINT = "bilibili.im.interface.v1.ImInterface/SyncFetchSessionMsgs"
+        const val SEND_MSG_ENDPOINT = "bilibili.im.interface.v1.ImInterface/SendMsg"
         const val UPDATE_ACK_ENDPOINT = "bilibili.im.interface.v1.ImInterface/UpdateAck"
         const val MAX_UNREAD_COUNT = 99
         const val DEFAULT_PAGE_SIZE = 20

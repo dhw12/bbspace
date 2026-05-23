@@ -79,6 +79,12 @@ fun ImConversationScreen(
         if (shouldLoadMore) vm.loadMore()
     }
 
+    LaunchedEffect(state.lastSentMessageKey) {
+        if (state.lastSentMessageKey != null) {
+            listState.scrollToItem(0)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -91,6 +97,14 @@ fun ImConversationScreen(
                         )
                     }
                 }
+            )
+        },
+        bottomBar = {
+            ImConversationComposer(
+                draftText = state.draftText,
+                errorMessage = state.sendErrorMessage,
+                onDraftChange = vm::updateDraftText,
+                onSend = vm::sendMessage
             )
         }
     ) { padding ->

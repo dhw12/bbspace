@@ -3,6 +3,7 @@ package com.naaammme.bbspace.feature.im.conversation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.domain.ImRepository
 import com.naaammme.bbspace.core.model.ImConversationPage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -86,6 +87,72 @@ class ImConversationViewModel @Inject constructor(
         }
     }
 
+    fun updateDraftText(text: String) {
+        _uiState.update {
+            it.copy(
+                draftText = text,
+                sendErrorMessage = null
+            )
+        }
+    }
+
+    fun sendMessage() {
+        val state = _uiState.value
+        if (state.isSending) return
+        if (talkerId <= 0L || sessionType <= 0) {
+            _uiState.update {
+                it.copy(sendErrorMessage = "会话信息无效")
+            }
+            return
+        }
+        val text = state.draftText.trim()
+        if (text.isBlank()) {
+            _uiState.update {
+                it.copy(sendErrorMessage = "消息不能为空")
+            }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                isSending = true,
+                sendErrorMessage = null
+            )
+        }
+        viewModelScope.launch {
+            val result = runCatching {
+                imRepo.sendConversationMessage(
+                    talkerId = talkerId,
+                    sessionType = sessionType,
+                    text = text
+                )
+            }
+            result.fold(
+                onSuccess = { message ->
+                    _uiState.update { cur ->
+                        cur.copy(
+                            messages = listOf(message) + cur.messages,
+                            draftText = "",
+                            isSending = false,
+                            sendErrorMessage = null,
+                            lastSentMessageKey = message.key
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    Logger.e(TAG, err) {
+                        "send im message failed talkerId=$talkerId sessionType=$sessionType"
+                    }
+                    _uiState.update {
+                        it.copy(
+                            isSending = false,
+                            sendErrorMessage = err.message ?: "发送消息失败"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
     private fun reportAck(seqNo: Long?) {
         val ackSeqNo = seqNo?.takeIf { it > 0L } ?: return
         viewModelScope.launch {
@@ -123,5 +190,9 @@ class ImConversationViewModel @Inject constructor(
                 isLoadingMore = false
             )
         }
+    }
+
+    private companion object {
+        const val TAG = "ImConversationViewModel"
     }
 }
