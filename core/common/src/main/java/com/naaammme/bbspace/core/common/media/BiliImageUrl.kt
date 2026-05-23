@@ -6,6 +6,7 @@ private val thumbReg = Regex(
 )
 
 const val BILI_IMAGE_DEFAULT_Q = 15
+private const val AVATAR_IMAGE_SUFFIX = "@120w_120h_85q_!widget-layer-avatar.webp"
 private const val COVER_IMAGE_SUFFIX = "@575w_360h_1e_1c_85q.avif"
 
 fun coverThumbnailUrl(src: String?): String? {
@@ -30,6 +31,15 @@ fun thumbnailUrl(src: String?, q: Int = BILI_IMAGE_DEFAULT_Q): String? {
     } else {
         "${url}@${q}q.webp"
     }
+}
+
+fun avatarThumbnailUrl(src: String?): String? {
+    if (src.isNullOrBlank()) return src
+    val url = src.toHttps()
+    val queryIdx = url.indexOf('?')
+    val body = if (queryIdx >= 0) url.substring(0, queryIdx) else url
+    val query = if (queryIdx >= 0) url.substring(queryIdx) else ""
+    return body.substringBefore('@') + AVATAR_IMAGE_SUFFIX + query
 }
 
 fun originImageUrl(src: String?): String? {
