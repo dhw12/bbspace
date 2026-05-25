@@ -104,12 +104,16 @@ internal fun DownloadPlayerPane(
             setEnableComposeSurfaceSyncWorkaround(true)
         }
     }
-    val danmakuOverlayState = rememberDanmakuOverlayState(
-        initialConfig = danmakuConfig,
-        initialPositionMs = state.positionMs,
-        initialIsPlaying = state.isPlaying,
-        initialSpeed = state.speed
-    )
+    val danmakuOverlayState = if (danmakuConfig.enabled) {
+        rememberDanmakuOverlayState(
+            initialConfig = danmakuConfig,
+            initialPositionMs = state.positionMs,
+            initialIsPlaying = state.isPlaying,
+            initialSpeed = state.speed
+        )
+    } else {
+        null
+    }
 
     DisposableEffect(playerView) {
         onDispose {
@@ -129,17 +133,19 @@ internal fun DownloadPlayerPane(
             modifier = Modifier.fillMaxSize()
         )
 
-        DanmakuLayer(
-            playerView = playerView,
-            overlayState = danmakuOverlayState,
-            danmakuState = danmakuState,
-            danmakuConfig = danmakuConfig,
-            positionMs = state.positionMs,
-            isPlaying = state.isPlaying,
-            speed = state.speed,
-            seekEventId = state.seekEventId,
-            hasSource = state.taskId != null
-        )
+        if (danmakuOverlayState != null) {
+            DanmakuLayer(
+                playerView = playerView,
+                overlayState = danmakuOverlayState,
+                danmakuState = danmakuState,
+                danmakuConfig = danmakuConfig,
+                positionMs = state.positionMs,
+                isPlaying = state.isPlaying,
+                speed = state.speed,
+                seekEventId = state.seekEventId,
+                hasSource = state.taskId != null
+            )
+        }
 
         Box(
             modifier = Modifier

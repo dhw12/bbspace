@@ -182,12 +182,17 @@ internal fun VideoPlayerPane(
         }
     }
     val externalOverlay = danmakuOverlayState
-    val danmakuOverlayState = externalOverlay ?: rememberDanmakuOverlayState(
-        initialConfig = settingsState.danmaku,
-        initialPositionMs = state.positionMs,
-        initialIsPlaying = state.isPlaying,
-        initialSpeed = state.speed
-    )
+    val localOverlayState = if (danmakuOn && externalOverlay == null) {
+        rememberDanmakuOverlayState(
+            initialConfig = settingsState.danmaku,
+            initialPositionMs = state.positionMs,
+            initialIsPlaying = state.isPlaying,
+            initialSpeed = state.speed
+        )
+    } else {
+        null
+    }
+    val activeOverlayState = externalOverlay ?: localOverlayState
     var lastWarmAspect by remember(playerView) { mutableStateOf<Float?>(null) }
 
     LaunchedEffect(state.playWhenReady) {
@@ -221,18 +226,20 @@ internal fun VideoPlayerPane(
                 modifier = Modifier.fillMaxSize()
             )
 
-            DanmakuLayer(
-                playerView = playerView,
-                overlayState = danmakuOverlayState,
-                danmakuState = danmakuState,
-                danmakuConfig = settingsState.danmaku,
-                positionMs = state.positionMs,
-                isPlaying = state.isPlaying,
-                speed = state.speed,
-                seekEventId = state.seekEventId,
-                hasSource = state.playbackSource != null,
-                manageLifecycle = externalOverlay == null
-            )
+            if (activeOverlayState != null) {
+                DanmakuLayer(
+                    playerView = playerView,
+                    overlayState = activeOverlayState,
+                    danmakuState = danmakuState,
+                    danmakuConfig = settingsState.danmaku,
+                    positionMs = state.positionMs,
+                    isPlaying = state.isPlaying,
+                    speed = state.speed,
+                    seekEventId = state.seekEventId,
+                    hasSource = state.playbackSource != null,
+                    manageLifecycle = externalOverlay == null
+                )
+            }
 
             val act = remember(context) { context.findActivity() }
             Box(

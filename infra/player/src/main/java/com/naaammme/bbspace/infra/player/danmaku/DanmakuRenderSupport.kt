@@ -16,7 +16,7 @@ internal fun createDanmakuContext(
     density: Float
 ): DanmakuContext {
     return DanmakuContext.create()
-        .setDanmakuStyle(IDisplayer.DANMAKU_STYLE_STROKEN, 3f)
+        .setDanmakuStyle(IDisplayer.DANMAKU_STYLE_STROKEN, DANMAKU_STROKE_WIDTH)
         .setDanmakuMargin((density * DANMAKU_ROW_GAP_DP).roundToInt().coerceAtLeast(1))
 }
 
@@ -145,6 +145,7 @@ internal fun DanmakuContext.applyConfig(config: DanmakuConfig) {
 private val DanmakuConfig.maximumVisibleSize: Int
     get() = when (densityLevel) {
         0 -> 20
+        1 -> -1
         2 -> 0
         else -> -1
     }
@@ -181,4 +182,5 @@ private val DanmakuConfig.overlappingRules: Map<Int, Boolean>?
     }
 
 internal const val DANMAKU_SEEK_SYNC_THRESHOLD_MS = 1_000L
+private const val DANMAKU_STROKE_WIDTH = 2f
 private const val DANMAKU_ROW_GAP_DP = 4f

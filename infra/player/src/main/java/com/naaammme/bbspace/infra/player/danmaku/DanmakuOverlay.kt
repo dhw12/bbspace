@@ -4,7 +4,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.util.UnstableApi
@@ -34,7 +34,7 @@ fun rememberDanmakuOverlayState(
             // 绘制缓存 内存换cpu占用
             enableDanmakuDrawingCache(true)
             showFPS(false)
-            setDrawingThreadType(IDanmakuView.THREAD_TYPE_HIGH_PRIORITY)
+            setDrawingThreadType(IDanmakuView.THREAD_TYPE_NORMAL_PRIORITY)
             setZOrderMediaOverlay(true)
             isClickable = false
             isFocusable = false
@@ -119,9 +119,17 @@ fun DanmakuLayer(
         }
     }
 
-    SideEffect {
-        when (renderMode) {
-            DanmakuRenderMode.Segmented -> {
+    when (renderMode) {
+        DanmakuRenderMode.Segmented -> {
+            LaunchedEffect(
+                danmakuState.sourceKey,
+                danmakuState.window?.id,
+                danmakuConfig,
+                isPlaying,
+                speed,
+                seekEventId,
+                hasSource
+            ) {
                 overlayState.sync(
                     danmakuState = danmakuState,
                     config = danmakuConfig,
@@ -132,8 +140,10 @@ fun DanmakuLayer(
                     hasSource = hasSource
                 )
             }
+        }
 
-            DanmakuRenderMode.LiveAppend -> {
+        DanmakuRenderMode.LiveAppend -> {
+            LaunchedEffect(danmakuConfig, isPlaying, speed, hasSource) {
                 overlayState.syncLive(
                     config = danmakuConfig,
                     isPlaying = isPlaying,
