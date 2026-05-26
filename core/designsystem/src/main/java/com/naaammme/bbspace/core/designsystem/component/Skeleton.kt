@@ -137,15 +137,9 @@ fun CommentHeaderSkeleton(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SkeletonBlock(
-            modifier = Modifier
-                .width(104.dp)
-                .height(20.dp),
-            shape = MaterialTheme.shapes.extraSmall
-        )
         SkeletonBlock(
             modifier = Modifier
                 .width(60.dp)

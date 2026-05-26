@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,6 +72,7 @@ import com.naaammme.bbspace.core.model.VideoStat
 import com.naaammme.bbspace.feature.comment.CommentPanel
 import com.naaammme.bbspace.feature.video.VideoPageState
 import com.naaammme.bbspace.feature.video.formatDuration
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -193,31 +195,44 @@ private fun DetailPager(
     onDownloadClick: () -> Unit
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
-    val itemMod = if (horizontalPad > 0.dp) {
-        Modifier.padding(horizontal = horizontalPad)
-    } else {
-        Modifier
+    val itemMod = remember(horizontalPad) {
+        if (horizontalPad > 0.dp) Modifier.padding(horizontal = horizontalPad) else Modifier
+    }
+    val infoListState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val switchToComments: () -> Unit = {
+        scope.launch {
+            pagerState.scrollToPage(1)
+        }
     }
 
     HorizontalPager(
         state = pagerState,
+        beyondViewportPageCount = 0,
         modifier = modifier.fillMaxSize()
     ) { page ->
         when (page) {
-            0 -> VideoInfoList(
-                pageState = pageState,
-                modifier = itemMod,
-                topPad = infoTopPad,
-                descOn = descOn,
-                tagOn = tagOn,
-                onToggleDesc = onToggleDesc,
-                onToggleTag = onToggleTag,
-                onSeasonClick = onSeasonClick,
-                onPageClick = onPageClick,
-                onOpenVideo = onOpenVideo,
-                onOpenSpace = onOpenSpace,
-                onDownloadClick = onDownloadClick
-            )
+            0 -> LazyColumn(
+                state = infoListState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = infoTopPad, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                detailItems(
+                    pageState = pageState,
+                    itemMod = itemMod,
+                    descOn = descOn,
+                    tagOn = tagOn,
+                    onToggleDesc = onToggleDesc,
+                    onToggleTag = onToggleTag,
+                    onSeasonClick = onSeasonClick,
+                    onPageClick = onPageClick,
+                    onOpenVideo = onOpenVideo,
+                    onOpenSpace = onOpenSpace,
+                    onDownloadClick = onDownloadClick,
+                    onOpenComments = switchToComments
+                )
+            }
 
             else -> CommentPanel(
                 subject = commentSubject,
@@ -234,42 +249,6 @@ private fun DetailPager(
     }
 }
 
-@Composable
-private fun VideoInfoList(
-    pageState: VideoPageState,
-    modifier: Modifier,
-    topPad: Dp,
-    descOn: Boolean,
-    tagOn: Boolean,
-    onToggleDesc: () -> Unit,
-    onToggleTag: () -> Unit,
-    onSeasonClick: () -> Unit,
-    onPageClick: () -> Unit,
-    onOpenVideo: (VideoTarget) -> Unit,
-    onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = topPad, bottom = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        detailItems(
-            pageState = pageState,
-            itemMod = modifier,
-            descOn = descOn,
-            tagOn = tagOn,
-            onToggleDesc = onToggleDesc,
-            onToggleTag = onToggleTag,
-            onSeasonClick = onSeasonClick,
-            onPageClick = onPageClick,
-            onOpenVideo = onOpenVideo,
-            onOpenSpace = onOpenSpace,
-            onDownloadClick = onDownloadClick
-        )
-    }
-}
-
 private fun LazyListScope.detailItems(
     pageState: VideoPageState,
     itemMod: Modifier,
@@ -281,7 +260,8 @@ private fun LazyListScope.detailItems(
     onPageClick: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit
+    onDownloadClick: () -> Unit,
+    onOpenComments: () -> Unit
 ) {
     when {
         pageState.detailLoading -> {
@@ -327,6 +307,7 @@ private fun LazyListScope.detailItems(
                     onToggleTag = onToggleTag,
                     onOpenSpace = onOpenSpace,
                     onDownloadClick = onDownloadClick,
+                    onOpenComments = onOpenComments,
                     modifier = itemMod
                 )
             }
@@ -398,7 +379,8 @@ private fun VideoSummarySection(
     onToggleDesc: () -> Unit,
     onToggleTag: () -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit
+    onDownloadClick: () -> Unit,
+    onOpenComments: () -> Unit
 ) {
     val spaceRoute = detail.toSpaceRouteOrNull()
     Column(
@@ -418,7 +400,8 @@ private fun VideoSummarySection(
             descOn = descOn,
             tagOn = tagOn,
             onToggleDesc = onToggleDesc,
-            onToggleTag = onToggleTag
+            onToggleTag = onToggleTag,
+            onOpenComments = onOpenComments
         )
         ActionCapsule(
             stat = detail.stat,
@@ -485,6 +468,7 @@ private fun InfoCapsule(
     tagOn: Boolean,
     onToggleDesc: () -> Unit,
     onToggleTag: () -> Unit,
+    onOpenComments: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     CapsuleCard(modifier = modifier) {
@@ -510,7 +494,7 @@ private fun InfoCapsule(
             detail.stat?.let { stat ->
                 SoftChip("${stat.view} 播放")
                 SoftChip("${stat.danmaku} 弹幕")
-                SoftChip("${stat.reply} 评论")
+                SoftChip("${stat.reply} 评论", onClick = onOpenComments)
             }
         }
 
@@ -625,10 +609,14 @@ private fun CapsuleCard(
 }
 
 @Composable
-private fun SoftChip(text: String) {
+private fun SoftChip(
+    text: String,
+    onClick: (() -> Unit)? = null
+) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        shape = MaterialTheme.shapes.extraLarge
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
     ) {
         Text(
             text = text,
