@@ -7,7 +7,7 @@ data class DanmakuConfig(
     val enabled: Boolean = true,
     val areaPercent: Int = 100,
     val opacity: Float = 1f,
-    val textScale: Float = 1f,
+    val textScale: Float = 1.2f,
     val speed: Float = 1f,
     val densityLevel: Int = 1,
     val mergeDuplicates: Boolean = false,

@@ -50,12 +50,8 @@ data class CommentThreadState(
 data class CommentEditorState(
     val visible: Boolean = false,
     val loading: Boolean = false,
-    val input: String = "",
     val target: CommentEditorTarget = CommentEditorTarget()
-) {
-    val canSubmit: Boolean
-        get() = !loading && input.isNotBlank()
-}
+)
 
 @Immutable
 data class CommentEditorTarget(

@@ -33,7 +33,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,7 +57,6 @@ fun SearchScreen(
     val videos by viewModel.videos.collectAsStateWithLifecycle()
     val histories by viewModel.histories.collectAsStateWithLifecycle()
     val historyOrder by viewModel.currentHistoryOrder.collectAsStateWithLifecycle()
-    val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
     val sortFilter = viewModel.filters.firstOrNull { it.key == SORT_KEY }
@@ -70,8 +68,7 @@ fun SearchScreen(
         }
     }
 
-    fun dismissKeyboard() {
-        focusManager.clearFocus(force = true)
+    fun hideKeyboard() {
         keyboard?.hide()
     }
 
@@ -109,7 +106,7 @@ fun SearchScreen(
                 onTextChange = viewModel::updateInput,
                 onBack = handleBack,
                 onSearch = {
-                    dismissKeyboard()
+                    hideKeyboard()
                     viewModel.submitSearch()
                 },
                 scrollBehavior = scrollBehavior
@@ -131,7 +128,7 @@ fun SearchScreen(
                                 selectedMap = buildSelectedMap(filters, viewModel),
                                 time = viewModel.time,
                                 active = hasActiveExtraFilter,
-                                onDismissKeyboard = ::dismissKeyboard,
+                                onDismissKeyboard = ::hideKeyboard,
                                 onApply = viewModel::applyFilters
                             )
                         }
@@ -143,7 +140,7 @@ fun SearchScreen(
                     selected = viewModel.selectedOf(filter.key),
                     trailing = trailing,
                     onSelect = { params ->
-                        dismissKeyboard()
+                        hideKeyboard()
                         viewModel.applyFilter(filter.key, params)
                     }
                 )
@@ -161,7 +158,7 @@ fun SearchScreen(
                         selectedMap = buildSelectedMap(filters, viewModel),
                         time = viewModel.time,
                         active = hasActiveExtraFilter,
-                        onDismissKeyboard = ::dismissKeyboard,
+                        onDismissKeyboard = ::hideKeyboard,
                         onApply = viewModel::applyFilters
                     )
                 }
@@ -174,7 +171,7 @@ fun SearchScreen(
                     SearchError(
                         message = viewModel.errorMessage.orEmpty(),
                         onRetry = {
-                            dismissKeyboard()
+                            hideKeyboard()
                             viewModel.submitSearch(recordHistory = false)
                         }
                     )
@@ -189,7 +186,7 @@ fun SearchScreen(
                             order = historyOrder,
                             onToggleOrder = viewModel::toggleHistoryOrder,
                             onSearch = { keyword ->
-                                dismissKeyboard()
+                                hideKeyboard()
                                 viewModel.submitSearch(keyword)
                             },
                             onDelete = viewModel::deleteHistory

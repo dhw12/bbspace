@@ -20,6 +20,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -54,9 +58,10 @@ internal fun CommentEditorFab(
 internal fun CommentEditorSheet(
     state: CommentEditorState,
     onDismiss: () -> Unit,
-    onInputChange: (String) -> Unit,
-    onSubmit: () -> Unit
+    onSubmit: (String) -> Unit
 ) {
+    var input by rememberSaveable { mutableStateOf("") }
+    if (!state.visible) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = {
@@ -96,8 +101,8 @@ internal fun CommentEditorSheet(
                     }
                 }
                 TextButton(
-                    onClick = onSubmit,
-                    enabled = state.canSubmit
+                    onClick = { onSubmit(input) },
+                    enabled = !state.loading && input.isNotBlank()
                 ) {
                     Text(
                         if (state.loading) "发送中" else "发送"
@@ -105,8 +110,8 @@ internal fun CommentEditorSheet(
                 }
             }
             OutlinedTextField(
-                value = state.input,
-                onValueChange = onInputChange,
+                value = input,
+                onValueChange = { value -> input = value },
                 enabled = !state.loading,
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large,

@@ -112,10 +112,9 @@ fun ImConversationScreen(
         },
         bottomBar = {
             ImConversationComposer(
-                draftText = state.draftText,
                 errorMessage = state.sendErrorMessage,
-                onDraftChange = vm::updateDraftText,
-                onSend = vm::sendMessage
+                onClearError = vm::clearSendError,
+                onSend = { vm.sendMessage(it) }
             )
         }
     ) { padding ->
@@ -147,7 +146,7 @@ fun ImConversationScreen(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         reverseLayout = true
                     ) {

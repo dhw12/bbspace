@@ -87,37 +87,18 @@ class ImConversationViewModel @Inject constructor(
         }
     }
 
-    fun updateDraftText(text: String) {
-        _uiState.update {
-            it.copy(
-                draftText = text,
-                sendErrorMessage = null
-            )
-        }
+    fun clearSendError() {
+        _uiState.update { it.copy(sendErrorMessage = null) }
     }
 
-    fun sendMessage() {
+    fun sendMessage(text: String) {
         val state = _uiState.value
-        if (state.isSending) return
+        if (state.isSending || text.isBlank()) return
         if (talkerId <= 0L || sessionType <= 0) {
-            _uiState.update {
-                it.copy(sendErrorMessage = "会话信息无效")
-            }
+            _uiState.update { it.copy(sendErrorMessage = "会话信息无效") }
             return
         }
-        val text = state.draftText.trim()
-        if (text.isBlank()) {
-            _uiState.update {
-                it.copy(sendErrorMessage = "消息不能为空")
-            }
-            return
-        }
-        _uiState.update {
-            it.copy(
-                isSending = true,
-                sendErrorMessage = null
-            )
-        }
+        _uiState.update { it.copy(isSending = true, sendErrorMessage = null) }
         viewModelScope.launch {
             val result = runCatching {
                 imRepo.sendConversationMessage(
@@ -131,7 +112,6 @@ class ImConversationViewModel @Inject constructor(
                     _uiState.update { cur ->
                         cur.copy(
                             messages = listOf(message) + cur.messages,
-                            draftText = "",
                             isSending = false,
                             sendErrorMessage = null,
                             lastSentMessageKey = message.key

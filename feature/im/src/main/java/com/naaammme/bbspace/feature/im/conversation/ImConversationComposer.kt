@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -38,10 +39,9 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun ImConversationComposer(
-    draftText: String,
     errorMessage: String?,
-    onDraftChange: (String) -> Unit,
-    onSend: () -> Unit,
+    onClearError: () -> Unit,
+    onSend: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
@@ -49,6 +49,8 @@ internal fun ImConversationComposer(
     var isFocused by remember { mutableStateOf(false) }
     var imeWasVisible by remember { mutableStateOf(false) }
     val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    var text by rememberSaveable { mutableStateOf("") }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(imeVisible) {
         if (imeWasVisible && !imeVisible && isFocused) {
@@ -82,8 +84,12 @@ internal fun ImConversationComposer(
                         )
                 ) {
                     BasicTextField(
-                        value = draftText,
-                        onValueChange = onDraftChange,
+                        value = text,
+                        onValueChange = { newText ->
+                            text = newText
+                            localError = null
+                            if (errorMessage != null) onClearError()
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(44.dp)
@@ -98,7 +104,11 @@ internal fun ImConversationComposer(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(
                             onSend = {
-                                onSend()
+                                val trimmed = text.trimEnd()
+                                if (trimmed.isNotEmpty()) {
+                                    onSend(trimmed)
+                                    text = ""
+                                }
                                 focusManager.clearFocus(force = true)
                             }
                         ),
@@ -108,7 +118,7 @@ internal fun ImConversationComposer(
                                 modifier = Modifier.fillMaxWidth(),
                                 contentAlignment = Alignment.CenterStart
                             ) {
-                                if (draftText.isEmpty()) {
+                                if (text.isEmpty()) {
                                     Text(
                                         text = "发消息",
                                         style = MaterialTheme.typography.bodyMedium,
@@ -122,8 +132,15 @@ internal fun ImConversationComposer(
                 }
                 IconButton(
                     onClick = {
-                        onSend()
-                        focusManager.clearFocus(force = true)
+                        val trimmed = text.trimEnd()
+                        if (trimmed.isEmpty()) {
+                            localError = "消息不能为空"
+                        } else {
+                            onSend(trimmed)
+                            text = ""
+                            localError = null
+                            focusManager.clearFocus(force = true)
+                        }
                     }
                 ) {
                     Icon(
@@ -132,9 +149,10 @@ internal fun ImConversationComposer(
                     )
                 }
             }
-            if (!errorMessage.isNullOrBlank()) {
+            val displayError = localError ?: errorMessage
+            if (!displayError.isNullOrBlank()) {
                 Text(
-                    text = errorMessage,
+                    text = displayError,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error
                 )

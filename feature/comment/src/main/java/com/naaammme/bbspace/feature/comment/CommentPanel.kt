@@ -142,21 +142,13 @@ fun CommentPanel(
     LaunchedEffect(listState, threadListState, replyThread != null) {
         val activeListState = if (replyThread != null) threadListState else listState
         var lastIndex = activeListState.firstVisibleItemIndex
-        var lastOffset = activeListState.firstVisibleItemScrollOffset
-        snapshotFlow {
-            activeListState.firstVisibleItemIndex to activeListState.firstVisibleItemScrollOffset
-        }.collectLatest { (index, offset) ->
-            fabVisible = when {
-                index == 0 && offset == 0 -> true
-                index > lastIndex -> false
-                index < lastIndex -> true
-                offset > lastOffset -> false
-                offset < lastOffset -> true
-                else -> fabVisible
+        snapshotFlow { activeListState.firstVisibleItemIndex }
+            .collectLatest { index ->
+                if (index != lastIndex) {
+                    fabVisible = index <= lastIndex
+                    lastIndex = index
+                }
             }
-            lastIndex = index
-            lastOffset = offset
-        }
     }
 
     LaunchedEffect(viewModel, context) {
@@ -358,14 +350,11 @@ fun CommentPanel(
             }
         }
     }
-    if (uiState.editor.visible) {
-        CommentEditorSheet(
-            state = uiState.editor,
-            onDismiss = viewModel::dismissEditor,
-            onInputChange = viewModel::updateEditorInput,
-            onSubmit = viewModel::submitEditor
-        )
-    }
+    CommentEditorSheet(
+        state = uiState.editor,
+        onDismiss = viewModel::dismissEditor,
+        onSubmit = viewModel::submitEditor
+    )
 }
 
 @Composable

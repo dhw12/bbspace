@@ -365,13 +365,7 @@ class CommentViewModel @Inject constructor(
         }
     }
 
-    fun updateEditorInput(value: String) {
-        _uiState.update {
-            it.copy(editor = it.editor.copy(input = value))
-        }
-    }
-
-    fun submitEditor() {
+    fun submitEditor(message: String) {
         val state = _uiState.value
         val subject = state.subject ?: return
         if (state.currentMid <= 0L) {
@@ -380,8 +374,8 @@ class CommentViewModel @Inject constructor(
         }
         val editor = state.editor
         if (editor.loading) return
-        val message = editor.input.trim()
-        if (message.isBlank()) {
+        val text = message.trim()
+        if (text.isBlank()) {
             _msg.tryEmit("评论内容不能为空")
             return
         }
@@ -398,7 +392,7 @@ class CommentViewModel @Inject constructor(
             val publishResult = runCatching {
                 repo.publishReply(
                     subject = subject,
-                    message = message,
+                    message = text,
                     rootRpid = target.rootRpid,
                     parentRpid = target.parentRpid,
                     sort = sort
@@ -563,11 +557,9 @@ class CommentViewModel @Inject constructor(
     ) {
         if (state.editor.loading) return
         _uiState.update { cur ->
-            val reuseInput = if (cur.editor.target == target) cur.editor.input else ""
             cur.copy(
                 editor = CommentEditorState(
                     visible = true,
-                    input = reuseInput,
                     target = target
                 )
             )
