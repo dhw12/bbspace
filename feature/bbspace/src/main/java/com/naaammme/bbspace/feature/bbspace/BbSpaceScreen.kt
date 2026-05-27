@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
-import com.naaammme.bbspace.feature.bbspace.aicucomment.AicuCommentPane
+import com.naaammme.bbspace.feature.bbspace.commentsearch.CommentSearchPane
 import com.naaammme.bbspace.feature.bbspace.playback.PlaybackHistoryPane
 import com.naaammme.bbspace.feature.bbspace.relation.RelationCheckPane
 
@@ -65,7 +65,7 @@ fun BbSpaceScreen(
                             BbSpacePage.HOME -> "bb空间"
                             BbSpacePage.PLAYBACK_HISTORY -> "播放历史"
                             BbSpacePage.RELATION_CHECK -> "拉黑关系"
-                            BbSpacePage.AICU_COMMENT -> "AICU 评论"
+                            BbSpacePage.COMMENT_SEARCH -> "查评论"
                         }
                     )
                 },
@@ -87,7 +87,7 @@ fun BbSpaceScreen(
                         .padding(padding),
                     onOpenPlaybackHistory = { page = BbSpacePage.PLAYBACK_HISTORY },
                     onOpenRelationCheck = { page = BbSpacePage.RELATION_CHECK },
-                    onOpenAicuComment = { page = BbSpacePage.AICU_COMMENT }
+                    onOpenCommentSearch = { page = BbSpacePage.COMMENT_SEARCH }
                 )
             }
             BbSpacePage.PLAYBACK_HISTORY -> {
@@ -106,8 +106,8 @@ fun BbSpaceScreen(
                         .padding(horizontal = 16.dp)
                 )
             }
-            BbSpacePage.AICU_COMMENT -> {
-                AicuCommentPane(
+            BbSpacePage.COMMENT_SEARCH -> {
+                CommentSearchPane(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
@@ -124,7 +124,7 @@ private fun BbSpaceHomePane(
     modifier: Modifier = Modifier,
     onOpenPlaybackHistory: () -> Unit,
     onOpenRelationCheck: () -> Unit,
-    onOpenAicuComment: () -> Unit
+    onOpenCommentSearch: () -> Unit
 ) {
     Column(
         modifier = modifier.padding(horizontal = 16.dp),
@@ -145,11 +145,11 @@ private fun BbSpaceHomePane(
             onClick = onOpenRelationCheck
         )
         BbSpaceEntryCard(
-            title = "AICU 评论",
-            subtitle = "输入 UID 查询 AICU 评论",
+            title = "查评论",
+            subtitle = "输入 UID 查询历史评论",
             icon = Icons.Default.DateRange,
             modifier = Modifier.fillMaxWidth(),
-            onClick = onOpenAicuComment
+            onClick = onOpenCommentSearch
         )
     }
 }
@@ -205,5 +205,5 @@ private enum class BbSpacePage {
     HOME,
     PLAYBACK_HISTORY,
     RELATION_CHECK,
-    AICU_COMMENT
+    COMMENT_SEARCH
 }

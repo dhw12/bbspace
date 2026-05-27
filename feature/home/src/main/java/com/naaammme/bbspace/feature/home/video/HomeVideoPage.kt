@@ -118,16 +118,22 @@ private fun FeedCard(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Column {
-                CoverImage(
-                    url = item.cover,
-                    contentDescription = item.title,
-                    shape = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 10f)
-                ) {
+        Column {
+            CoverImage(
+                url = item.cover,
+                contentDescription = item.title,
+                shape = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 10f)
+            ) {
+                if (isDisliked) {
+                    DislikedOverlay(
+                        reason = dislikedReason.orEmpty(),
+                        onUndo = { onCancelDislike(item) },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
                     val hasLeftText = item.coverLeftText1 != null
                     if (hasLeftText) {
                         Row(
@@ -156,90 +162,82 @@ private fun FeedCard(
                         )
                     }
                 }
-                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                    val spaceRoute = remember(item.args, item.target) {
-                        item.args?.let { args ->
-                            if (args.upId <= 0L && args.upName.isNullOrBlank()) {
-                                null
-                            } else {
-                                SpaceRoute(
-                                    mid = args.upId,
-                                    name = args.upName,
-                                    fromViewAid = args.aid.takeIf { it > 0L }
-                                        ?: (item.target as? VideoTarget.Ugc)?.aid?.takeIf { it > 0L }
-                                )
-                            }
-                        }
-                    }
-                    Text(
-                        text = item.title,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val upName = item.descButton?.text ?: item.args?.upName ?: ""
-                        if (upName.isNotEmpty()) {
-                            Text(
-                                text = upName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .then(
-                                        if (spaceRoute == null || isDisliked) {
-                                            Modifier
-                                        } else {
-                                            Modifier.clickable { onOpenSpace(spaceRoute) }
-                                        }
-                                    )
-                            )
-                        }
-
-                        val threePoint = item.threePointV2
-                        if (!isDisliked && !threePoint.isNullOrEmpty()) {
-                            MoreMenu(
-                                item = item,
-                                items = threePoint,
-                                onDislike = onDislike
-                            )
-                        }
-                    }
-
-                    item.rcmdReason?.let { reason ->
-                        if (reason.text.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(2.dp))
-                            val rcmdBgColor = MaterialTheme.colorScheme.secondaryContainer
-                            val rcmdBgShape = MaterialTheme.shapes.extraSmall
-                            Text(
-                                text = reason.text,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier
-                                    .background(rcmdBgColor, rcmdBgShape)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+            }
+            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                val spaceRoute = remember(item.args, item.target) {
+                    item.args?.let { args ->
+                        if (args.upId <= 0L && args.upName.isNullOrBlank()) {
+                            null
+                        } else {
+                            SpaceRoute(
+                                mid = args.upId,
+                                name = args.upName,
+                                fromViewAid = args.aid.takeIf { it > 0L }
+                                    ?: (item.target as? VideoTarget.Ugc)?.aid?.takeIf { it > 0L }
                             )
                         }
                     }
                 }
-            }
-
-            if (isDisliked) {
-                DislikedOverlay(
-                    reason = dislikedReason,
-                    onUndo = { onCancelDislike(item) },
-                    modifier = Modifier.fillMaxSize()
+                Text(
+                    text = item.title,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium
                 )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val upName = item.descButton?.text ?: item.args?.upName ?: ""
+                    if (upName.isNotEmpty()) {
+                        Text(
+                            text = upName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(
+                                    if (spaceRoute == null || isDisliked) {
+                                        Modifier
+                                    } else {
+                                        Modifier.clickable { onOpenSpace(spaceRoute) }
+                                    }
+                                )
+                        )
+                    }
+
+                    val threePoint = item.threePointV2
+                    if (!isDisliked && !threePoint.isNullOrEmpty()) {
+                        MoreMenu(
+                            item = item,
+                            items = threePoint,
+                            onDislike = onDislike
+                        )
+                    }
+                }
+
+                item.rcmdReason?.let { reason ->
+                    if (reason.text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        val rcmdBgColor = MaterialTheme.colorScheme.secondaryContainer
+                        val rcmdBgShape = MaterialTheme.shapes.extraSmall
+                        Text(
+                            text = reason.text,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier
+                                .background(rcmdBgColor, rcmdBgShape)
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }

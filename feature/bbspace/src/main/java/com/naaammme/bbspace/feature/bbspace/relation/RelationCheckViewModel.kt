@@ -2,6 +2,7 @@ package com.naaammme.bbspace.feature.bbspace.relation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.naaammme.bbspace.feature.bbspace.BuildConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -172,7 +173,7 @@ class RelationCheckViewModel @Inject constructor(
 
     private companion object {
         const val API_ENDPOINT = "https://api.vtb.cat/black"
-        const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
+        val USER_AGENT = "bbspace/${BuildConfig.APP_VERSION_NAME}"
     }
 
     private data class CacheEntry(

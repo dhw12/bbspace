@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.0"
+
 android {
     namespace = "com.naaammme.bbspace.feature.bbspace"
     compileSdk = 36
@@ -13,6 +15,7 @@ android {
     defaultConfig {
         minSdk = 24
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "APP_VERSION_NAME", "\"$appVersionName\"")
     }
 
     compileOptions {
@@ -22,6 +25,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

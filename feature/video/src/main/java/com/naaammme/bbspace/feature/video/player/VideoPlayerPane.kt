@@ -2,7 +2,6 @@ package com.naaammme.bbspace.feature.video.player
 
 import android.media.AudioManager
 import android.os.BatteryManager
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,7 +59,6 @@ import com.naaammme.bbspace.infra.player.danmaku.DanmakuOverlayState
 import com.naaammme.bbspace.infra.player.danmaku.rememberDanmakuOverlayState
 import com.naaammme.bbspace.infra.player.PlayerViewTargetBinder
 import com.naaammme.bbspace.core.model.PlaybackAudio
-import com.naaammme.bbspace.core.model.PlaybackStream
 import com.naaammme.bbspace.core.model.QualityOption
 import com.naaammme.bbspace.feature.video.detail.QualityOptionItem
 import com.naaammme.bbspace.feature.video.VideoViewModel
@@ -82,10 +80,6 @@ internal enum class PlayerVideoResizeMode {
 internal val LocalVideoResizeModeState = compositionLocalOf<MutableState<PlayerVideoResizeMode>> {
     error("Missing player video resize mode state")
 }
-
-private const val HIGH_QUALITY_QN = 80
-private const val AV1_CODEC_ID = 13
-private const val HIGH_QUALITY_CODEC_TIP = "高画质下建议把首选编码改成 AV1"
 
 @Suppress("UnsafeOptInUsageError")
 @UnstableApi
@@ -458,11 +452,7 @@ internal fun VideoPlayerPane(
                     curQuality = state.currentStream?.quality,
                     onDismiss = { showQ = false },
                     onSelect = { quality ->
-                        val codecId = (src.streams.firstOrNull { it.quality == quality } as? PlaybackStream.Dash)?.codecId
                         viewModel.switchQuality(quality)
-                        if (quality > HIGH_QUALITY_QN && codecId != null && codecId != AV1_CODEC_ID) {
-                            Toast.makeText(context, HIGH_QUALITY_CODEC_TIP, Toast.LENGTH_SHORT).show()
-                        }
                         showQ = false
                     }
                 )

@@ -55,6 +55,7 @@ fun RelationCheckPane(
                 OutlinedTextField(
                     value = state.upInput,
                     onValueChange = vm::updateUpInput,
+                    enabled = !state.isLoading,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
                     label = { Text("up UID") },

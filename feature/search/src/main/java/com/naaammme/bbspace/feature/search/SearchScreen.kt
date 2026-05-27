@@ -15,7 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -324,7 +324,7 @@ private fun SearchFilterButton(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Icon(
-            imageVector = Icons.Default.MoreVert,
+            imageVector = Icons.Default.Menu,
             contentDescription = "筛选",
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
             tint = if (active) {
