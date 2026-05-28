@@ -36,6 +36,7 @@ class PlayerSettingsStore @Inject constructor(
     private val danmakuTextScaleKey = floatPreferencesKey("danmaku_text_scale")
     private val danmakuSpeedKey = floatPreferencesKey("danmaku_speed")
     private val danmakuDensityKey = intPreferencesKey("danmaku_density")
+    private val danmakuWeightFilterLevelKey = intPreferencesKey("danmaku_weight_filter_level")
     private val danmakuMergeDuplicatesKey = booleanPreferencesKey("danmaku_merge_duplicates")
     private val danmakuShowTopKey = booleanPreferencesKey("danmaku_show_top")
     private val danmakuShowBottomKey = booleanPreferencesKey("danmaku_show_bottom")
@@ -62,6 +63,7 @@ class PlayerSettingsStore @Inject constructor(
                 textScale = prefs[danmakuTextScaleKey] ?: 1f,
                 speed = prefs[danmakuSpeedKey] ?: 1f,
                 densityLevel = prefs[danmakuDensityKey] ?: 1,
+                weightFilterLevel = (prefs[danmakuWeightFilterLevelKey] ?: 2).coerceIn(0, 10),
                 mergeDuplicates = prefs[danmakuMergeDuplicatesKey] ?: false,
                 showTop = prefs[danmakuShowTopKey] ?: true,
                 showBottom = prefs[danmakuShowBottomKey] ?: true,
@@ -153,6 +155,10 @@ class PlayerSettingsStore @Inject constructor(
 
     suspend fun updateDanmakuDensity(level: Int) {
         context.appSettingsDataStore.edit { it[danmakuDensityKey] = level.coerceIn(0, 2) }
+    }
+
+    suspend fun updateDanmakuWeightFilterLevel(level: Int) {
+        context.appSettingsDataStore.edit { it[danmakuWeightFilterLevelKey] = level.coerceIn(0, 10) }
     }
 
     suspend fun updateDanmakuMergeDuplicates(enabled: Boolean) {

@@ -47,6 +47,7 @@ class PlayerSettingsImpl @Inject constructor(
         store.updateDanmakuTextScale(config.textScale)
         store.updateDanmakuSpeed(config.speed)
         store.updateDanmakuDensity(config.densityLevel)
+        store.updateDanmakuWeightFilterLevel(config.weightFilterLevel)
         store.updateDanmakuMergeDuplicates(config.mergeDuplicates)
         store.updateDanmakuShowTop(config.showTop)
         store.updateDanmakuShowBottom(config.showBottom)

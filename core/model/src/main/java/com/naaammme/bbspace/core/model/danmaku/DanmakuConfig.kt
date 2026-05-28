@@ -10,6 +10,7 @@ data class DanmakuConfig(
     val textScale: Float = 1.2f,
     val speed: Float = 1f,
     val densityLevel: Int = 1,
+    val weightFilterLevel: Int = 2,
     val mergeDuplicates: Boolean = false,
     val showTop: Boolean = true,
     val showBottom: Boolean = true,

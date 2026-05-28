@@ -3,6 +3,7 @@ package com.naaammme.bbspace.core.data.repository
 import com.bapis.bilibili.community.service.dm.v1.DmSegMobileReply
 import com.bapis.bilibili.community.service.dm.v1.DmSegMobileReq
 import com.naaammme.bbspace.core.common.log.Logger
+import com.naaammme.bbspace.core.data.player.PlayerSettingsStore
 import com.naaammme.bbspace.core.domain.danmaku.VodDanmakuRepository
 import com.naaammme.bbspace.core.model.DanmakuItem
 import com.naaammme.bbspace.core.model.VodDanmakuRequest
@@ -11,11 +12,13 @@ import com.naaammme.bbspace.infra.grpc.BiliGrpcClient
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 @Singleton
 class VodDanmakuRepoImpl @Inject constructor(
-    private val grpcClient: BiliGrpcClient
+    private val grpcClient: BiliGrpcClient,
+    private val playerSettingsStore: PlayerSettingsStore
 ) : VodDanmakuRepository {
 
     override suspend fun fetchSegment(request: VodDanmakuRequest): VodDanmakuSegment {
@@ -26,8 +29,9 @@ class VodDanmakuRepoImpl @Inject constructor(
                 parser = DmSegMobileReply.parser()
             )
         }
+        val weightFilterLevel = playerSettingsStore.state.first().danmaku.weightFilterLevel
         return withContext(Dispatchers.Default) {
-            mapReply(request, reply)
+            mapReply(request, reply, weightFilterLevel)
         }
     }
 
@@ -49,9 +53,12 @@ class VodDanmakuRepoImpl @Inject constructor(
 
     private fun mapReply(
         request: VodDanmakuRequest,
-        reply: DmSegMobileReply
+        reply: DmSegMobileReply,
+        weightFilterLevel: Int
     ): VodDanmakuSegment {
-        val elems = reply.elemsList.map { elem ->
+        val elems = reply.elemsList.asSequence()
+            .filter { elem -> elem.weight >= weightFilterLevel }
+            .map { elem ->
             DanmakuItem(
                 id = elem.id,
                 idStr = elem.idStr,
@@ -74,7 +81,7 @@ class VodDanmakuRepoImpl @Inject constructor(
                 oid = elem.oid,
                 dmFromType = elem.dmFromValue
             )
-        }
+        }.toList()
 
         Logger.d(TAG) {
             "Loaded danmaku segment aid=${request.videoId.aid}, cid=${request.videoId.cid}, segment=${request.segmentIndex}, elems=${elems.size}"

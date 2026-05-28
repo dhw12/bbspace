@@ -15,6 +15,7 @@ import com.bapis.bilibili.playershared.Stream
 import com.bapis.bilibili.playershared.VideoVod
 import com.naaammme.bbspace.core.common.UserAgentBuilder
 import com.naaammme.bbspace.core.common.log.Logger
+import com.naaammme.bbspace.core.data.player.PlayerSettingsStore
 import com.naaammme.bbspace.core.domain.download.VideoDownloadRepository
 import com.naaammme.bbspace.core.model.DanmakuItem
 import com.naaammme.bbspace.core.model.DownloadDanmakuCache
@@ -40,6 +41,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -54,7 +56,8 @@ class VideoDownloadRepoImpl @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val grpcClient: BiliGrpcClient,
     private val okHttpClient: OkHttpClient,
-    private val dao: VideoDownloadDao
+    private val dao: VideoDownloadDao,
+    private val playerSettingsStore: PlayerSettingsStore
 ) : VideoDownloadRepository {
 
     override val tasks: Flow<List<VideoDownloadTask>> = dao.observeAll()
@@ -155,8 +158,12 @@ class VideoDownloadRepoImpl @Inject constructor(
         val reply = withContext(Dispatchers.IO) {
             DmSegMobileReply.parseFrom(file.readBytes())
         }
+        val weightFilterLevel = playerSettingsStore.state.first().danmaku.weightFilterLevel
         val items = withContext(Dispatchers.Default) {
-            reply.elemsList.map(::mapDanmakuItem)
+            reply.elemsList.asSequence()
+                .filter { elem -> elem.weight >= weightFilterLevel }
+                .map(::mapDanmakuItem)
+                .toList()
         }
         return DownloadDanmakuCache(
             aid = aid,

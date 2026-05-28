@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.model.DanmakuConfig
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun DanmakuSettingsSection(
@@ -77,6 +78,18 @@ fun DanmakuSettingsSection(
         options = listOf(0, 1, 2),
         label = ::formatDanmakuDensity,
         onSelect = { onConfigChange(config.copy(densityLevel = it)) }
+    )
+
+    SliderCard(
+        title = "智能云屏蔽",
+        subtitle = "过滤低于当前权重等级的弹幕",
+        value = config.weightFilterLevel.toFloat(),
+        valueRange = 0f..10f,
+        steps = 9,
+        valueLabel = ::formatDanmakuWeightLevel,
+        onValueChangeCommitted = {
+            onConfigChange(config.copy(weightFilterLevel = it.roundToInt()))
+        }
     )
 
     SwitchCard(
@@ -257,6 +270,10 @@ private fun formatDanmakuDensity(value: Int): String {
         2 -> "密集"
         else -> "标准"
     }
+}
+
+private fun formatDanmakuWeightLevel(value: Float): String {
+    return "${value.roundToInt().coerceIn(0, 10)}级"
 }
 
 private fun formatPercent(value: Float): String {
