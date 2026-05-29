@@ -46,6 +46,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import com.naaammme.bbspace.core.model.DownloadPlaybackStatus
+import com.naaammme.bbspace.core.model.PlayerSettingsState
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -59,7 +60,7 @@ fun DownloadPlayerScreen(
     val procOwner = remember { ProcessLifecycleOwner.get() }
     val ctx = LocalContext.current
     val act = remember(ctx) { ctx.findActivity() }
-    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     var isFull by rememberSaveable { mutableStateOf(false) }
 
     val closePage = {
@@ -112,10 +113,10 @@ fun DownloadPlayerScreen(
         onDispose { }
     }
 
-    DisposableEffect(procOwner, viewModel) {
+    DisposableEffect(procOwner, viewModel, settingsState.playback.backgroundPlayback) {
         val lifecycle = procOwner.lifecycle
         val obs = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && !viewModel.settingsState.value.playback.backgroundPlayback) {
+            if (event == Lifecycle.Event.ON_STOP && !settingsState.playback.backgroundPlayback) {
                 if (viewModel.state.value.isPlaying) {
                     viewModel.pause()
                 }

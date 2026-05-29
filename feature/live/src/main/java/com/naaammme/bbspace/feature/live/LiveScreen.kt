@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowWidthSizeClass
 import com.naaammme.bbspace.core.model.LiveRoomPanelState
+import com.naaammme.bbspace.core.model.PlayerSettingsState
 import com.naaammme.bbspace.feature.live.component.LivePlaybackBody
 import com.naaammme.bbspace.feature.live.player.LivePlayerPane
 
@@ -53,7 +54,7 @@ fun LiveScreen(
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val roomPanel by viewModel.roomPanel.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
-    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val owner = LocalLifecycleOwner.current
     val ctx = LocalContext.current
     val act = remember(ctx) { ctx.findActivity() }

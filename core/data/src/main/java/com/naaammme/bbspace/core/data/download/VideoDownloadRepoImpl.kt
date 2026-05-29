@@ -15,8 +15,8 @@ import com.bapis.bilibili.playershared.Stream
 import com.bapis.bilibili.playershared.VideoVod
 import com.naaammme.bbspace.core.common.UserAgentBuilder
 import com.naaammme.bbspace.core.common.log.Logger
-import com.naaammme.bbspace.core.data.player.PlayerSettingsStore
 import com.naaammme.bbspace.core.domain.download.VideoDownloadRepository
+import com.naaammme.bbspace.core.domain.player.PlayerSettings
 import com.naaammme.bbspace.core.model.DanmakuItem
 import com.naaammme.bbspace.core.model.DownloadDanmakuCache
 import com.naaammme.bbspace.core.model.PlayBiz
@@ -57,7 +57,7 @@ class VideoDownloadRepoImpl @Inject constructor(
     private val grpcClient: BiliGrpcClient,
     private val okHttpClient: OkHttpClient,
     private val dao: VideoDownloadDao,
-    private val playerSettingsStore: PlayerSettingsStore
+    private val playerSettings: PlayerSettings
 ) : VideoDownloadRepository {
 
     override val tasks: Flow<List<VideoDownloadTask>> = dao.observeAll()
@@ -158,7 +158,7 @@ class VideoDownloadRepoImpl @Inject constructor(
         val reply = withContext(Dispatchers.IO) {
             DmSegMobileReply.parseFrom(file.readBytes())
         }
-        val weightFilterLevel = playerSettingsStore.state.first().danmaku.weightFilterLevel
+        val weightFilterLevel = playerSettings.state.first().danmaku.weightFilterLevel
         val items = withContext(Dispatchers.Default) {
             reply.elemsList.asSequence()
                 .filter { elem -> elem.weight >= weightFilterLevel }

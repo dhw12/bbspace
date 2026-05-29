@@ -58,6 +58,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.window.core.layout.WindowWidthSizeClass
 import com.naaammme.bbspace.core.model.PlaybackSource
 import com.naaammme.bbspace.core.model.PlaybackStream
+import com.naaammme.bbspace.core.model.PlayerSettingsState
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoDownloadKind
 import com.naaammme.bbspace.core.model.VideoDownloadOption
@@ -84,7 +85,7 @@ fun VideoScreen(
 ) {
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
     val playerState by viewModel.playerState.collectAsStateWithLifecycle()
-    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val owner = LocalLifecycleOwner.current
     val ctx = LocalContext.current
     val act = remember(ctx) { ctx.findActivity() }

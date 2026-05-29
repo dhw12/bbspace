@@ -1,10 +1,10 @@
 ﻿package com.naaammme.bbspace.core.data.di
 
 import com.naaammme.bbspace.core.common.AuthProvider
+import com.naaammme.bbspace.core.data.AppSettings
 import com.naaammme.bbspace.core.data.AuthProviderImpl
 import com.naaammme.bbspace.core.data.download.VideoDownloadRepoImpl
 import com.naaammme.bbspace.core.data.player.DownloadPlaybackControllerImpl
-import com.naaammme.bbspace.core.data.player.PlayerSettingsImpl
 import com.naaammme.bbspace.core.data.player.StreamPlaybackSessionImpl
 import com.naaammme.bbspace.core.data.repository.AuthRepoImpl
 import com.naaammme.bbspace.core.data.repository.ArticleRecommendRepoImpl
@@ -148,7 +148,7 @@ abstract class DataModule {
 
     @Binds
     @Singleton
-    abstract fun bindPlayerSettings(impl: PlayerSettingsImpl): PlayerSettings
+    abstract fun bindPlayerSettings(impl: AppSettings): PlayerSettings
 
     @Binds
     @Singleton

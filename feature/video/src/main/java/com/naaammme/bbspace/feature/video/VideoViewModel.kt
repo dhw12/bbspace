@@ -15,8 +15,6 @@ import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.PlaybackError
 import com.naaammme.bbspace.core.model.PlaybackHistoryMeta
 import com.naaammme.bbspace.core.model.PlaybackViewState
-import com.naaammme.bbspace.core.model.PlayerBufferSettings
-import com.naaammme.bbspace.core.model.PlayerPlaybackPrefs
 import com.naaammme.bbspace.core.model.VideoDetail
 import com.naaammme.bbspace.core.model.VideoDownloadKind
 import com.naaammme.bbspace.core.model.VideoDownloadMeta
@@ -187,40 +185,56 @@ class VideoViewModel @Inject constructor(
     }
 
     fun updateBackgroundPlayback(enabled: Boolean) {
-        updatePlayback { copy(backgroundPlayback = enabled) }
+        viewModelScope.launch {
+            playerSettings.setBackgroundPlayback(enabled)
+        }
     }
 
     fun updateInAppMiniPlayer(enabled: Boolean) {
-        updatePlayback { copy(inAppMiniPlayer = enabled) }
+        viewModelScope.launch {
+            playerSettings.setInAppMiniPlayer(enabled)
+        }
     }
 
     fun updateReportPlayback(enabled: Boolean) {
-        updatePlayback { copy(reportPlayback = enabled) }
+        viewModelScope.launch {
+            playerSettings.setReportPlayback(enabled)
+        }
     }
 
     fun updateBufferProfile(profile: PlayerBufferProfile) {
-        updateBuffer { copy(profile = profile) }
+        viewModelScope.launch {
+            playerSettings.setBufferProfile(profile)
+        }
     }
 
     fun updatePreferSoftwareDecode(enabled: Boolean) {
-        updatePlayback { copy(preferSoftwareDecode = enabled) }
+        viewModelScope.launch {
+            playerSettings.setPreferSoftwareDecode(enabled)
+        }
     }
 
     fun updateDecoderFallback(enabled: Boolean) {
-        updatePlayback { copy(decoderFallback = enabled) }
+        viewModelScope.launch {
+            playerSettings.setDecoderFallback(enabled)
+        }
     }
 
     fun updateAutoRotateFullscreen(enabled: Boolean) {
-        updatePlayback { copy(autoRotateFullscreen = enabled) }
+        viewModelScope.launch {
+            playerSettings.setAutoRotateFullscreen(enabled)
+        }
     }
 
     fun updateGestureSpeed(speed: Float) {
-        updatePlayback { copy(gestureSpeed = speed) }
+        viewModelScope.launch {
+            playerSettings.setGestureSpeed(speed)
+        }
     }
 
     fun updateDanmaku(config: DanmakuConfig) {
         viewModelScope.launch {
-            playerSettings.updateDanmaku(config)
+            playerSettings.setDanmaku(config)
         }
     }
 
@@ -364,18 +378,6 @@ class VideoViewModel @Inject constructor(
                 _detailError.value = null
                 _detailLoading.value = true
             }
-        }
-    }
-
-    private fun updateBuffer(transform: PlayerBufferSettings.() -> PlayerBufferSettings) {
-        viewModelScope.launch {
-            playerSettings.updateBuffer(settingsState.value.buffer.transform())
-        }
-    }
-
-    private fun updatePlayback(transform: PlayerPlaybackPrefs.() -> PlayerPlaybackPrefs) {
-        viewModelScope.launch {
-            playerSettings.updatePlayback(settingsState.value.playback.transform())
         }
     }
 

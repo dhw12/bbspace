@@ -28,13 +28,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
+import com.naaammme.bbspace.feature.settings.SettingsViewModel
 import com.naaammme.bbspace.feature.settings.components.SettingSwitch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioVideoSettingsScreen(
     onBack: () -> Unit,
-    viewModel: AudioVideoSettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val enableHdrAnd8k by viewModel.enableHdrAnd8k.collectAsStateWithLifecycle()
     val defaultVideoQuality by viewModel.defaultVideoQuality.collectAsStateWithLifecycle()
@@ -77,7 +78,7 @@ fun AudioVideoSettingsScreen(
                 title = "启用 HDR 和 8K",
                 subtitle = "允许请求 HDR 和 8K 视频流（如果视频支持）",
                 checked = enableHdrAnd8k,
-                onCheckedChange = { viewModel.updateEnableHdrAnd8k(it) }
+                onCheckedChange = viewModel::updateEnableHdrAnd8k
             )
 
             SettingCategory(title = "本地选择")
@@ -112,21 +113,21 @@ fun AudioVideoSettingsScreen(
             SettingSwitch(
                 title = "需要4k",
                 checked = needTrial,
-                onCheckedChange = { viewModel.updateNeedTrial(it) }
+                onCheckedChange = viewModel::updateNeedTrial
             )
 
             SettingSwitch(
                 title = "免登录看1080p",
                 subtitle = "打开就算不登录也能看1080p喵",
                 checked = enableWebPlayback,
-                onCheckedChange = { viewModel.updateEnableWebPlayback(it) }
+                onCheckedChange = viewModel::updateEnableWebPlayback
             )
         }
 
         if (showVideoQualityDialog) {
             VideoQualityDialog(
                 currentQuality = defaultVideoQuality,
-                onSelect = { viewModel.updateDefaultVideoQuality(it) },
+                onSelect = viewModel::updateDefaultVideoQuality,
                 onDismiss = { showVideoQualityDialog = false }
             )
         }
@@ -134,7 +135,7 @@ fun AudioVideoSettingsScreen(
         if (showAudioQualityDialog) {
             AudioQualityDialog(
                 currentQuality = defaultAudioQuality,
-                onSelect = { viewModel.updateDefaultAudioQuality(it) },
+                onSelect = viewModel::updateDefaultAudioQuality,
                 onDismiss = { showAudioQualityDialog = false }
             )
         }
@@ -142,7 +143,7 @@ fun AudioVideoSettingsScreen(
         if (showCodecDialog) {
             CodecDialog(
                 currentCodec = preferredCodec,
-                onSelect = { viewModel.updatePreferredCodec(it) },
+                onSelect = viewModel::updatePreferredCodec,
                 onDismiss = { showCodecDialog = false }
             )
         }

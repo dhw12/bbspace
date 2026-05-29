@@ -3,8 +3,8 @@ package com.naaammme.bbspace.core.data.repository
 import com.bapis.bilibili.community.service.dm.v1.DmSegMobileReply
 import com.bapis.bilibili.community.service.dm.v1.DmSegMobileReq
 import com.naaammme.bbspace.core.common.log.Logger
-import com.naaammme.bbspace.core.data.player.PlayerSettingsStore
 import com.naaammme.bbspace.core.domain.danmaku.VodDanmakuRepository
+import com.naaammme.bbspace.core.domain.player.PlayerSettings
 import com.naaammme.bbspace.core.model.DanmakuItem
 import com.naaammme.bbspace.core.model.VodDanmakuRequest
 import com.naaammme.bbspace.core.model.VodDanmakuSegment
@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 @Singleton
 class VodDanmakuRepoImpl @Inject constructor(
     private val grpcClient: BiliGrpcClient,
-    private val playerSettingsStore: PlayerSettingsStore
+    private val playerSettings: PlayerSettings
 ) : VodDanmakuRepository {
 
     override suspend fun fetchSegment(request: VodDanmakuRequest): VodDanmakuSegment {
@@ -29,7 +29,7 @@ class VodDanmakuRepoImpl @Inject constructor(
                 parser = DmSegMobileReply.parser()
             )
         }
-        val weightFilterLevel = playerSettingsStore.state.first().danmaku.weightFilterLevel
+        val weightFilterLevel = playerSettings.state.first().danmaku.weightFilterLevel
         return withContext(Dispatchers.Default) {
             mapReply(request, reply, weightFilterLevel)
         }

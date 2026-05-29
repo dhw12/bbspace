@@ -59,6 +59,7 @@ import com.naaammme.bbspace.infra.player.danmaku.DanmakuOverlayState
 import com.naaammme.bbspace.infra.player.danmaku.rememberDanmakuOverlayState
 import com.naaammme.bbspace.infra.player.PlayerViewTargetBinder
 import com.naaammme.bbspace.core.model.PlaybackAudio
+import com.naaammme.bbspace.core.model.PlayerSettingsState
 import com.naaammme.bbspace.core.model.QualityOption
 import com.naaammme.bbspace.feature.video.detail.QualityOptionItem
 import com.naaammme.bbspace.feature.video.VideoViewModel
@@ -97,7 +98,7 @@ internal fun VideoPlayerPane(
     val timeFmt = remember(context) { android.text.format.DateFormat.getTimeFormat(context) }
     val state by viewModel.playerState.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
-    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val danmakuState by viewModel.danmakuState.collectAsStateWithLifecycle()
     val gestureState = remember { VideoGestureState() }
     var dragStartBrightness by remember { mutableFloatStateOf(0.5f) }

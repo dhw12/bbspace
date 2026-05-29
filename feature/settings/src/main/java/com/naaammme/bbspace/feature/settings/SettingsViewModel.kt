@@ -62,6 +62,48 @@ class SettingsViewModel @Inject constructor(
         16
     )
 
+    val enableHdrAnd8k = appSettings.enableHdrAnd8k.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        false
+    )
+
+    val defaultVideoQuality = appSettings.defaultVideoQuality.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        64
+    )
+
+    val defaultAudioQuality = appSettings.defaultAudioQuality.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        0
+    )
+
+    val forceHost = appSettings.forceHost.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        0
+    )
+
+    val needTrial = appSettings.needTrial.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        false
+    )
+
+    val preferredCodec = appSettings.preferredCodec.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        2
+    )
+
+    val enableWebPlayback = appSettings.enableWebPlayback.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        false
+    )
+
     fun updateThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             appSettings.updateThemeMode(mode)
@@ -160,6 +202,48 @@ class SettingsViewModel @Inject constructor(
     fun updateTeenagersAge(age: Int) {
         viewModelScope.launch {
             appSettings.updateTeenagersAge(age)
+        }
+    }
+
+    fun updateEnableHdrAnd8k(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettings.updateEnableHdrAnd8k(enabled)
+        }
+    }
+
+    fun updateDefaultVideoQuality(quality: Int) {
+        viewModelScope.launch {
+            appSettings.updateDefaultVideoQuality(quality)
+        }
+    }
+
+    fun updateDefaultAudioQuality(quality: Int) {
+        viewModelScope.launch {
+            appSettings.updateDefaultAudioQuality(quality)
+        }
+    }
+
+    fun updateForceHost(value: Int) {
+        viewModelScope.launch {
+            appSettings.updateForceHost(value)
+        }
+    }
+
+    fun updateNeedTrial(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettings.updateNeedTrial(enabled)
+        }
+    }
+
+    fun updatePreferredCodec(codec: Int) {
+        viewModelScope.launch {
+            appSettings.updatePreferredCodec(codec)
+        }
+    }
+
+    fun updateEnableWebPlayback(enabled: Boolean) {
+        viewModelScope.launch {
+            appSettings.updateEnableWebPlayback(enabled)
         }
     }
 

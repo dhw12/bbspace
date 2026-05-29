@@ -13,6 +13,7 @@ import com.naaammme.bbspace.infra.network.BiliRestProfile
 import com.naaammme.bbspace.infra.player.PlaybackSnapshot
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 import org.json.JSONObject
 
 @Singleton
@@ -189,8 +190,8 @@ class RemotePlaybackReporter @Inject constructor(
         }
     }
 
-    private fun canReport(active: PlaybackReportSession): Boolean {
-        return active.reportEnabled && playerSettings.state.value.playback.reportPlayback
+    private suspend fun canReport(active: PlaybackReportSession): Boolean {
+        return active.reportEnabled && playerSettings.state.first().playback.reportPlayback
     }
 
     private companion object {

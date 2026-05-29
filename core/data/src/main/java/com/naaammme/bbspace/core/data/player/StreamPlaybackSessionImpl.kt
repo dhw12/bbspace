@@ -65,7 +65,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
     private val videoRepository: VideoPlayerRepository,
     private val danmakuRepository: VodDanmakuRepository,
     private val appSettings: AppSettings,
-    private val playerSettingsStore: PlayerSettingsStore,
     private val playerSettings: PlayerSettings,
     private val reporter: PlaybackReporter,
     private val authProvider: AuthProvider,
@@ -286,9 +285,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
             prev = _videoState.value,
             isNewSeekEvent = false
         )
-        runtimeScope.launch {
-            playerSettingsStore.updatePlayerCdnIndex(engineSource.second)
-        }
     }
 
     override fun switchVideoPage(cid: Long) {
@@ -385,14 +381,13 @@ class StreamPlaybackSessionImpl @Inject constructor(
                     request.preferredQuality ?: appSettings.defaultVideoQuality.first()
                 }
                 val audioJob = async { appSettings.defaultAudioQuality.first() }
-                val cdnJob = async { playerSettingsStore.playerCdnIndex.first() }
 
                 prepareJob.await()
                 OpenConfig(
                     source = sourceJob.await(),
                     preferredQuality = qualityJob.await(),
                     preferredAudioId = audioJob.await(),
-                    preferredCdnIndex = cdnJob.await(),
+                    preferredCdnIndex = if (reopenSameEntry) state.cdnIndex else DEFAULT_CDN_INDEX,
                     localResume = localResumeJob.await()
                 )
             }
@@ -595,19 +590,21 @@ class StreamPlaybackSessionImpl @Inject constructor(
 
     // vod: config & history
     private suspend fun buildPlayerConfig(): PlayerConfig {
-        val buffer = playerSettingsStore.playerBufferProfile.first()
+        val settings = playerSettings.state.first()
+        val buffer = settings.buffer.profile
+        val playback = settings.playback
         return PlayerConfig(
             minBufferMs = buffer.minBufferMs,
             maxBufferMs = buffer.maxBufferMs,
             playBufferMs = buffer.playBufferMs,
             rebufferMs = buffer.rebufferMs,
             backBufferMs = buffer.backBufferMs,
-            decoderMode = if (playerSettingsStore.preferSoftwareDecode.first()) {
+            decoderMode = if (playback.preferSoftwareDecode) {
                 DecoderMode.Soft
             } else {
                 DecoderMode.Hard
             },
-            decoderFallback = playerSettingsStore.decoderFallback.first()
+            decoderFallback = playback.decoderFallback
         )
     }
 
@@ -771,6 +768,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
     private companion object {
         const val TAG = "StreamPlayback"
         const val COMPLETE_THRESHOLD_MS = 3_000L
+        const val DEFAULT_CDN_INDEX = 0
     }
 }
 

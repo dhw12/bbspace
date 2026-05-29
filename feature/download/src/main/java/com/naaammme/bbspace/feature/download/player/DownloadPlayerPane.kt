@@ -72,7 +72,7 @@ internal fun DownloadPlayerPane(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
-    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val danmakuState by viewModel.danmakuState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current

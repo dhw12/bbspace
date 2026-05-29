@@ -17,6 +17,12 @@ import com.naaammme.bbspace.core.designsystem.theme.MIN_PULL_REFRESH_DISTANCE_DP
 import com.naaammme.bbspace.core.designsystem.theme.ThemeConfig
 import com.naaammme.bbspace.core.designsystem.theme.ThemeMode
 import com.naaammme.bbspace.core.designsystem.theme.TransitionStyle
+import com.naaammme.bbspace.core.domain.player.PlayerSettings
+import com.naaammme.bbspace.core.model.DanmakuConfig
+import com.naaammme.bbspace.core.model.PlayerBufferProfile
+import com.naaammme.bbspace.core.model.PlayerBufferSettings
+import com.naaammme.bbspace.core.model.PlayerPlaybackPrefs
+import com.naaammme.bbspace.core.model.PlayerSettingsState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -27,7 +33,7 @@ import javax.inject.Singleton
 @Singleton
 class AppSettings @Inject constructor(
     @param:ApplicationContext private val context: Context
-) {
+) : PlayerSettings {
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val seedColorKey = intPreferencesKey("seed_color")
     private val useDynamicColorKey = booleanPreferencesKey("use_dynamic_color")
@@ -171,6 +177,25 @@ class AppSettings @Inject constructor(
     private val needTrialKey = booleanPreferencesKey("need_trial")
     private val preferredCodecKey = intPreferencesKey("preferred_codec_qn")
     private val enableWebPlaybackKey = booleanPreferencesKey("enable_web_playback")
+    private val playerBufferProfileKey = intPreferencesKey("player_buffer_profile")
+    private val preferSoftDecKey = booleanPreferencesKey("prefer_soft_dec")
+    private val decFallbackKey = booleanPreferencesKey("dec_fallback")
+    private val bgPlayKey = booleanPreferencesKey("bg_play")
+    private val inAppMiniPlayerKey = booleanPreferencesKey("in_app_mini_player")
+    private val autoRotateFullscreenKey = booleanPreferencesKey("auto_rotate_fullscreen")
+    private val gestureSpeedKey = floatPreferencesKey("gesture_speed")
+    private val reportPlaybackKey = booleanPreferencesKey("report_playback")
+    private val danmakuEnabledKey = booleanPreferencesKey("danmaku_enabled")
+    private val danmakuAreaPercentKey = intPreferencesKey("danmaku_area_percent")
+    private val danmakuOpacityKey = floatPreferencesKey("danmaku_opacity")
+    private val danmakuTextScaleKey = floatPreferencesKey("danmaku_text_scale")
+    private val danmakuSpeedKey = floatPreferencesKey("danmaku_speed")
+    private val danmakuDensityKey = intPreferencesKey("danmaku_density")
+    private val danmakuWeightFilterLevelKey = intPreferencesKey("danmaku_weight_filter_level")
+    private val danmakuMergeDuplicatesKey = booleanPreferencesKey("danmaku_merge_duplicates")
+    private val danmakuShowTopKey = booleanPreferencesKey("danmaku_show_top")
+    private val danmakuShowBottomKey = booleanPreferencesKey("danmaku_show_bottom")
+    private val danmakuShowScrollRlKey = booleanPreferencesKey("danmaku_show_scroll_rl")
 
     val enableHdrAnd8k: Flow<Boolean> = context.appSettingsDataStore.data.map { it[enableHdrAnd8kKey] ?: false }
     val defaultVideoQuality: Flow<Int> = context.appSettingsDataStore.data.map { it[defaultVideoQualityKey] ?: 64 }
@@ -179,6 +204,36 @@ class AppSettings @Inject constructor(
     val needTrial: Flow<Boolean> = context.appSettingsDataStore.data.map { it[needTrialKey] ?: false }
     val preferredCodec: Flow<Int> = context.appSettingsDataStore.data.map { it[preferredCodecKey] ?: 2 }
     val enableWebPlayback: Flow<Boolean> = context.appSettingsDataStore.data.map { it[enableWebPlaybackKey] ?: false }
+    // 播放偏好和外观 推荐等设置一样都属于持久偏好，不在这里做会话态缓存
+    override val state: Flow<PlayerSettingsState> = context.appSettingsDataStore.data.map { prefs ->
+        PlayerSettingsState(
+            buffer = PlayerBufferSettings(
+                profile = prefs[playerBufferProfileKey].toPlayerBufferProfile()
+            ),
+            playback = PlayerPlaybackPrefs(
+                backgroundPlayback = prefs[bgPlayKey] ?: false,
+                inAppMiniPlayer = prefs[inAppMiniPlayerKey] ?: true,
+                reportPlayback = prefs[reportPlaybackKey] ?: true,
+                preferSoftwareDecode = prefs[preferSoftDecKey] ?: false,
+                decoderFallback = prefs[decFallbackKey] ?: true,
+                autoRotateFullscreen = prefs[autoRotateFullscreenKey] ?: true,
+                gestureSpeed = (prefs[gestureSpeedKey] ?: 2f).coerceIn(0.25f, 3f)
+            ),
+            danmaku = DanmakuConfig(
+                enabled = prefs[danmakuEnabledKey] ?: true,
+                areaPercent = prefs[danmakuAreaPercentKey] ?: 100,
+                opacity = prefs[danmakuOpacityKey] ?: 1f,
+                textScale = prefs[danmakuTextScaleKey] ?: 1f,
+                speed = prefs[danmakuSpeedKey] ?: 1f,
+                densityLevel = prefs[danmakuDensityKey] ?: 1,
+                weightFilterLevel = (prefs[danmakuWeightFilterLevelKey] ?: 2).coerceIn(0, 10),
+                mergeDuplicates = prefs[danmakuMergeDuplicatesKey] ?: false,
+                showTop = prefs[danmakuShowTopKey] ?: true,
+                showBottom = prefs[danmakuShowBottomKey] ?: true,
+                showScrollRl = prefs[danmakuShowScrollRlKey] ?: true
+            )
+        )
+    }.distinctUntilChanged()
 
     suspend fun updateEnableHdrAnd8k(enabled: Boolean) {
         context.appSettingsDataStore.edit { it[enableHdrAnd8kKey] = enabled }
@@ -208,6 +263,54 @@ class AppSettings @Inject constructor(
         context.appSettingsDataStore.edit { it[enableWebPlaybackKey] = enabled }
     }
 
+    override suspend fun setBufferProfile(profile: PlayerBufferProfile) {
+        context.appSettingsDataStore.edit { it[playerBufferProfileKey] = profile.ordinal }
+    }
+
+    override suspend fun setBackgroundPlayback(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[bgPlayKey] = enabled }
+    }
+
+    override suspend fun setInAppMiniPlayer(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[inAppMiniPlayerKey] = enabled }
+    }
+
+    override suspend fun setReportPlayback(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[reportPlaybackKey] = enabled }
+    }
+
+    override suspend fun setPreferSoftwareDecode(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[preferSoftDecKey] = enabled }
+    }
+
+    override suspend fun setDecoderFallback(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[decFallbackKey] = enabled }
+    }
+
+    override suspend fun setAutoRotateFullscreen(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[autoRotateFullscreenKey] = enabled }
+    }
+
+    override suspend fun setGestureSpeed(speed: Float) {
+        context.appSettingsDataStore.edit { it[gestureSpeedKey] = speed.coerceIn(0.25f, 3f) }
+    }
+
+    override suspend fun setDanmaku(config: DanmakuConfig) {
+        context.appSettingsDataStore.edit {
+            it[danmakuEnabledKey] = config.enabled
+            it[danmakuAreaPercentKey] = config.areaPercent.coerceIn(25, 100)
+            it[danmakuOpacityKey] = config.opacity.coerceIn(0.1f, 1f)
+            it[danmakuTextScaleKey] = config.textScale.coerceIn(0.5f, 2f)
+            it[danmakuSpeedKey] = config.speed.coerceIn(0.5f, 2f)
+            it[danmakuDensityKey] = config.densityLevel.coerceIn(0, 2)
+            it[danmakuWeightFilterLevelKey] = config.weightFilterLevel.coerceIn(0, 10)
+            it[danmakuMergeDuplicatesKey] = config.mergeDuplicates
+            it[danmakuShowTopKey] = config.showTop
+            it[danmakuShowBottomKey] = config.showBottom
+            it[danmakuShowScrollRlKey] = config.showScrollRl
+        }
+    }
+
     suspend fun resetAllSettings() {
         context.appSettingsDataStore.edit {
             val interestDone = it[interestDoneKey] ?: false
@@ -222,5 +325,11 @@ class AppSettings @Inject constructor(
         const val DEFAULT_TEENAGERS_AGE = 16
         const val MIN_TEENAGERS_AGE = 1
         const val MAX_TEENAGERS_AGE = 17
+    }
+
+    private fun Int?.toPlayerBufferProfile(): PlayerBufferProfile {
+        return PlayerBufferProfile.entries.getOrElse(this ?: PlayerBufferProfile.FastStart.ordinal) {
+            PlayerBufferProfile.FastStart
+        }
     }
 }

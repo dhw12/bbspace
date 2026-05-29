@@ -69,6 +69,7 @@ class VideoPlayerRepoImpl @Inject constructor(
         val enableHdrAnd8k = appSettings.enableHdrAnd8k.first()
         val needTrial = appSettings.needTrial.first()
         val preferredCodec = appSettings.preferredCodec.first()
+        val forceHost = appSettings.forceHost.first()
         val fnval = if (enableHdrAnd8k) 4048 else 272
 
         val codecType = when (preferredCodec) {
@@ -86,6 +87,7 @@ class VideoPlayerRepoImpl @Inject constructor(
             .setDownload(0)
             .setPreferCodecType(codecType)
             .setIsNeedTrial(needTrial)
+            .setForceHost(forceHost)
             .build()
 
         val playCtrl = when (request.controlMode) {

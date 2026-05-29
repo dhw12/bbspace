@@ -12,6 +12,7 @@ import com.naaammme.bbspace.infra.player.EnginePlaybackState
 import com.naaammme.bbspace.infra.player.PlaybackSnapshot
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -50,6 +51,7 @@ class PlaybackReporter @Inject constructor(
         val quality = state.currentStream?.quality ?: DEFAULT_QN
         val startSec = msToSec(startPositionMs)
         val nowElapsed = SystemClock.elapsedRealtime()
+        val reportEnabled = playerSettings.state.first().playback.reportPlayback
         mu.withLock {
             ctx = PlaybackReportSession(
                 uid = authProvider.mid,
@@ -58,7 +60,7 @@ class PlaybackReporter @Inject constructor(
                 report = source.report,
                 sessionId = BiliSessionId.view(deviceIdentity.buvid),
                 polarisActionId = pagePolarisId.ifBlank(BiliSessionId::polarisAction),
-                reportEnabled = playerSettings.state.value.playback.reportPlayback,
+                reportEnabled = reportEnabled,
                 playbackHistoryStartTs = nowSec(),
                 startElapsedMs = nowElapsed,
                 lastSampleElapsedMs = nowElapsed,

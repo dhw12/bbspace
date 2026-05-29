@@ -72,7 +72,7 @@ internal fun VideoPlaybackSheet(
     limitUnderPlayer: Boolean,
     onDismiss: () -> Unit
 ) {
-    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var section by rememberSaveable { mutableStateOf(PlaybackSheetSection.Info) }
     val windowInfo = LocalWindowInfo.current
@@ -123,7 +123,7 @@ internal fun VideoPlaybackSidebar(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+    val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     var section by rememberSaveable { mutableStateOf(PlaybackSheetSection.Playback) }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {

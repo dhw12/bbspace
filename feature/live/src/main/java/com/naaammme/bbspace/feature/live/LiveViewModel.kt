@@ -10,11 +10,11 @@ import com.naaammme.bbspace.core.model.LivePlaybackViewState
 import com.naaammme.bbspace.core.model.LiveRoomPanelState
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.LiveRoomSessionState
-import com.naaammme.bbspace.core.model.PlayerSettingsState
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +40,7 @@ class LiveViewModel @Inject constructor(
             initialValue = null
         )
     val playbackState: StateFlow<LivePlaybackViewState> = playbackSession.liveState
-    val settingsState: StateFlow<PlayerSettingsState> = playerSettings.state
+    val settingsState = playerSettings.state
     private val emptyRoomSession = MutableStateFlow(LiveRoomSessionState())
     val roomSession: StateFlow<LiveRoomSessionState> = route
         .flatMapLatest { curRoute ->
@@ -107,11 +107,11 @@ class LiveViewModel @Inject constructor(
     private var danmakuUpdateJob: Job? = null
 
     fun setDanmakuEnabled(enabled: Boolean) {
-        val cur = settingsState.value.danmaku
-        if (cur.enabled == enabled) return
         danmakuUpdateJob?.cancel()
         danmakuUpdateJob = viewModelScope.launch {
-            playerSettings.updateDanmaku(cur.copy(enabled = enabled))
+            val cur = playerSettings.state.first().danmaku
+            if (cur.enabled == enabled) return@launch
+            playerSettings.setDanmaku(cur.copy(enabled = enabled))
         }
     }
 

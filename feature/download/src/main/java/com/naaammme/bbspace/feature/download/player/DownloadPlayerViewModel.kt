@@ -65,15 +65,13 @@ class DownloadPlayerViewModel @Inject constructor(
 
     fun updateDanmaku(config: DanmakuConfig) {
         viewModelScope.launch {
-            playerSettings.updateDanmaku(config)
+            playerSettings.setDanmaku(config)
         }
     }
 
     fun updateBackgroundPlayback(enabled: Boolean) {
         viewModelScope.launch {
-            playerSettings.updatePlayback(
-                settingsState.value.playback.copy(backgroundPlayback = enabled)
-            )
+            playerSettings.setBackgroundPlayback(enabled)
         }
     }
 
