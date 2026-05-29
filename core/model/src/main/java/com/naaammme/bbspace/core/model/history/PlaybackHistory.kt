@@ -12,12 +12,6 @@ data class PlaybackHistory(
     val cid: Long,
     val epId: Long? = null,
     val seasonId: Long? = null,
-    val title: String = "",
-    val cover: String? = null,
-    val part: Int? = null,
-    val partTitle: String? = null,
-    val ownerUid: Long? = null,
-    val ownerName: String? = null,
     val durationMs: Long = 0L,
     val progressMs: Long = 0L,
     val watchMs: Long = 0L,
@@ -27,16 +21,6 @@ data class PlaybackHistory(
     val id: String
         get() = PlaybackHistoryKey.videoId(uid, key)
 }
-
-@Immutable
-data class PlaybackHistoryMeta(
-    val title: String = "",
-    val cover: String? = null,
-    val ownerUid: Long? = null,
-    val ownerName: String? = null,
-    val part: Int? = null,
-    val partTitle: String? = null
-)
 
 object PlaybackHistoryKey {
     fun video(report: PlayReportParams): String {

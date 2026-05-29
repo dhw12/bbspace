@@ -3,7 +3,6 @@ package com.naaammme.bbspace.core.data.player
 import android.os.SystemClock
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.domain.player.PlayerSettings
-import com.naaammme.bbspace.core.model.PlaybackHistoryMeta
 import com.naaammme.bbspace.core.model.PlaybackRequest
 import com.naaammme.bbspace.core.model.PlayerSessionState
 import com.naaammme.bbspace.infra.crypto.BiliSessionId
@@ -27,19 +26,12 @@ class PlaybackReporter @Inject constructor(
     private val mu = Mutex()
     private var pageOwnerId = 0L
     private var pagePolarisId = ""
-    @Volatile
-    private var historyMeta: PlaybackHistoryMeta? = null
     private var ctx: PlaybackReportSession? = null
 
     fun bindOwner(who: Long) {
         if (pageOwnerId == who) return
         pageOwnerId = who
         pagePolarisId = BiliSessionId.polarisAction()
-        historyMeta = null
-    }
-
-    fun updateHistoryMeta(meta: PlaybackHistoryMeta?) {
-        historyMeta = meta
     }
 
     suspend fun startSession(
@@ -119,17 +111,13 @@ class PlaybackReporter @Inject constructor(
         finalizeSession(active)
     }
 
-    internal suspend fun detachSession(
-        snapshot: PlaybackSnapshot,
-        historyMeta: PlaybackHistoryMeta? = null
-    ): DetachedPlaybackReport? {
+    internal suspend fun detachSession(snapshot: PlaybackSnapshot): DetachedPlaybackReport? {
         return mu.withLock {
             val current = ctx ?: return@withLock null
             current.sync(snapshot, null)
             current.lastSnapshot = snapshot
             val detached = DetachedPlaybackReport(
                 session = current.copy(),
-                historyMeta = historyMeta ?: this.historyMeta,
                 snapshot = snapshot
             )
             if (ctx?.sessionId == current.sessionId) {
@@ -145,7 +133,6 @@ class PlaybackReporter @Inject constructor(
         if (!active.finalized) {
             recordAndReportPlaybackHistory(
                 active = active,
-                historyMeta = report.historyMeta,
                 snapshot = report.snapshot,
                 complete = active.isComplete(report.snapshot, allowEndedOnly = false)
             )
@@ -191,7 +178,6 @@ class PlaybackReporter @Inject constructor(
     ) {
         recordAndReportPlaybackHistory(
             active = active,
-            historyMeta = historyMeta,
             snapshot = snapshot,
             complete = complete
         )
@@ -204,11 +190,10 @@ class PlaybackReporter @Inject constructor(
 
     private suspend fun recordAndReportPlaybackHistory(
         active: PlaybackReportSession,
-        historyMeta: PlaybackHistoryMeta?,
         snapshot: PlaybackSnapshot,
         complete: Boolean
     ) {
-        localHistoryRecorder.record(active, historyMeta, snapshot)
+        localHistoryRecorder.record(active, snapshot)
         remoteReporter.reportPlaybackHistory(active, snapshot, complete)
     }
 
@@ -227,6 +212,5 @@ class PlaybackReporter @Inject constructor(
 
 internal data class DetachedPlaybackReport(
     val session: PlaybackReportSession,
-    val historyMeta: PlaybackHistoryMeta?,
     val snapshot: PlaybackSnapshot
 )

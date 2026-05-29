@@ -3,7 +3,6 @@ package com.naaammme.bbspace.feature.bbspace.playback
 import android.content.Context
 import android.text.format.DateFormat
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,16 +11,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,14 +27,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.model.PlaybackHistory
 import com.naaammme.bbspace.feature.bbspace.rememberExportJson
 
@@ -104,7 +96,7 @@ fun PlaybackHistoryPane(
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("删除记录") },
-            text = { Text("删除 ${item.title.ifBlank { "视频 ${item.aid}" }}") },
+            text = { Text("删除视频 ${item.aid}") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -219,15 +211,11 @@ private fun PlaybackHistoryCard(
     onDelete: () -> Unit
 ) {
     var expanded by rememberSaveable(item.id) { mutableStateOf(false) }
-    val title = remember(item.title, item.aid) {
-        item.title.ifBlank { "视频 ${item.aid}" }
-    }
-    val sub = remember(item.part, item.partTitle, item.ownerName) {
-        buildList {
-            item.part?.let { add("P$it") }
-            item.partTitle?.takeIf(String::isNotBlank)?.let(::add)
-            item.ownerName?.takeIf(String::isNotBlank)?.let(::add)
-        }.joinToString(" · ")
+    val title = remember(item.biz, item.aid, item.cid, item.epId) {
+        when {
+            (item.epId ?: 0L) > 0L -> "${item.biz.uppercase()} ${item.epId}"
+            else -> "${item.biz.uppercase()} ${item.aid}:${item.cid}"
+        }
     }
     val progress = remember(item.progressMs, item.durationMs, item.finished) {
         buildString {
@@ -258,11 +246,8 @@ private fun PlaybackHistoryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            PlaybackHistoryCover(item = item)
-
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -274,16 +259,14 @@ private fun PlaybackHistoryCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (expanded && sub.isNotBlank()) {
-                    Text(
-                        text = sub,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 if (expanded) {
                     Text(
                         text = "UID ${item.uid}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "AID ${item.aid} CID ${item.cid}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -309,36 +292,6 @@ private fun PlaybackHistoryCard(
                 text = if (expanded) "收起" else "展开",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun PlaybackHistoryCover(item: PlaybackHistory) {
-    if (!item.cover.isNullOrBlank()) {
-        CoverImage(
-            url = item.cover,
-            contentDescription = item.title,
-            modifier = Modifier
-                .size(width = 96.dp, height = 60.dp)
-        )
-    } else {
-        Box(
-            modifier = Modifier
-                .size(width = 96.dp, height = 60.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (item.ownerName.isNullOrBlank()) {
-                    Icons.Default.DateRange
-                } else {
-                    Icons.Default.Person
-                },
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
