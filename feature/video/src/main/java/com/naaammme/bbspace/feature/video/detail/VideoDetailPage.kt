@@ -69,15 +69,15 @@ import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoSeason
 import com.naaammme.bbspace.core.model.VideoSeasonEpisode
 import com.naaammme.bbspace.core.model.VideoStat
+import com.naaammme.bbspace.core.model.VideoPlaybackState
 import com.naaammme.bbspace.feature.comment.CommentPanel
-import com.naaammme.bbspace.feature.video.VideoPageState
 import com.naaammme.bbspace.feature.video.formatDuration
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun VideoDetailPage(
-    pageState: VideoPageState,
+    state: VideoPlaybackState,
     commentSubject: CommentSubject?,
     isExpanded: Boolean,
     playerSpaceWidth: Dp,
@@ -88,10 +88,12 @@ internal fun VideoDetailPage(
     onOpenEpisode: (VideoTarget.Ugc) -> Unit,
     onSwitchPage: (Long) -> Unit
 ) {
-    val detail = pageState.detail
-    var descOn by rememberSaveable(detail?.aid) { mutableStateOf(false) }
-    var tagOn by rememberSaveable(detail?.aid) { mutableStateOf(false) }
-    var sheetTp by rememberSaveable(detail?.aid) { mutableStateOf<String?>(null) }
+    val detail = state.detail
+    val aidKey = state.ids.aid.takeIf { it > 0L }
+    val curCid = state.ids.cid.takeIf { it > 0L }
+    var descOn by rememberSaveable(aidKey) { mutableStateOf(false) }
+    var tagOn by rememberSaveable(aidKey) { mutableStateOf(false) }
+    var sheetTp by rememberSaveable(aidKey) { mutableStateOf<String?>(null) }
 
     if (isExpanded) {
         Row(
@@ -114,7 +116,7 @@ internal fun VideoDetailPage(
             DetailPager(
                 modifier = Modifier
                     .weight(1f),
-                pageState = pageState,
+                state = state,
                 commentSubject = commentSubject,
                 horizontalPad = 0.dp,
                 infoTopPad = 0.dp,
@@ -135,7 +137,7 @@ internal fun VideoDetailPage(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(top = playerSpaceHeight),
-            pageState = pageState,
+            state = state,
             commentSubject = commentSubject,
             horizontalPad = 16.dp,
             infoTopPad = 16.dp,
@@ -154,7 +156,7 @@ internal fun VideoDetailPage(
     detail?.season?.takeIf { sheetTp == SHEET_SEASON }?.let { season ->
         SeasonSheet(
             season = season,
-            curCid = pageState.curCid,
+            curCid = curCid,
             onDismiss = { sheetTp = null },
             onOpenEpisode = { route ->
                 sheetTp = null
@@ -166,7 +168,7 @@ internal fun VideoDetailPage(
     if (sheetTp == SHEET_PAGE && detail != null && detail.pages.size > 1) {
         PageSheet(
             pages = detail.pages,
-            curCid = pageState.curCid,
+            curCid = curCid,
             onDismiss = { sheetTp = null },
             onSwitchPage = { cid ->
                 sheetTp = null
@@ -180,7 +182,7 @@ internal fun VideoDetailPage(
 @Composable
 private fun DetailPager(
     modifier: Modifier,
-    pageState: VideoPageState,
+    state: VideoPlaybackState,
     commentSubject: CommentSubject?,
     horizontalPad: Dp,
     infoTopPad: Dp,
@@ -219,7 +221,7 @@ private fun DetailPager(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 detailItems(
-                    pageState = pageState,
+                    state = state,
                     itemMod = itemMod,
                     descOn = descOn,
                     tagOn = tagOn,
@@ -250,7 +252,7 @@ private fun DetailPager(
 }
 
 private fun LazyListScope.detailItems(
-    pageState: VideoPageState,
+    state: VideoPlaybackState,
     itemMod: Modifier,
     descOn: Boolean,
     tagOn: Boolean,
@@ -263,8 +265,11 @@ private fun LazyListScope.detailItems(
     onDownloadClick: () -> Unit,
     onOpenComments: () -> Unit
 ) {
+    val curCid = state.ids.cid.takeIf { it > 0L }
+    val detailError = state.detailError
+    val detail = state.detail
     when {
-        pageState.detailLoading -> {
+        state.detailLoading -> {
             item(
                 key = "detail_loading_summary",
                 contentType = "skeleton"
@@ -280,27 +285,27 @@ private fun LazyListScope.detailItems(
             }
         }
 
-        !pageState.detailError.isNullOrBlank() -> {
+        !detailError.isNullOrBlank() -> {
             item(
                 key = "detail_error",
                 contentType = "state"
             ) {
                 StateCard(
-                    text = pageState.detailError,
+                    text = detailError,
                     modifier = itemMod,
                     isError = true
                 )
             }
         }
 
-        pageState.detail != null -> {
-            val detail = pageState.detail
+        detail != null -> {
             item(
                 key = "summary",
                 contentType = "summary"
             ) {
                 VideoSummarySection(
                     detail = detail,
+                    ids = state.ids,
                     descOn = descOn,
                     tagOn = tagOn,
                     onToggleDesc = onToggleDesc,
@@ -319,7 +324,7 @@ private fun LazyListScope.detailItems(
                 ) {
                     SeasonEntryCard(
                         season = season,
-                        curCid = pageState.curCid,
+                        curCid = curCid,
                         onClick = onSeasonClick,
                         modifier = itemMod
                     )
@@ -333,7 +338,7 @@ private fun LazyListScope.detailItems(
                 ) {
                     PageEntryCard(
                         pages = detail.pages,
-                        curCid = pageState.curCid,
+                        curCid = curCid,
                         onClick = onPageClick,
                         modifier = itemMod
                     )
@@ -373,6 +378,7 @@ private fun LazyListScope.detailItems(
 @Composable
 private fun VideoSummarySection(
     detail: VideoDetail,
+    ids: com.naaammme.bbspace.core.model.ResolvedVideoIds,
     modifier: Modifier = Modifier,
     descOn: Boolean,
     tagOn: Boolean,
@@ -382,7 +388,7 @@ private fun VideoSummarySection(
     onDownloadClick: () -> Unit,
     onOpenComments: () -> Unit
 ) {
-    val spaceRoute = detail.toSpaceRouteOrNull()
+    val spaceRoute = detail.toSpaceRouteOrNull(ids.aid.takeIf { it > 0L })
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -397,6 +403,7 @@ private fun VideoSummarySection(
         }
         InfoCapsule(
             detail = detail,
+            ids = ids,
             descOn = descOn,
             tagOn = tagOn,
             onToggleDesc = onToggleDesc,
@@ -464,6 +471,7 @@ private fun OwnerCapsule(
 @Composable
 private fun InfoCapsule(
     detail: VideoDetail,
+    ids: com.naaammme.bbspace.core.model.ResolvedVideoIds,
     descOn: Boolean,
     tagOn: Boolean,
     onToggleDesc: () -> Unit,
@@ -484,9 +492,9 @@ private fun InfoCapsule(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SoftChip("AV${detail.aid}")
-            if (detail.bvid.isNotBlank()) {
-                SoftChip(detail.bvid)
+            ids.aid.takeIf { it > 0L }?.let { SoftChip("AV$it") }
+            ids.bvid?.takeIf(String::isNotBlank)?.let { bvid ->
+                SoftChip(bvid)
             }
             detail.pubTs?.let { ts ->
                 SoftChip(formatPubTime(ts))
@@ -1258,14 +1266,14 @@ private fun formatPubTime(ts: Long): String {
     return DateFormat.format("yyyy-MM-dd HH:mm", ts * 1000).toString()
 }
 
-private fun VideoDetail.toSpaceRouteOrNull(): SpaceRoute? {
+private fun VideoDetail.toSpaceRouteOrNull(fromViewAid: Long?): SpaceRoute? {
     val owner = owner ?: return null
     if (owner.mid <= 0L && owner.name.isBlank()) return null
     return SpaceRoute(
         mid = owner.mid,
         name = owner.name.takeIf(String::isNotBlank),
         from = SpaceRouteTool.FROM_DEFAULT,
-        fromViewAid = aid.takeIf { it > 0L }
+        fromViewAid = fromViewAid
     )
 }
 

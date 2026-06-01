@@ -5,6 +5,7 @@ import androidx.media3.common.MediaMetadata
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.data.AppSettings
+import com.naaammme.bbspace.core.domain.video.VideoDetailRepository
 import com.naaammme.bbspace.core.domain.danmaku.VodDanmakuRepository
 import com.naaammme.bbspace.core.domain.history.PlaybackHistoryRepository
 import com.naaammme.bbspace.core.domain.live.LiveRepository
@@ -18,6 +19,7 @@ import com.naaammme.bbspace.core.model.LivePlaybackError
 import com.naaammme.bbspace.core.model.LivePlaybackViewState
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.PlayBiz
+import com.naaammme.bbspace.core.model.PlayReportParams
 import com.naaammme.bbspace.core.model.PlaybackAudio
 import com.naaammme.bbspace.core.model.PlaybackControlMode
 import com.naaammme.bbspace.core.model.PlaybackError
@@ -28,12 +30,13 @@ import com.naaammme.bbspace.core.model.PlaybackRequest
 import com.naaammme.bbspace.core.model.PlaybackSource
 import com.naaammme.bbspace.core.model.PlaybackStream
 import com.naaammme.bbspace.core.model.PlayerSessionState
+import com.naaammme.bbspace.core.model.ResolvedVideoIds
 import com.naaammme.bbspace.core.model.StreamPlaybackSessionState
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
 import com.naaammme.bbspace.core.model.VideoPlaybackState
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.buildPlaybackCdns
-import com.naaammme.bbspace.core.model.isSameEntry
+import com.naaammme.bbspace.core.model.toReportParams
 import com.naaammme.bbspace.core.model.toPlayableParams
 import com.naaammme.bbspace.infra.player.DecoderMode
 import com.naaammme.bbspace.infra.player.EngineSource
@@ -63,6 +66,7 @@ import kotlinx.coroutines.withContext
 @Singleton
 class StreamPlaybackSessionImpl @Inject constructor(
     private val videoRepository: VideoPlayerRepository,
+    private val detailRepository: VideoDetailRepository,
     private val danmakuRepository: VodDanmakuRepository,
     private val appSettings: AppSettings,
     private val playerSettings: PlayerSettings,
@@ -128,12 +132,11 @@ class StreamPlaybackSessionImpl @Inject constructor(
         runtimeScope.launch {
             playerSettings.state.map { it.danmaku.enabled }.collect { enabled ->
                 if (_currentTarget.value !is StreamPlaybackTarget.Video) return@collect
-                if (enabled) {
-                    danmakuSession.setSource(vodSession.value.playbackSource)
-                    danmakuSession.seekTo(currentPlaybackPositionMs())
-                } else {
+                if (!enabled) {
                     danmakuSession.clear()
+                    return@collect
                 }
+                syncDanmakuSource(vodSession.value)
             }
         }
     }
@@ -260,15 +263,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
         val source = state.playbackSource ?: return
         val stream = source.streams.firstOrNull { it.quality == quality } ?: return
         val audio = selectAudio(stream, source.audios, state.currentAudio?.id ?: 0)
-        val engineSource = buildVideoEngineSource(stream, audio, state.cdnIndex) ?: return
-        val progress = currentPlaybackProgress()
-        playerEngine.setSource(engineSource.first, progress.positionMs, currentPlayWhenReady())
-        vodSession.value = state.copy(
-            currentStream = stream,
-            currentAudio = audio,
-            cdnIndex = engineSource.second
-        )
-        refreshVideoState()
+        applyVideoSelection(state = state.copy(currentStream = stream, currentAudio = audio))
     }
 
     override fun switchVideoAudio(audioId: Int) {
@@ -276,21 +271,13 @@ class StreamPlaybackSessionImpl @Inject constructor(
         val state = vodSession.value
         val source = state.playbackSource ?: return
         val audio = source.audios.firstOrNull { it.id == audioId } ?: return
-        val engineSource = buildVideoEngineSource(state.currentStream, audio, state.cdnIndex) ?: return
-        val progress = currentPlaybackProgress()
-        playerEngine.setSource(engineSource.first, progress.positionMs, currentPlayWhenReady())
-        vodSession.value = state.copy(currentAudio = audio, cdnIndex = engineSource.second)
-        refreshVideoState()
+        applyVideoSelection(state = state.copy(currentAudio = audio))
     }
 
     override fun switchVideoCdn(index: Int) {
         if (_currentTarget.value !is StreamPlaybackTarget.Video) return
         val state = vodSession.value
-        val engineSource = buildVideoEngineSource(state.currentStream, state.currentAudio, index) ?: return
-        val progress = currentPlaybackProgress()
-        playerEngine.setSource(engineSource.first, progress.positionMs, currentPlayWhenReady())
-        vodSession.value = state.copy(cdnIndex = engineSource.second)
-        refreshVideoState()
+        applyVideoSelection(state = state.copy(cdnIndex = index))
     }
 
     override fun switchLiveQuality(quality: Int) {
@@ -313,45 +300,51 @@ class StreamPlaybackSessionImpl @Inject constructor(
             preferredQuality = preferredQuality,
             controlMode = controlMode
         )
-        val state = vodSession.value
         val currentVideoTarget = (_currentTarget.value as? StreamPlaybackTarget.Video)?.target
-        val reopenSameEntry = currentVideoTarget?.isSameEntry(target) == true &&
-            state.playbackSource != null &&
-            state.error == null
+        val currentState = vodSession.value
         if (
             currentVideoTarget == target &&
-            state.error == null &&
-            (state.playbackSource != null || state.isPreparing)
+            currentState.error == null &&
+            (currentState.playbackSource != null || currentState.isPreparing)
         ) {
             _currentTarget.value = StreamPlaybackTarget.Video(target)
             syncSessionState()
             return
         }
+        val reuseDetail = currentState.takeIf {
+            currentVideoTarget is VideoTarget.Ugc &&
+                target is VideoTarget.Ugc &&
+                currentVideoTarget.aid > 0L &&
+                currentVideoTarget.aid == target.aid
+        }
 
         val token = openId.incrementAndGet()
         nextPlayWhenReady = true
         reporter.bindOwner(token)
-        if (reopenSameEntry) {
-            _currentTarget.value = StreamPlaybackTarget.Video(target)
-            val pendingState = state.copy(
-                isPreparing = true,
-                error = null
-            )
-            vodSession.value = pendingState
-            refreshVideoState()
-        } else {
-            finishVideoPlayback(
-                invalidateOpen = false,
-                releasePlayer = false,
-                nextTarget = target,
-                nextState = PlayerSessionState(isPreparing = true),
-                nextViewState = VideoPlaybackState(isPreparing = true),
-                finalizeReportAsync = true
-            )
-        }
+        val initState = PlayerSessionState(
+            request = request,
+            biz = reuseDetail?.biz ?: request.playable.biz.biz,
+            ids = ResolvedVideoIds(
+                aid = request.ids.aid,
+                cid = request.ids.cid,
+                epId = request.ids.epId,
+                seasonId = request.ids.seasonId,
+                bvid = request.ids.bvid
+            ),
+            detail = reuseDetail?.detail,
+            detailLoading = reuseDetail == null,
+            isPreparing = true
+        )
+        finishVideoPlayback(
+            invalidateOpen = false,
+            releasePlayer = false,
+            nextTarget = target,
+            nextState = initState,
+            finalizeReportAsync = true
+        )
 
         try {
-            val openCfg = coroutineScope {
+            coroutineScope {
                 val prepareJob = async { prepare() }
                 val sourceJob = async { videoRepository.fetchPlaybackSource(request) }
                 val localResumeJob = async(Dispatchers.IO) { readLocalResumeIfResolvable(request) }
@@ -361,63 +354,70 @@ class StreamPlaybackSessionImpl @Inject constructor(
                 val audioJob = async { appSettings.defaultAudioQuality.first() }
 
                 prepareJob.await()
-                OpenConfig(
-                    source = sourceJob.await(),
-                    preferredQuality = qualityJob.await(),
-                    preferredAudioId = audioJob.await(),
-                    preferredCdnIndex = if (reopenSameEntry) state.cdnIndex else DEFAULT_CDN_INDEX,
-                    localResume = localResumeJob.await()
+                val source = sourceJob.await()
+                val preferredQualityValue = qualityJob.await()
+                val preferredAudioId = audioJob.await()
+                val localResume = localResumeJob.await()
+                if (openId.get() != token) return@coroutineScope
+
+                val stream = source.streams.firstOrNull { it.quality == preferredQualityValue }
+                    ?: source.streams.firstOrNull()
+                val audio = selectAudio(stream, source.audios, preferredAudioId)
+                val engineSource = buildVideoEngineSource(stream, audio, DEFAULT_CDN_INDEX)
+                    ?: throw NoPlayableStreamException("暂无可用播放流")
+                val startMs = resolveStartMs(request, source, localResume)
+                if (openId.get() != token) return@coroutineScope
+
+                val playbackState = vodSession.value.copy(
+                    playbackSource = source,
+                    currentStream = stream,
+                    currentAudio = audio,
+                    cdnIndex = engineSource.second,
+                    error = null
                 )
-            }
-            if (openId.get() != token) return
-
-            val source = openCfg.source
-            val stream = source.streams.firstOrNull { it.quality == openCfg.preferredQuality }
-                ?: source.streams.firstOrNull()
-            val audio = selectAudio(stream, source.audios, openCfg.preferredAudioId)
-            val engineSource = buildVideoEngineSource(stream, audio, openCfg.preferredCdnIndex)
-                ?: throw NoPlayableStreamException("暂无可用播放流")
-            val startMs = resolveStartMs(request, source, openCfg.localResume)
-            if (openId.get() != token) return
-            if (reopenSameEntry) {
-                reporter.finishSession(
-                    playbackState = playerEngine.playbackState.value,
-                    progress = currentPlaybackProgress()
+                vodSession.value = playbackState.copy(isPreparing = true)
+                playerEngine.setSource(
+                    source = engineSource.first,
+                    startPositionMs = startMs,
+                    playWhenReady = nextPlayWhenReady
                 )
-            }
+                if (openId.get() != token) return@coroutineScope
 
-            vodSession.value = PlayerSessionState(
-                playbackSource = source,
-                currentStream = stream,
-                currentAudio = audio,
-                cdnIndex = engineSource.second,
-                isPreparing = true
-            )
-            if (playerSettings.state.first().danmaku.enabled) {
-                danmakuSession.setSource(source)
-                danmakuSession.seekTo(startMs ?: 0L)
-            }
-            playerEngine.setSource(
-                source = engineSource.first,
-                startPositionMs = startMs,
-                playWhenReady = nextPlayWhenReady
-            )
-            if (openId.get() != token) return
+                vodSession.value = playbackState.copy(isPreparing = false)
+                refreshVideoState()
+                if (reuseDetail != null) {
+                    runtimeScope.launch {
+                        startReportIfReady(vodSession.value)
+                        syncDanmakuSource(vodSession.value)
+                    }
+                    return@coroutineScope
+                }
 
-            vodSession.value = PlayerSessionState(
-                playbackSource = source,
-                currentStream = stream,
-                currentAudio = audio,
-                cdnIndex = engineSource.second,
-                isPreparing = false
-            )
-            syncSessionState()
-            reporter.startSession(
-                request = request,
-                state = vodSession.value,
-                startPositionMs = startMs ?: 0L
-            )
-            refreshVideoState()
+                val detailResult = runCatching {
+                    withContext(Dispatchers.IO) {
+                        detailRepository.fetchVideoDetail(
+                            ids = request.ids,
+                            src = target.src
+                        )
+                    }
+                }.getOrElse { error ->
+                    if (error is CancellationException) throw error
+                    if (openId.get() != token) return@coroutineScope
+                    val currentTarget = (_currentTarget.value as? StreamPlaybackTarget.Video)?.target
+                    if (currentTarget != target) return@coroutineScope
+                    vodSession.value = vodSession.value.copy(
+                        detail = null,
+                        detailLoading = false,
+                        detailError = error.message ?: "加载视频详情失败"
+                    )
+                    refreshVideoState()
+                    return@coroutineScope
+                }
+                if (openId.get() != token) return@coroutineScope
+                val currentTarget = (_currentTarget.value as? StreamPlaybackTarget.Video)?.target
+                if (currentTarget != target) return@coroutineScope
+                applyDetailResult(detailResult)
+            }
         } catch (t: Throwable) {
             if (t is CancellationException) {
                 if (openId.get() == token && vodSession.value.playbackSource == null) {
@@ -435,14 +435,9 @@ class StreamPlaybackSessionImpl @Inject constructor(
             nextPlayWhenReady = true
             Logger.e(TAG, t) {
                 "load playback source failed biz=${request.playable.biz.biz} " +
-                    "aid=${request.videoId.aid} cid=${request.videoId.cid} " +
-                    "epId=${request.playable.biz.epId} seasonId=${request.playable.biz.seasonId} " +
+                    "aid=${request.ids.aid} cid=${request.ids.cid} " +
+                    "epId=${request.ids.epId} seasonId=${request.ids.seasonId} " +
                     "q=${request.preferredQuality} msg=${t.message}"
-            }
-            if (reopenSameEntry) {
-                vodSession.value = state
-                refreshVideoState()
-                return
             }
             vodSession.value = vodSession.value.copy(
                 isPreparing = false,
@@ -465,7 +460,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
         releasePlayer: Boolean,
         nextTarget: VideoTarget? = null,
         nextState: PlayerSessionState? = null,
-        nextViewState: VideoPlaybackState? = null,
         finalizeReportAsync: Boolean = false
     ) {
         val playbackState = playerEngine.playbackState.value
@@ -477,7 +471,11 @@ class StreamPlaybackSessionImpl @Inject constructor(
         _currentTarget.value = nextTarget?.let { StreamPlaybackTarget.Video(it) }
         nextPlayWhenReady = true
         vodSession.value = nextState ?: PlayerSessionState()
-        _videoState.value = nextViewState ?: VideoPlaybackState()
+        _videoState.value = nextState?.toVideoPlaybackState(
+            state = playerEngine.playbackState.value,
+            prev = _videoState.value,
+            isNewSeekEvent = false
+        ) ?: VideoPlaybackState()
         if (nextState?.playbackSource == null) {
             danmakuSession.clear()
         }
@@ -525,6 +523,47 @@ class StreamPlaybackSessionImpl @Inject constructor(
 
     private fun currentPlaybackPositionMs(): Long {
         return currentPlaybackProgress().positionMs
+    }
+
+    private fun applyDetailResult(detailResult: com.naaammme.bbspace.core.model.VideoDetailResult) {
+        vodSession.value = vodSession.value.copy(
+            biz = detailResult.biz,
+            ids = detailResult.ids,
+            detail = detailResult.detail,
+            detailLoading = false,
+            detailError = null
+        )
+        playerEngine.setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(detailResult.detail.title.takeIf(String::isNotBlank))
+                .setArtist(detailResult.detail.owner?.name?.takeIf(String::isNotBlank))
+                .setArtworkUri(
+                    detailResult.detail.cover?.takeIf(String::isNotBlank)?.let(android.net.Uri::parse)
+                )
+                .build()
+        )
+        refreshVideoState()
+        runtimeScope.launch {
+            startReportIfReady(vodSession.value)
+            syncDanmakuSource(vodSession.value)
+        }
+    }
+
+    private fun applyVideoSelection(
+        state: PlayerSessionState
+    ) {
+        val engineSource = buildVideoEngineSource(
+            stream = state.currentStream,
+            audio = state.currentAudio,
+            cdnIndex = state.cdnIndex
+        ) ?: return
+        playerEngine.setSource(
+            engineSource.first,
+            currentPlaybackPositionMs(),
+            currentPlayWhenReady()
+        )
+        vodSession.value = state.copy(cdnIndex = engineSource.second)
+        refreshVideoState()
     }
 
     // vod: stream selection helpers
@@ -594,7 +633,8 @@ class StreamPlaybackSessionImpl @Inject constructor(
         prefetchedLocal: PlaybackHistory?
     ): Long? {
         request.seekToMs?.let { return it }
-        val key = PlaybackHistoryKey.video(source.report)
+        val report = request.toInitialReportParams() ?: return source.resumePositionMs ?: 0L
+        val key = PlaybackHistoryKey.video(report)
         val local = when {
             prefetchedLocal?.key == key -> prefetchedLocal
             else -> playbackHistoryRepo.getVideo(authProvider.mid, key)
@@ -610,14 +650,56 @@ class StreamPlaybackSessionImpl @Inject constructor(
 
     private suspend fun readLocalResumeIfResolvable(request: PlaybackRequest): PlaybackHistory? {
         if (request.seekToMs != null) return null
-        val report = request.playable.getReportCommonParams()
-        val key = when {
-            report.cid <= 0L -> null
-            report.biz == PlayBiz.PGC && (report.epId ?: 0L) > 0L -> PlaybackHistoryKey.video(report)
-            report.biz != PlayBiz.PGC && report.aid > 0L -> PlaybackHistoryKey.video(report)
-            else -> null
-        } ?: return null
+        val report = request.toInitialReportParams() ?: return null
+        val key = PlaybackHistoryKey.video(report)
         return playbackHistoryRepo.getVideo(authProvider.mid, key)
+    }
+
+    private fun PlaybackRequest.toInitialReportParams(): PlayReportParams? {
+        val reqIds = ids
+        val resolved = ResolvedVideoIds(
+            aid = reqIds.aid,
+            cid = reqIds.cid,
+            epId = reqIds.epId,
+            seasonId = reqIds.seasonId,
+            bvid = reqIds.bvid
+        )
+        if (!resolved.danmakuReady) return null
+        return resolved.toReportParams(
+            biz = playable.biz.biz,
+            subType = playable.biz.subType
+        )
+    }
+
+    private suspend fun startReportIfReady(state: PlayerSessionState) {
+        if (state.detail == null) return
+        val request = state.request ?: return
+        val ids = state.ids.takeIf { it.danmakuReady } ?: return
+        if (state.playbackSource == null) return
+        val biz = state.biz
+        reporter.startSession(
+            request = request,
+            state = state,
+            report = ids.toReportParams(
+                biz = biz,
+                subType = request.playable.biz.subType
+            ),
+            startPositionMs = currentPlaybackPositionMs()
+        )
+        reporter.onPlaybackState(
+            state = vodSession.value,
+            playbackState = playerEngine.playbackState.value,
+            progress = currentPlaybackProgress()
+        )
+    }
+
+    private suspend fun syncDanmakuSource(state: PlayerSessionState) {
+        if (state.detail == null) return
+        val ids = state.ids.takeIf { it.danmakuReady } ?: return
+        val source = state.playbackSource ?: return
+        if (!playerSettings.state.first().danmaku.enabled) return
+        danmakuSession.setSource(ids, source.durationMs)
+        danmakuSession.seekTo(currentPlaybackPositionMs())
     }
 
     private fun canResume(
@@ -647,6 +729,11 @@ class StreamPlaybackSessionImpl @Inject constructor(
         isNewSeekEvent: Boolean
     ): VideoPlaybackState {
         return VideoPlaybackState(
+            biz = biz,
+            ids = ids,
+            detail = detail,
+            detailLoading = detailLoading,
+            detailError = detailError,
             isPreparing = isPreparing,
             playbackSource = playbackSource,
             currentStream = currentStream,
@@ -708,9 +795,12 @@ class StreamPlaybackSessionImpl @Inject constructor(
                     isPlaying = state.isPlaying,
                     playWhenReady = state.playWhenReady,
                     playbackState = state.playbackState,
-                    title = mediaMetadata?.title?.toString().orEmpty(),
-                    subtitle = mediaMetadata?.artist?.toString()?.takeIf(String::isNotBlank),
-                    cover = mediaMetadata?.artworkUri?.toString()?.takeIf(String::isNotBlank),
+                    title = state.detail?.title?.takeIf(String::isNotBlank)
+                        ?: mediaMetadata?.title?.toString().orEmpty(),
+                    subtitle = state.detail?.owner?.name?.takeIf(String::isNotBlank)
+                        ?: mediaMetadata?.artist?.toString()?.takeIf(String::isNotBlank),
+                    cover = state.detail?.cover?.takeIf(String::isNotBlank)
+                        ?: mediaMetadata?.artworkUri?.toString()?.takeIf(String::isNotBlank),
                     videoWidth = state.videoWidth,
                     videoHeight = state.videoHeight,
                     hasRenderedFirstFrame = state.hasRenderedFirstFrame,
@@ -767,14 +857,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
         const val DEFAULT_CDN_INDEX = 0
     }
 }
-
-private data class OpenConfig(
-    val source: PlaybackSource,
-    val preferredQuality: Int,
-    val preferredAudioId: Int,
-    val preferredCdnIndex: Int,
-    val localResume: PlaybackHistory?
-)
 
 private class NoPlayableStreamException(
     message: String

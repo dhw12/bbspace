@@ -20,13 +20,13 @@ class VideoWebPlaybackResolver @Inject constructor(
     private val webPlayUrlClient: WebPlayUrlClient
 ) {
     suspend fun fetchPlaybackSource(request: PlaybackRequest): PlaybackSource {
-        val videoId = request.videoId
+        val ids = request.ids
         val preferredCodecId = appSettings.preferredCodec.first().toVideoCodecId()
         val json = webPlayUrlClient.fetchPlayback(
             WebPlayUrlRequest(
-                aid = videoId.aid,
-                bvid = videoId.bvid?.takeIf(String::isNotBlank),
-                cid = videoId.cid
+                aid = ids.aid,
+                bvid = ids.bvid?.takeIf(String::isNotBlank),
+                cid = ids.cid
             )
         )
         return mapPlaybackSource(request, json, preferredCodecId)
@@ -45,9 +45,7 @@ class VideoWebPlaybackResolver @Inject constructor(
         if (streams.isEmpty()) error("web 取流没有可用视频流")
 
         return PlaybackSource(
-            videoId = request.videoId,
             biz = request.playable.biz.biz,
-            report = request.playable.getReportCommonParams(),
             durationMs = data.optLong("timelength"),
             streams = streams,
             audios = audios,

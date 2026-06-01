@@ -4,8 +4,6 @@ import androidx.compose.runtime.Immutable
 
 @Immutable
 data class VideoDetail(
-    val aid: Long,
-    val bvid: String,
     val title: String,
     val cover: String? = null,
     val owner: VideoOwner? = null,
@@ -17,6 +15,13 @@ data class VideoDetail(
     val season: VideoSeason? = null,
     val pages: List<VideoPagePart> = emptyList(),
     val relates: List<VideoRelate> = emptyList()
+)
+
+@Immutable
+data class VideoDetailResult(
+    val detail: VideoDetail,
+    val ids: ResolvedVideoIds,
+    val biz: PlayBiz
 )
 
 @Immutable

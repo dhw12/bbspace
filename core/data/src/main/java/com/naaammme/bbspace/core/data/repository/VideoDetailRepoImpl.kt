@@ -4,8 +4,11 @@ import com.bapis.bilibili.app.archive.middleware.v1.PlayerArgs
 import com.bapis.bilibili.app.archive.middleware.v1.QnPolicy
 import com.bapis.bilibili.app.viewunite.common.Module
 import com.bapis.bilibili.app.viewunite.common.RelateCard
+import com.bapis.bilibili.app.viewunite.common.ViewEpisode
 import com.bapis.bilibili.app.viewunite.common.Stat
 import com.bapis.bilibili.app.viewunite.common.UgcSeasons
+import com.bapis.bilibili.app.viewunite.pgcanymodel.ViewPgcAny
+import com.bapis.bilibili.app.viewunite.pugvanymodel.ViewPugvAny
 import com.bapis.bilibili.app.viewunite.ugcanymodel.ViewUgcAny
 import com.bapis.bilibili.app.viewunite.v1.Relate
 import com.bapis.bilibili.app.viewunite.v1.TabType
@@ -13,11 +16,14 @@ import com.bapis.bilibili.app.viewunite.v1.ViewReply
 import com.bapis.bilibili.app.viewunite.v1.ViewReq
 import com.bapis.bilibili.pagination.Pagination
 import com.naaammme.bbspace.core.domain.video.VideoDetailRepository
+import com.naaammme.bbspace.core.model.PlayBiz
+import com.naaammme.bbspace.core.model.ResolvedVideoIds
 import com.naaammme.bbspace.core.model.VideoDetail
+import com.naaammme.bbspace.core.model.VideoDetailResult
 import com.naaammme.bbspace.core.model.VideoOwner
 import com.naaammme.bbspace.core.model.VideoPagePart
 import com.naaammme.bbspace.core.model.VideoRelate
-import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoRequestIds
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.core.model.VideoSeason
 import com.naaammme.bbspace.core.model.VideoSeasonEpisode
@@ -28,6 +34,7 @@ import com.naaammme.bbspace.core.model.VideoStat
 import com.naaammme.bbspace.infra.crypto.BiliSessionId
 import com.naaammme.bbspace.infra.crypto.DeviceIdentity
 import com.naaammme.bbspace.infra.grpc.BiliGrpcClient
+import com.naaammme.bbspace.core.model.toUgcTarget
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,25 +46,24 @@ class VideoDetailRepoImpl @Inject constructor(
     private val grpcClient: BiliGrpcClient,
     private val deviceIdentity: DeviceIdentity
 ) : VideoDetailRepository {
-
     override suspend fun fetchVideoDetail(
-        aid: Long,
-        bvid: String?,
+        ids: VideoRequestIds,
         src: VideoSrc
-    ): VideoDetail {
+    ): VideoDetailResult {
         val reply = withContext(Dispatchers.IO) {
             grpcClient.call(
                 endpoint = ENDPOINT,
-                requestBytes = buildRequest(aid, bvid, src).toByteArray(),
+                requestBytes = buildRequest(ids, src).toByteArray(),
                 parser = ViewReply.parser()
             )
         }
-        return withContext(Dispatchers.Default) { mapReply(aid, reply) }
+        return withContext(Dispatchers.Default) {
+            mapReply(ids, reply)
+        }
     }
 
     private fun buildRequest(
-        aid: Long,
-        bvid: String?,
+        ids: VideoRequestIds,
         src: VideoSrc
     ): ViewReq {
         val playerArgs = PlayerArgs.newBuilder()
@@ -85,16 +91,23 @@ class VideoDetailRepoImpl @Inject constructor(
                     .build()
             )
             .setFromScene(FROM_SCENE)
-        aid.takeIf { it > 0L }?.let(builder::setAid)
-        bvid?.takeIf(String::isNotBlank)?.let(builder::setBvid)
+        ids.aid.takeIf { it > 0L }?.let(builder::setAid)
+        ids.bvid?.takeIf(String::isNotBlank)?.let(builder::setBvid)
+        ids.cid.takeIf { it > 0L }?.let { builder.putExtraContent("cid", it.toString()) }
+        ids.epId.takeIf { it > 0L }?.let { builder.putExtraContent("ep_id", it.toString()) }
+        ids.seasonId.takeIf { it > 0L }?.let { builder.putExtraContent("season_id", it.toString()) }
         if (!src.trackId.isNullOrBlank()) {
             builder.trackId = src.trackId
         }
         return builder.build()
     }
 
-    private fun mapReply(aid: Long, reply: ViewReply): VideoDetail {
-        val resolvedAid = reply.arc.aid.takeIf { it > 0L } ?: aid
+    private fun mapReply(
+        requestIds: VideoRequestIds,
+        reply: ViewReply
+    ): VideoDetailResult {
+        val ids = resolveIds(requestIds, reply)
+        val biz = resolveBiz(requestIds, reply)
         var title = reply.arc.title
         var pubTs: Long? = null
         var desc = ""
@@ -144,20 +157,22 @@ class VideoDetailRepoImpl @Inject constructor(
                 }
             }
 
-        return VideoDetail(
-            aid = resolvedAid,
-            bvid = reply.arc.bvid,
-            title = title.ifBlank { "视频详情" },
-            cover = reply.arc.cover.toHttps().ifBlank { null },
-            owner = mapOwner(reply),
-            stat = mapStat(reply.arc.stat),
-            pubTs = pubTs,
-            tags = tags.distinct(),
-            desc = desc,
-            staffs = staffs,
-            season = season,
-            pages = parsePages(reply),
-            relates = relates
+        return VideoDetailResult(
+            detail = VideoDetail(
+                title = title.ifBlank { "视频详情" },
+                cover = reply.arc.cover.toHttps().ifBlank { null },
+                owner = mapOwner(reply),
+                stat = mapStat(reply.arc.stat),
+                pubTs = pubTs,
+                tags = tags.distinct(),
+                desc = desc,
+                staffs = staffs,
+                season = season,
+                pages = parsePages(reply),
+                relates = relates
+            ),
+            ids = ids,
+            biz = biz
         )
     }
 
@@ -193,11 +208,12 @@ class VideoDetailRepoImpl @Inject constructor(
         val sections = season.sectionList.mapNotNull { sec ->
             val eps = sec.episodesList.mapNotNull { ep ->
                 val epTitle = ep.title.ifBlank { return@mapNotNull null }
+                val ids = ResolvedVideoIds(
+                    aid = ep.aid,
+                    cid = ep.cid
+                )
                 VideoSeasonEpisode(
-                    target = VideoTarget.Ugc(
-                        aid = ep.aid,
-                        cid = ep.cid
-                    ),
+                    target = ids.toUgcTarget(VideoTargetTool.relate()),
                     title = epTitle,
                     subTitle = ep.coverRightText.ifBlank { null },
                     cover = ep.cover.toHttps().ifBlank { null }
@@ -245,6 +261,11 @@ class VideoDetailRepoImpl @Inject constructor(
             val cid = card.av.cid.takeIf { it > 0L }
                 ?: VideoTargetTool.cid(basic.uri)
                 ?: return@mapNotNull null
+            val ids = ResolvedVideoIds(
+                aid = aid,
+                cid = cid,
+                bvid = VideoTargetTool.bvid(basic.uri)
+            )
             val title = basic.title.ifBlank { return@mapNotNull null }
             val viewText = card.av.stat.vt.text.ifBlank {
                 formatCount(card.av.stat.vt.value)
@@ -253,11 +274,8 @@ class VideoDetailRepoImpl @Inject constructor(
                 formatCount(card.av.stat.danmaku.value)
             }.takeIf(String::isNotBlank)
             VideoRelate(
-                target = VideoTarget.Ugc(
-                    aid = aid,
-                    cid = cid,
-                    bvid = VideoTargetTool.bvid(basic.uri),
-                    src = VideoTargetTool.relate(
+                target = ids.toUgcTarget(
+                    VideoTargetTool.relate(
                         trackId = basic.trackId,
                         reportFlowData = basic.reportFlowData,
                         fromSpmidSuffix = basic.fromSpmidSuffix
@@ -279,6 +297,152 @@ class VideoDetailRepoImpl @Inject constructor(
             )
         }
     }
+
+    private fun resolveIds(
+        requestIds: VideoRequestIds,
+        reply: ViewReply
+    ): ResolvedVideoIds {
+        val arcIds = ResolvedVideoIds(
+            aid = reply.arc.aid,
+            cid = reply.arc.cid,
+            bvid = reply.arc.bvid.takeIf(String::isNotBlank)
+        )
+        val reportIds = ResolvedVideoIds(
+            aid = reply.reportMap["aid"]?.toLongOrNull() ?: 0L,
+            cid = reply.reportMap["cid"]?.toLongOrNull() ?: 0L,
+            epId = reply.reportMap["epid"]?.toLongOrNull()
+                ?: reply.reportMap["ep_id"]?.toLongOrNull()
+                ?: 0L,
+            seasonId = reply.reportMap["sid"]?.toLongOrNull()
+                ?: reply.reportMap["season_id"]?.toLongOrNull()
+                ?: 0L,
+            bvid = reply.reportMap["bvid"]?.takeIf(String::isNotBlank)
+        )
+        val supplement = parseSupplementIds(reply)
+        val selected = selectCurrentSupplementIds(requestIds, supplement.ids, supplement.current)
+        return ResolvedVideoIds(
+            aid = requestIds.aid.takeIf { it > 0L }
+                ?: selected?.aid?.takeIf { it > 0L }
+                ?: reportIds.aid.takeIf { it > 0L }
+                ?: arcIds.aid,
+            cid = requestIds.cid.takeIf { it > 0L }
+                ?: selected?.cid?.takeIf { it > 0L }
+                ?: reportIds.cid.takeIf { it > 0L }
+                ?: arcIds.cid,
+            epId = requestIds.epId.takeIf { it > 0L }
+                ?: selected?.epId?.takeIf { it > 0L }
+                ?: reportIds.epId.takeIf { it > 0L }
+                ?: 0L,
+            seasonId = requestIds.seasonId.takeIf { it > 0L }
+                ?: selected?.seasonId?.takeIf { it > 0L }
+                ?: reportIds.seasonId.takeIf { it > 0L }
+                ?: 0L,
+            bvid = requestIds.bvid?.takeIf(String::isNotBlank)
+                ?: selected?.bvid?.takeIf(String::isNotBlank)
+                ?: reportIds.bvid?.takeIf(String::isNotBlank)
+                ?: arcIds.bvid?.takeIf(String::isNotBlank)
+        )
+    }
+
+    private fun resolveBiz(
+        requestIds: VideoRequestIds,
+        reply: ViewReply
+    ): PlayBiz {
+        return when {
+            requestIds.aid > 0L || requestIds.cid > 0L || !requestIds.bvid.isNullOrBlank() -> PlayBiz.UGC
+            reply.supplement.typeUrl.endsWith("ViewPugvAny") -> PlayBiz.PUGV
+            reply.supplement.typeUrl.endsWith("ViewPgcAny") -> PlayBiz.PGC
+            requestIds.epId > 0L || requestIds.seasonId > 0L -> PlayBiz.PGC
+            else -> PlayBiz.UGC
+        }
+    }
+
+    private fun selectCurrentSupplementIds(
+        requestIds: VideoRequestIds,
+        ids: List<ResolvedVideoIds>,
+        preferred: ResolvedVideoIds?
+    ): ResolvedVideoIds? {
+        if (ids.isEmpty()) return preferred
+        return ids.firstOrNull { requestIds.epId > 0L && it.epId == requestIds.epId }
+            ?: ids.firstOrNull { requestIds.cid > 0L && it.cid == requestIds.cid }
+            ?: ids.firstOrNull { requestIds.aid > 0L && it.aid == requestIds.aid }
+            ?: ids.firstOrNull { preferred?.epId?.takeIf { epId -> epId > 0L } == it.epId }
+            ?: preferred
+            ?: ids.firstOrNull { requestIds.seasonId > 0L && it.seasonId == requestIds.seasonId }
+            ?: ids.first()
+    }
+
+    private fun parseSupplementIds(reply: ViewReply): SupplementIds {
+        if (!reply.hasSupplement()) return SupplementIds()
+        val supplement = reply.supplement
+        if (supplement.typeUrl.isBlank() || supplement.value.isEmpty) return SupplementIds()
+        return when {
+            supplement.typeUrl.endsWith("ViewPgcAny") -> {
+                val pgc = ViewPgcAny.parseFrom(supplement.value)
+                val seasonId = pgc.ogvData.seasonId
+                val ids = pgc.ogvData.reserve.episodesList.map {
+                    it.toResolvedIds(seasonId)
+                }
+                val current = pgc.ogvData.newEp.id
+                    .takeIf { it > 0 }
+                    ?.toLong()
+                    ?.let { epId ->
+                        ids.firstOrNull { it.epId == epId } ?: ResolvedVideoIds(
+                            epId = epId,
+                            seasonId = seasonId
+                        )
+                    }
+                SupplementIds(ids = ids, current = current)
+            }
+
+            supplement.typeUrl.endsWith("ViewPugvAny") -> {
+                val pugv = ViewPugvAny.parseFrom(supplement.value)
+                val seasonId = pugv.seasonOverview.seasonId
+                val ids = pugv.sectionInfo.sectionsList.flatMap { section ->
+                    section.episodesList.mapNotNull { ep ->
+                        if (!ep.hasVideoEpisode()) return@mapNotNull null
+                        val video = ep.videoEpisode
+                        ResolvedVideoIds(
+                            aid = video.aid,
+                            cid = video.cid,
+                            epId = video.episodeId,
+                            seasonId = seasonId,
+                            bvid = VideoTargetTool.bvid(video.shareLink)
+                        )
+                    }
+                }
+                val current = ids.firstOrNull { id ->
+                    pugv.sectionInfo.sectionsList.any { section ->
+                        section.episodesList.any { ep ->
+                            ep.hasVideoEpisode() &&
+                                ep.videoEpisode.episodeId == id.epId &&
+                                ep.videoEpisode.history.lastPlay
+                        }
+                    }
+                }
+                SupplementIds(ids = ids, current = current)
+            }
+
+            else -> SupplementIds()
+        }.let { parsed ->
+            parsed.copy(ids = parsed.ids.filter { it.hasAny })
+        }
+    }
+
+    private fun ViewEpisode.toResolvedIds(seasonId: Long): ResolvedVideoIds {
+        return ResolvedVideoIds(
+            aid = aid,
+            cid = cid,
+            epId = epId,
+            seasonId = seasonId,
+            bvid = bvid.takeIf(String::isNotBlank) ?: VideoTargetTool.bvid(shareUrl)
+        )
+    }
+
+    private data class SupplementIds(
+        val ids: List<ResolvedVideoIds> = emptyList(),
+        val current: ResolvedVideoIds? = null
+    )
 
     private fun formatCount(count: Long): String {
         return when {

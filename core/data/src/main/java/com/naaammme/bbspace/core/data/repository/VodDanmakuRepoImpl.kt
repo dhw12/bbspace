@@ -37,8 +37,8 @@ class VodDanmakuRepoImpl @Inject constructor(
 
     private fun buildRequest(request: VodDanmakuRequest): DmSegMobileReq {
         return DmSegMobileReq.newBuilder()
-            .setPid(request.videoId.aid)
-            .setOid(request.videoId.cid)
+            .setPid(request.ids.aid)
+            .setOid(request.ids.cid)
             .setType(TYPE_VIDEO)
             .setSegmentIndex(request.segmentIndex)
             .setTeenagersMode(0)
@@ -84,7 +84,7 @@ class VodDanmakuRepoImpl @Inject constructor(
         }.toList()
 
         Logger.d(TAG) {
-            "Loaded danmaku segment aid=${request.videoId.aid}, cid=${request.videoId.cid}, segment=${request.segmentIndex}, elems=${elems.size}"
+            "Loaded danmaku segment aid=${request.ids.aid}, cid=${request.ids.cid}, segment=${request.segmentIndex}, elems=${elems.size}"
         }
 
         return VodDanmakuSegment(

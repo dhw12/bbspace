@@ -11,6 +11,11 @@ enum class PlaybackState {
 
 @Immutable
 data class VideoPlaybackState(
+    val biz: PlayBiz = PlayBiz.UGC,
+    val ids: ResolvedVideoIds = ResolvedVideoIds(),
+    val detail: VideoDetail? = null,
+    val detailLoading: Boolean = false,
+    val detailError: String? = null,
     val isPreparing: Boolean = false,
     val playbackSource: PlaybackSource? = null,
     val currentStream: PlaybackStream? = null,

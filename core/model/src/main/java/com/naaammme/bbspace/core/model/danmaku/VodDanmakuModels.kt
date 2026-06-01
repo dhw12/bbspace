@@ -38,7 +38,7 @@ data class DanmakuItem(
 
 @Immutable
 data class VodDanmakuRequest(
-    val videoId: VideoPlaybackId,
+    val ids: ResolvedVideoIds,
     val positionMs: Long,
     val durationMs: Long
 ) {

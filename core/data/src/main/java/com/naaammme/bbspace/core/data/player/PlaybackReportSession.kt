@@ -86,15 +86,6 @@ internal fun PlaybackReportSession.isComplete(
     return durationMs - positionMs <= COMPLETE_THRESHOLD_MS
 }
 
-internal fun samePlaybackSource(
-    left: PlaybackSource,
-    right: PlaybackSource?
-): Boolean {
-    return right != null &&
-            left.videoId.aid == right.videoId.aid &&
-            left.videoId.cid == right.videoId.cid
-}
-
 internal fun msToSec(value: Long): Int {
     return (value.coerceAtLeast(0L) / 1000L).toInt()
 }

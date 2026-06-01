@@ -3,8 +3,7 @@ package com.naaammme.bbspace.core.data.player
 import com.naaammme.bbspace.core.domain.danmaku.VodDanmakuRepository
 import com.naaammme.bbspace.core.model.DanmakuSessionState
 import com.naaammme.bbspace.core.model.DanmakuWindow
-import com.naaammme.bbspace.core.model.PlaybackSource
-import com.naaammme.bbspace.core.model.VideoPlaybackId
+import com.naaammme.bbspace.core.model.ResolvedVideoIds
 import com.naaammme.bbspace.core.model.VodDanmakuRequest
 import com.naaammme.bbspace.core.model.danmakuWindowStartMs
 import com.naaammme.bbspace.core.model.toDanmakuWindowId
@@ -26,22 +25,25 @@ internal class VodDanmakuSession(
 
     private var loadingJob: Job? = null
     private var loadingWindowId: Long? = null
-    private var currentSource: PlaybackSource? = null
+    private var currentIds: ResolvedVideoIds? = null
     private var currentDurationMs = 0L
     private var currentWindowId: Long? = null
 
-    fun setSource(source: PlaybackSource?) {
-        if (source == null) {
+    fun setSource(
+        ids: ResolvedVideoIds?,
+        durationMs: Long
+    ) {
+        if (ids == null || !ids.danmakuReady) {
             reset()
             return
         }
 
-        if (currentSource?.videoId != source.videoId) {
-            resetSource(source)
+        if (currentIds != ids) {
+            resetSource(ids, durationMs)
         } else {
-            currentSource = source
-            currentDurationMs = source.durationMs.coerceAtLeast(0L)
-            updateSourceKey(source.videoId.toDanmakuSourceKey())
+            currentIds = ids
+            currentDurationMs = durationMs.coerceAtLeast(0L)
+            updateSourceKey(ids.toDanmakuSourceKey())
         }
     }
 
@@ -55,11 +57,11 @@ internal class VodDanmakuSession(
     }
 
     private fun ensureWindowAt(positionMs: Long) {
-        val source = currentSource ?: return
+        val ids = currentIds ?: return
         val windowId = positionMs.coerceAtLeast(0L).toDanmakuWindowId()
         if (windowId == currentWindowId) return
         currentWindowId = windowId
-        updateSourceKey(source.videoId.toDanmakuSourceKey())
+        updateSourceKey(ids.toDanmakuSourceKey())
         ensureWindowLoaded(windowId)
     }
 
@@ -70,7 +72,7 @@ internal class VodDanmakuSession(
     }
 
     private fun buildRequest(windowId: Long): VodDanmakuRequest? {
-        val source = currentSource ?: return null
+        val ids = currentIds ?: return null
         val startMs = danmakuWindowStartMs(windowId)
         val positionMs = if (currentDurationMs > 0L) {
             startMs.coerceAtMost((currentDurationMs - 1L).coerceAtLeast(0L))
@@ -78,7 +80,7 @@ internal class VodDanmakuSession(
             startMs
         }
         return VodDanmakuRequest(
-            videoId = source.videoId,
+            ids = ids,
             positionMs = positionMs,
             durationMs = currentDurationMs
         )
@@ -96,7 +98,7 @@ internal class VodDanmakuSession(
             runCatching {
                 repository.fetchSegment(request)
             }.onSuccess { segment ->
-                if (segment.request.videoId != currentSource?.videoId || windowId != currentWindowId) {
+                if (segment.request.ids != currentIds || windowId != currentWindowId) {
                     return@onSuccess
                 }
                 _state.update { state ->
@@ -110,7 +112,7 @@ internal class VodDanmakuSession(
                 }
             }.onFailure { error ->
                 if (error is CancellationException) return@onFailure
-                if (request.videoId != currentSource?.videoId || windowId != currentWindowId) {
+                if (request.ids != currentIds || windowId != currentWindowId) {
                     return@onFailure
                 }
                 _state.update { it.copy(lastError = error.message ?: "Failed to load danmaku segment") }
@@ -126,14 +128,17 @@ internal class VodDanmakuSession(
         reset()
     }
 
-    private fun resetSource(source: PlaybackSource) {
+    private fun resetSource(
+        ids: ResolvedVideoIds,
+        durationMs: Long
+    ) {
         loadingJob?.cancel()
         loadingJob = null
         loadingWindowId = null
-        currentSource = source
-        currentDurationMs = source.durationMs.coerceAtLeast(0L)
+        currentIds = ids
+        currentDurationMs = durationMs.coerceAtLeast(0L)
         currentWindowId = null
-        _state.value = DanmakuSessionState(sourceKey = source.videoId.toDanmakuSourceKey())
+        _state.value = DanmakuSessionState(sourceKey = ids.toDanmakuSourceKey())
     }
 
     private fun clearError() {
@@ -147,7 +152,7 @@ internal class VodDanmakuSession(
     }
 
     private fun reset() {
-        currentSource = null
+        currentIds = null
         currentDurationMs = 0L
         currentWindowId = null
         loadingJob?.cancel()
@@ -157,7 +162,7 @@ internal class VodDanmakuSession(
     }
 }
 
-private fun VideoPlaybackId.toDanmakuSourceKey(): String {
+private fun ResolvedVideoIds.toDanmakuSourceKey(): String {
     return buildString {
         append("vod:")
         append(aid)

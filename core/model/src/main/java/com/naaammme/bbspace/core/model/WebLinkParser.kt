@@ -67,7 +67,6 @@ object WebLinkParser {
             ?: return WebLinkTarget.Stay
         return WebLinkTarget.ToVideo(
             VideoTarget.Pgc(
-                epId = 0L,
                 seasonId = seasonId,
                 src = VideoTargetTool.feed()
             )

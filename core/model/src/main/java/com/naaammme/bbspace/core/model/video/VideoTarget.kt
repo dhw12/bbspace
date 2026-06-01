@@ -17,7 +17,7 @@ sealed interface VideoTarget {
 
     @Immutable
     data class Pgc(
-        val epId: Long,
+        val epId: Long = 0L,
         val seasonId: Long? = null,
         val subType: Int? = null,
         override val src: VideoSrc = VideoTargetTool.feed()
@@ -25,24 +25,27 @@ sealed interface VideoTarget {
 
     @Immutable
     data class Pugv(
-        val epId: Long,
+        val epId: Long = 0L,
         val seasonId: Long? = null,
         override val src: VideoSrc = VideoTargetTool.feed()
     ) : VideoTarget
 }
 
 fun VideoTarget.isSameEntry(other: VideoTarget?): Boolean {
+    other ?: return false
     return when (this) {
         is VideoTarget.Ugc -> other is VideoTarget.Ugc && aid == other.aid
-        is VideoTarget.Pgc -> other is VideoTarget.Pgc && epId == other.epId
-        is VideoTarget.Pugv -> other is VideoTarget.Pugv && epId == other.epId
+        is VideoTarget.Pgc -> other is VideoTarget.Pgc &&
+            (epId > 0L && other.epId > 0L && epId == other.epId || seasonId != null && seasonId == other.seasonId)
+        is VideoTarget.Pugv -> other is VideoTarget.Pugv &&
+            (epId > 0L && other.epId > 0L && epId == other.epId || seasonId != null && seasonId == other.seasonId)
     }
 }
 
 fun VideoTarget.toPlayableParams(): PlayableParams {
     return when (this) {
         is VideoTarget.Ugc -> PlayableParams(
-            videoId = VideoPlaybackId(
+            ids = VideoRequestIds(
                 aid = aid,
                 cid = cid,
                 bvid = bvid
@@ -51,29 +54,29 @@ fun VideoTarget.toPlayableParams(): PlayableParams {
         )
 
         is VideoTarget.Pgc -> PlayableParams(
-            videoId = VideoPlaybackId(
-                aid = 0L,
-                cid = 0L
+            ids = VideoRequestIds(
+                epId = epId,
+                seasonId = seasonId ?: 0L
             ),
             src = src,
             biz = PlayBizInfo(
                 biz = PlayBiz.PGC,
                 subType = subType,
-                seasonId = seasonId,
-                epId = epId
+                seasonId = seasonId?.takeIf { it > 0L },
+                epId = epId.takeIf { it > 0L }
             )
         )
 
         is VideoTarget.Pugv -> PlayableParams(
-            videoId = VideoPlaybackId(
-                aid = 0L,
-                cid = 0L
+            ids = VideoRequestIds(
+                epId = epId,
+                seasonId = seasonId ?: 0L
             ),
             src = src,
             biz = PlayBizInfo(
                 biz = PlayBiz.PUGV,
-                seasonId = seasonId,
-                epId = epId
+                seasonId = seasonId?.takeIf { it > 0L },
+                epId = epId.takeIf { it > 0L }
             )
         )
     }

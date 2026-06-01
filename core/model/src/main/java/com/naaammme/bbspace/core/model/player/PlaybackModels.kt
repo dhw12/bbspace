@@ -33,23 +33,71 @@ data class PlayBizInfo(
 @Immutable
 data class PlayReportParams(
     val biz: PlayBiz,
-    val aid: Long,
-    val cid: Long,
-    val bvid: String? = null,
-    val seasonId: Long? = null,
-    val epId: Long? = null,
+    val ids: ResolvedVideoIds,
     val subType: Int? = null
 ) {
     val type: Int
         get() = biz.reportType
+
+    val aid: Long
+        get() = ids.aid
+
+    val cid: Long
+        get() = ids.cid
+
+    val bvid: String?
+        get() = ids.bvid
+
+    val seasonId: Long?
+        get() = ids.seasonId.takeIf { it > 0L }
+
+    val epId: Long?
+        get() = ids.epId.takeIf { it > 0L }
 }
 
 @Immutable
-data class VideoPlaybackId(
-    val aid: Long,
-    val cid: Long,
+data class VideoRequestIds(
+    val aid: Long = 0L,
+    val cid: Long = 0L,
+    val epId: Long = 0L,
+    val seasonId: Long = 0L,
     val bvid: String? = null
 )
+
+@Immutable
+data class ResolvedVideoIds(
+    val aid: Long = 0L,
+    val cid: Long = 0L,
+    val epId: Long = 0L,
+    val seasonId: Long = 0L,
+    val bvid: String? = null
+) {
+    val hasAny: Boolean
+        get() = aid > 0L || cid > 0L || epId > 0L || seasonId > 0L || !bvid.isNullOrBlank()
+
+    val danmakuReady: Boolean
+        get() = aid > 0L && cid > 0L
+}
+
+fun ResolvedVideoIds.toUgcTarget(src: VideoSrc): VideoTarget.Ugc {
+    return VideoTarget.Ugc(
+        aid = aid,
+        cid = cid,
+        bvid = bvid,
+        src = src
+    )
+}
+
+fun ResolvedVideoIds.toReportParams(
+    biz: PlayBiz,
+    subType: Int? = null
+): PlayReportParams {
+    return PlayReportParams(
+        biz = biz,
+        ids = this,
+        subType = subType
+    )
+}
 
 enum class PlaybackControlMode {
     Default,
@@ -58,7 +106,7 @@ enum class PlaybackControlMode {
 
 @Immutable
 data class PlayableParams(
-    val videoId: VideoPlaybackId,
+    val ids: VideoRequestIds,
     val src: VideoSrc = VideoTargetTool.feed(),
     val biz: PlayBizInfo = PlayBizInfo(),
     val fromScene: String = DEFAULT_FROM_SCENE,
@@ -85,33 +133,21 @@ data class PlayableParams(
             when (biz.biz) {
                 PlayBiz.UGC -> Unit
                 PlayBiz.PGC -> {
-                    biz.epId?.let { put("ep_id", it.toString()) }
-                    biz.seasonId?.let { put("season_id", it.toString()) }
-                    biz.roomId?.let { put("room_id", it.toString()) }
+                    biz.epId?.takeIf { it > 0L }?.let { put("ep_id", it.toString()) }
+                    biz.seasonId?.takeIf { it > 0L }?.let { put("season_id", it.toString()) }
+                    biz.roomId?.takeIf { it > 0L }?.let { put("room_id", it.toString()) }
                     biz.inlineScene?.takeIf(String::isNotBlank)?.let { put("inline_scene", it) }
                     biz.materialNo?.takeIf(String::isNotBlank)?.let { put("material_no", it) }
                     biz.securityLevel?.takeIf(String::isNotBlank)?.let { put("security_level", it) }
                 }
                 PlayBiz.PUGV -> {
-                    biz.epId?.let { put("ep_id", it.toString()) }
-                    biz.seasonId?.let { put("season_id", it.toString()) }
+                    biz.epId?.takeIf { it > 0L }?.let { put("ep_id", it.toString()) }
+                    biz.seasonId?.takeIf { it > 0L }?.let { put("season_id", it.toString()) }
                     put("biz_type", PUGV_BIZ_TYPE)
                 }
             }
             putAll(extraResolve)
         }
-    }
-
-    fun getReportCommonParams(): PlayReportParams {
-        return PlayReportParams(
-            biz = biz.biz,
-            aid = videoId.aid,
-            cid = videoId.cid,
-            bvid = videoId.bvid,
-            seasonId = biz.seasonId,
-            epId = biz.epId,
-            subType = biz.subType
-        )
     }
 
     private companion object {
@@ -127,8 +163,8 @@ data class PlaybackRequest(
     val preferredQuality: Int? = null,
     val controlMode: PlaybackControlMode = PlaybackControlMode.Default
 ) {
-    val videoId: VideoPlaybackId
-        get() = playable.videoId
+    val ids: VideoRequestIds
+        get() = playable.ids
 }
 
 @Immutable
@@ -215,9 +251,7 @@ data class PlaybackAudio(
 
 @Immutable
 data class PlaybackSource(
-    val videoId: VideoPlaybackId,
     val biz: PlayBiz,
-    val report: PlayReportParams,
     val durationMs: Long,
     val streams: List<PlaybackStream>,
     val audios: List<PlaybackAudio>,
@@ -242,6 +276,12 @@ sealed interface PlaybackError {
 
 @Immutable
 data class PlayerSessionState(
+    val request: PlaybackRequest? = null,
+    val biz: PlayBiz = PlayBiz.UGC,
+    val ids: ResolvedVideoIds = ResolvedVideoIds(),
+    val detail: VideoDetail? = null,
+    val detailLoading: Boolean = false,
+    val detailError: String? = null,
     val playbackSource: PlaybackSource? = null,
     val currentStream: PlaybackStream? = null,
     val currentAudio: PlaybackAudio? = null,

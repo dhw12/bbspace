@@ -3,6 +3,7 @@ package com.naaammme.bbspace.core.data.player
 import android.os.SystemClock
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.domain.player.PlayerSettings
+import com.naaammme.bbspace.core.model.PlayReportParams
 import com.naaammme.bbspace.core.model.PlaybackProgress
 import com.naaammme.bbspace.core.model.PlaybackRequest
 import com.naaammme.bbspace.core.model.PlaybackState
@@ -38,6 +39,7 @@ class PlaybackReporter @Inject constructor(
     suspend fun startSession(
         request: PlaybackRequest,
         state: PlayerSessionState,
+        report: PlayReportParams,
         startPositionMs: Long
     ) {
         val source = state.playbackSource ?: return
@@ -46,11 +48,20 @@ class PlaybackReporter @Inject constructor(
         val nowElapsed = SystemClock.elapsedRealtime()
         val reportEnabled = playerSettings.state.first().playback.reportPlayback
         mu.withLock {
+            val active = ctx
+            if (
+                active != null &&
+                active.request == request &&
+                active.source == source &&
+                active.report == report
+            ) {
+                return@withLock
+            }
             ctx = PlaybackReportSession(
                 uid = authProvider.mid,
                 request = request,
                 source = source,
-                report = source.report,
+                report = report,
                 sessionId = BiliSessionId.view(deviceIdentity.buvid),
                 polarisActionId = pagePolarisId.ifBlank(BiliSessionId::polarisAction),
                 reportEnabled = reportEnabled,
@@ -71,7 +82,7 @@ class PlaybackReporter @Inject constructor(
     ) {
         val current = mu.withLock {
             val active = ctx ?: return@withLock null
-            if (!samePlaybackSource(active.source, state.playbackSource)) return@withLock null
+            if (active.source != state.playbackSource) return@withLock null
             val prevPlayWhenReady = active.lastPlayWhenReady
             val prevPlaybackState = active.lastPlaybackState
             active.sync(progress.positionMs, state)

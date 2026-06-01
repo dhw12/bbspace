@@ -532,7 +532,7 @@ private fun VideoPlayerOverlay(
                 state = state,
                 player = player,
                 isFull = isFull,
-                dragMs = dragMs,
+                dragMs = { dragMs },
                 gestureSeekMs = gestureState.dragSeekPosMs,
                 onDragMsChange = { dragMs = it },
                 onShowCtrlChange = onShowCtrlChange,
@@ -554,7 +554,7 @@ private fun PlayerCtrlBarHost(
     state: VideoPlaybackState,
     player: Player?,
     isFull: Boolean,
-    dragMs: Long?,
+    dragMs: () -> Long?,
     gestureSeekMs: Long?,
     onDragMsChange: (Long?) -> Unit,
     onShowCtrlChange: (Boolean) -> Unit,
@@ -570,7 +570,8 @@ private fun PlayerCtrlBarHost(
         ?: progress.durationMs.takeIf { it > 0L }
         ?: state.playbackSource?.durationMs?.coerceAtLeast(0L)
         ?: 0L
-    val barMs = dragMs ?: gestureSeekMs ?: progress.positionMs
+    val dragSeekMs = dragMs()
+    val barMs = dragSeekMs ?: gestureSeekMs ?: progress.positionMs
     val sliderVal = if (durationMs > 0L) {
         (barMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     } else {
@@ -598,7 +599,7 @@ private fun PlayerCtrlBarHost(
             onDragMsChange((durationMs * frac).toLong())
         },
         onSeekDone = {
-            val next = dragMs ?: return@PlayerCtrlBar
+            val next = dragMs() ?: return@PlayerCtrlBar
             viewModel.seekTo(next)
             onDragMsChange(null)
         },

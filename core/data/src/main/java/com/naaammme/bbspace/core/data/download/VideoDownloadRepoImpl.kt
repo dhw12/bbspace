@@ -347,11 +347,9 @@ class VideoDownloadRepoImpl @Inject constructor(
                 add(mapAudio(reply.vodInfo.lossLessItem.audio))
             }
         }
-        val resolvedAid = reply.playArc.aid.takeIf { it > 0L } ?: request.aid
-        val resolvedCid = reply.playArc.cid.takeIf { it > 0L } ?: request.cid
         return DownloadSource(
-            aid = resolvedAid,
-            cid = resolvedCid,
+            aid = request.aid,
+            cid = request.cid,
             durationMs = if (reply.hasPlayArc() && reply.playArc.durationMs > 0L) {
                 reply.playArc.durationMs
             } else {

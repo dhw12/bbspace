@@ -41,9 +41,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
@@ -84,10 +81,8 @@ fun VideoScreen(
     hostExpanded: Boolean = true,
     danmakuOverlayState: DanmakuOverlayState
 ) {
-    val pageState by viewModel.pageState.collectAsStateWithLifecycle()
     val videoState by viewModel.videoState.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
-    val owner = LocalLifecycleOwner.current
     val ctx = LocalContext.current
     val act = remember(ctx) { ctx.findActivity() }
     val widthClass = currentWindowAdaptiveInfo().windowSizeClass.windowWidthSizeClass
@@ -165,23 +160,6 @@ fun VideoScreen(
         onDispose { }
     }
 
-    DisposableEffect(owner, viewModel) {
-        val lifecycle = owner.lifecycle
-        val obs = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_START -> viewModel.ensureStarted()
-                else -> Unit
-            }
-        }
-        lifecycle.addObserver(obs)
-        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            viewModel.ensureStarted()
-        }
-        onDispose {
-            lifecycle.removeObserver(obs)
-        }
-    }
-
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -197,7 +175,7 @@ fun VideoScreen(
 
         if (hostExpanded && !fullOn) {
             VideoDetailPage(
-                pageState = pageState,
+                state = videoState,
                 commentSubject = viewModel.commentSubject,
                 isExpanded = isExpanded,
                 playerSpaceWidth = expandedPlayerW,
@@ -238,7 +216,7 @@ fun VideoScreen(
             VideoPlayerPane(
                 modifier = playerPaneMod,
                 viewModel = viewModel,
-                videoTitle = pageState.detail?.title,
+                videoTitle = videoState.detail?.title,
                 isFull = fullOn,
                 onToggleFull = { isFull = !isFull },
                 onBackClick = handleBack,

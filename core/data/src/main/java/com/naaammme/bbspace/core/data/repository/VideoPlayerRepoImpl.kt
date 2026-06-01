@@ -2,7 +2,6 @@ package com.naaammme.bbspace.core.data.repository
 
 import com.bapis.bilibili.app.playerunite.v1.PlayViewUniteReply
 import com.bapis.bilibili.app.playerunite.v1.PlayViewUniteReq
-import com.bapis.bilibili.playershared.BizType
 import com.bapis.bilibili.playershared.CodeType
 import com.bapis.bilibili.playershared.DashItem
 import com.bapis.bilibili.playershared.DolbyItem
@@ -16,7 +15,6 @@ import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.data.AppSettings
 import com.naaammme.bbspace.core.domain.player.VideoPlayerRepository
-import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.PlaybackAudio
 import com.naaammme.bbspace.core.model.PlaybackControlMode
 import com.naaammme.bbspace.core.model.PlaybackRequest
@@ -59,13 +57,13 @@ class VideoPlayerRepoImpl @Inject constructor(
     private suspend fun shouldUseWebPlayback(request: PlaybackRequest): Boolean {
         return authProvider.accessToken.isBlank() &&
             appSettings.enableWebPlayback.first() &&
-            request.videoId.aid > 0L &&
-            request.videoId.cid > 0L
+            request.ids.aid > 0L &&
+            request.ids.cid > 0L
     }
 
     private suspend fun buildRequest(request: PlaybackRequest): PlayViewUniteReq {
         val playable = request.playable
-        val videoId = playable.videoId
+        val ids = playable.ids
         val enableHdrAnd8k = appSettings.enableHdrAnd8k.first()
         val needTrial = appSettings.needTrial.first()
         val preferredCodec = appSettings.preferredCodec.first()
@@ -79,8 +77,8 @@ class VideoPlayerRepoImpl @Inject constructor(
         }
 
         val vod = VideoVod.newBuilder()
-            .setAid(videoId.aid)
-            .setCid(videoId.cid)
+            .setAid(ids.aid)
+            .setCid(ids.cid)
             .setQn(80)
             .setFnval(fnval)
             .setFnver(0)
@@ -103,11 +101,15 @@ class VideoPlayerRepoImpl @Inject constructor(
             .setPlayCtrl(playCtrl)
             .putAllExtraContent(playable.getResolveExtraContent())
 
+        ids.cid.takeIf { it > 0L }?.let { builder.putExtraContent("cid", it.toString()) }
+        ids.epId.takeIf { it > 0L }?.let { builder.putExtraContent("ep_id", it.toString()) }
+        ids.seasonId.takeIf { it > 0L }?.let { builder.putExtraContent("season_id", it.toString()) }
+
         playable.adExtra
             ?.takeIf(String::isNotBlank)
             ?.let(builder::setAdExtra)
 
-        videoId.bvid
+        ids.bvid
             ?.takeIf(String::isNotBlank)
             ?.let(builder::setBvid)
 
@@ -116,27 +118,7 @@ class VideoPlayerRepoImpl @Inject constructor(
 
     private fun mapReply(request: PlaybackRequest, reply: PlayViewUniteReply): PlaybackSource {
         val vodInfo = reply.vodInfo
-        /*
-        TODO:
-        这里先信任 playunite 响应里的 playArc aid cid
-        这样只传 epid 时也能把后续请求要用的 id 补齐
-        如果后面只传 epid 不再稳定返回
-        或 playArc 不再带 aid cid
-        要改回先走 View 详情接口的 arc
-         */
-        val resolvedId = if (reply.hasPlayArc()) {
-            request.videoId.copy(
-                aid = reply.playArc.aid.takeIf { it > 0L } ?: request.videoId.aid,
-                cid = reply.playArc.cid.takeIf { it > 0L } ?: request.videoId.cid
-            )
-        } else {
-            request.videoId
-        }
-        val report = request.playable.getReportCommonParams().copy(
-            aid = resolvedId.aid,
-            cid = resolvedId.cid
-        )
-        val biz = if (reply.hasPlayArc()) mapBiz(reply.playArc.videoType) else report.biz
+        val biz = request.playable.biz.biz
         val audios = buildList {
             addAll(vodInfo.dashAudioList.map(::mapAudio))
             if (vodInfo.hasDolby() && vodInfo.dolby.type != DolbyItem.Type.NONE) {
@@ -167,9 +149,7 @@ class VideoPlayerRepoImpl @Inject constructor(
         }
 
         return PlaybackSource(
-            videoId = resolvedId,
             biz = biz,
-            report = report,
             durationMs = if (reply.hasPlayArc() && reply.playArc.durationMs > 0) {
                 reply.playArc.durationMs
             } else {
@@ -287,14 +267,6 @@ class VideoPlayerRepoImpl @Inject constructor(
                 null
             }
         )
-    }
-
-    private fun mapBiz(type: BizType): PlayBiz {
-        return when (type) {
-            BizType.BIZ_TYPE_PGC -> PlayBiz.PGC
-            BizType.BIZ_TYPE_PUGV -> PlayBiz.PUGV
-            else -> PlayBiz.UGC
-        }
     }
 
     private companion object {

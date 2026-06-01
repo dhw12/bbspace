@@ -10,6 +10,7 @@ import com.naaammme.bbspace.core.model.VideoDownloadMeta
 import com.naaammme.bbspace.core.model.VideoDownloadRequest
 import com.naaammme.bbspace.core.model.VideoDownloadTask
 import com.naaammme.bbspace.core.model.PlayBiz
+import com.naaammme.bbspace.core.model.VideoRequestIds
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.core.model.fallbackTitle
 import com.naaammme.bbspace.feature.download.DownloadExporter
@@ -244,19 +245,31 @@ class DownloadViewModel @Inject constructor(
             ?: VideoTargetTool.arg(input, "seasonId")?.toLongOrNull()
             ?: SS_REGEX.find(input)?.groupValues?.get(1)?.toLongOrNull()
         if ((epId != null && epId > 0L) || (seasonId != null && seasonId > 0L)) {
-            val title = when {
-                epId != null && epId > 0L -> "ep$epId"
-                seasonId != null && seasonId > 0L -> "ss$seasonId"
-                else -> null
-            }
+            val result = detailRepository.fetchVideoDetail(
+                ids = VideoRequestIds(
+                    epId = epId ?: 0L,
+                    seasonId = seasonId ?: 0L
+                ),
+                src = VideoTargetTool.feed()
+            )
+            val detail = result.detail
+            val ids = result.ids
             return VideoDownloadRequest(
-                biz = PlayBiz.PGC,
-                epId = epId ?: 0L,
-                seasonId = seasonId ?: 0L,
+                biz = result.biz,
+                aid = ids.aid,
+                cid = ids.cid,
+                bvid = ids.bvid?.takeIf(String::isNotBlank),
+                epId = ids.epId,
+                seasonId = ids.seasonId,
                 kind = state.kind,
                 videoQuality = state.videoQuality,
                 audioQuality = state.audioQuality,
-                meta = VideoDownloadMeta(title = title)
+                meta = VideoDownloadMeta(
+                    title = detail.title.takeIf(String::isNotBlank),
+                    cover = detail.cover,
+                    ownerUid = detail.owner?.mid?.takeIf { it > 0L },
+                    ownerName = detail.owner?.name?.takeIf(String::isNotBlank)
+                )
             )
         }
 
@@ -266,11 +279,15 @@ class DownloadViewModel @Inject constructor(
             ?: input.toLongOrNull()
         val cid = VideoTargetTool.cid(input)
         if (aid == null && bvid == null) error("请输入链接、av号或BV号")
-        val detail = detailRepository.fetchVideoDetail(
-            aid = aid ?: 0L,
-            bvid = bvid,
+        val result = detailRepository.fetchVideoDetail(
+            ids = VideoRequestIds(
+                aid = aid ?: 0L,
+                cid = cid ?: 0L,
+                bvid = bvid
+            ),
             src = VideoTargetTool.feed()
         )
+        val detail = result.detail
         val targetCid = cid?.takeIf { it > 0L }
             ?: detail.pages.firstOrNull()?.cid
             ?: error("没有找到可缓存分P")
@@ -282,9 +299,9 @@ class DownloadViewModel @Inject constructor(
         ).joinToString(" - ").takeIf(String::isNotBlank)
         return VideoDownloadRequest(
             biz = PlayBiz.UGC,
-            aid = detail.aid,
+            aid = result.ids.aid,
             cid = targetCid,
-            bvid = detail.bvid.takeIf(String::isNotBlank),
+            bvid = result.ids.bvid?.takeIf(String::isNotBlank),
             kind = state.kind,
             videoQuality = state.videoQuality,
             audioQuality = state.audioQuality,

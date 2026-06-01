@@ -45,6 +45,7 @@ import com.naaammme.bbspace.core.designsystem.component.DanmakuSettingsSection
 import com.naaammme.bbspace.core.model.PlaybackError
 import com.naaammme.bbspace.core.model.PlayerBufferProfile
 import com.naaammme.bbspace.core.model.PlayerSettingsState
+import com.naaammme.bbspace.core.model.ResolvedVideoIds
 import com.naaammme.bbspace.core.model.VideoPlaybackState
 import com.naaammme.bbspace.core.model.buildPlaybackCdns
 import com.naaammme.bbspace.feature.video.VideoViewModel
@@ -97,6 +98,7 @@ internal fun VideoPlaybackSheet(
     ) {
         VideoPlaybackPanelContent(
             state = state,
+            ids = state.ids,
             settingsState = settingsState,
             viewModel = viewModel,
             section = section,
@@ -142,6 +144,7 @@ internal fun VideoPlaybackSidebar(
             ) {
                 VideoPlaybackPanelContent(
                     state = state,
+                    ids = state.ids,
                     settingsState = settingsState,
                     viewModel = viewModel,
                     section = section,
@@ -159,6 +162,7 @@ internal fun VideoPlaybackSidebar(
 @Composable
 private fun VideoPlaybackPanelContent(
     state: VideoPlaybackState,
+    ids: ResolvedVideoIds,
     settingsState: PlayerSettingsState,
     viewModel: VideoViewModel,
     section: PlaybackSheetSection,
@@ -186,7 +190,7 @@ private fun VideoPlaybackPanelContent(
         }
 
         when (section) {
-            PlaybackSheetSection.Info -> PlayerInfoSection(state)
+            PlaybackSheetSection.Info -> PlayerInfoSection(state, ids)
             PlaybackSheetSection.Playback -> PlaybackSettingsSection(
                 state = state,
                 settingsState = settingsState,
@@ -292,7 +296,10 @@ private fun PlaybackSettingsSection(
 }
 
 @Composable
-private fun PlayerInfoSection(state: VideoPlaybackState) {
+private fun PlayerInfoSection(
+    state: VideoPlaybackState,
+    ids: ResolvedVideoIds
+) {
     SheetSectionTitle("视频信息")
 
     state.error?.let { err ->
@@ -327,8 +334,11 @@ private fun PlayerInfoSection(state: VideoPlaybackState) {
     SheetInfoGroup(
         title = "视频",
         rows = buildList {
-            add("AV号" to "av${src.videoId.aid}")
-            add("CID" to src.videoId.cid.toString())
+            ids.aid.takeIf { it > 0L }?.let { add("AV号" to "av$it") }
+            ids.cid.takeIf { it > 0L }?.let { add("CID" to it.toString()) }
+            ids.epId.takeIf { it > 0L }?.let { add("EPID" to it.toString()) }
+            ids.seasonId.takeIf { it > 0L }?.let { add("SSID" to it.toString()) }
+            ids.bvid?.takeIf(String::isNotBlank)?.let { add("BVID" to it) }
             add("时长" to formatDuration(src.durationMs))
             stream?.let {
                 add(
