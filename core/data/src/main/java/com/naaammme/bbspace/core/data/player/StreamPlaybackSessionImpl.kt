@@ -699,7 +699,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
         val source = state.playbackSource ?: return
         if (!playerSettings.state.first().danmaku.enabled) return
         danmakuSession.setSource(ids, source.durationMs)
-        danmakuSession.seekTo(currentPlaybackPositionMs())
     }
 
     private fun canResume(

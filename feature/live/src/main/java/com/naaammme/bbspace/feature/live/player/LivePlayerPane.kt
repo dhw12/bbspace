@@ -67,6 +67,9 @@ import com.naaammme.bbspace.infra.player.danmaku.DanmakuRenderMode
 import com.naaammme.bbspace.infra.player.danmaku.rememberDanmakuOverlayState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 @Suppress("UnsafeOptInUsageError")
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -304,33 +307,48 @@ private fun LiveDanmakuEffect(
     playbackRoomId: Long,
     danmakuOn: Boolean
 ) {
-    val roomSession by roomSessionState.collectAsStateWithLifecycle()
-    val latestMessage = roomSession.messages.lastOrNull()
     var lastHandledMessageId by remember(playbackRoomId) {
         mutableLongStateOf(0L)
     }
 
-    LaunchedEffect(playbackRoomId, roomSession.roomId, danmakuOn) {
+    LaunchedEffect(playbackRoomId, danmakuOn) {
         overlayState.clearLiveDanmakus()
-        if (!danmakuOn || playbackRoomId <= 0L || roomSession.roomId != playbackRoomId) {
-            lastHandledMessageId = 0L
-            return@LaunchedEffect
-        }
-        lastHandledMessageId = latestMessage?.localId ?: 0L
+        lastHandledMessageId = 0L
     }
 
-    LaunchedEffect(latestMessage?.localId, playbackRoomId, danmakuOn) {
-        if (!danmakuOn || playbackRoomId <= 0L || roomSession.roomId != playbackRoomId) {
+    LaunchedEffect(roomSessionState, playbackRoomId, danmakuOn) {
+        if (!danmakuOn || playbackRoomId <= 0L) {
             return@LaunchedEffect
         }
-        val msg = latestMessage ?: return@LaunchedEffect
-        if (msg.localId <= lastHandledMessageId) {
-            return@LaunchedEffect
-        }
-        if (msg.shouldRenderLiveDanmaku()) {
-            overlayState.appendDanmaku(msg.toLiveDanmakuItem())
-        }
-        lastHandledMessageId = msg.localId
+        roomSessionState
+            .map { session ->
+                Triple(
+                    session.roomId,
+                    session.messages.lastOrNull()?.localId ?: 0L,
+                    session.messages
+                )
+            }
+            .distinctUntilChanged()
+            .collectLatest { (roomId, _, messages) ->
+                if (roomId != playbackRoomId) {
+                    lastHandledMessageId = 0L
+                    return@collectLatest
+                }
+                if (messages.isEmpty()) {
+                    return@collectLatest
+                }
+                val startIndex = messages.indexOfFirst { it.localId > lastHandledMessageId }
+                if (startIndex < 0) {
+                    return@collectLatest
+                }
+                val newItems = messages.subList(startIndex, messages.size)
+                newItems.asSequence()
+                    .filter(LiveRoomMessage::shouldRenderLiveDanmaku)
+                    .forEach { msg ->
+                        overlayState.appendDanmaku(msg.toLiveDanmakuItem())
+                    }
+                lastHandledMessageId = newItems.last().localId
+            }
     }
 }
 

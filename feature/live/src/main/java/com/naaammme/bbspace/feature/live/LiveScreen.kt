@@ -51,7 +51,8 @@ fun LiveScreen(
 ) {
     val route by viewModel.route.collectAsStateWithLifecycle()
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
-    val roomSession by viewModel.roomSession.collectAsStateWithLifecycle()
+    val popularCount by viewModel.popularCount.collectAsStateWithLifecycle()
+    val roomPanel by viewModel.roomPanel.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val owner = LocalLifecycleOwner.current
@@ -158,10 +159,10 @@ fun LiveScreen(
                 TopAppBar(
                     title = {
                         TopBarPanel(
-                            popularCount = roomSession.popularCount,
-                            watchedText = roomSession.panel.watchedText,
-                            onlineRankText = roomSession.panel.onlineRankText,
-                            rankChangedText = roomSession.panel.rankChangedText
+                            popularCount = popularCount,
+                            watchedText = roomPanel.watchedText,
+                            onlineRankText = roomPanel.onlineRankText,
+                            rankChangedText = roomPanel.rankChangedText
                         )
                     },
                     navigationIcon = {

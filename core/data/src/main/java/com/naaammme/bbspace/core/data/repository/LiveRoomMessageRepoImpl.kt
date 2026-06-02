@@ -463,25 +463,6 @@ class LiveRoomMessageRepoImpl @Inject constructor(
         )
     }
 
-    private fun appendMessage(
-        messages: List<LiveRoomMessage>,
-        msg: LiveRoomMessage
-    ): List<LiveRoomMessage> {
-        if (messages.isEmpty()) return listOf(msg)
-        val next = if (messages.size >= MAX_MESSAGE_COUNT) {
-            ArrayList<LiveRoomMessage>(MAX_MESSAGE_COUNT).apply {
-                addAll(messages.subList(1, messages.size))
-                add(msg)
-            }
-        } else {
-            ArrayList<LiveRoomMessage>(messages.size + 1).apply {
-                addAll(messages)
-                add(msg)
-            }
-        }
-        return next
-    }
-
     private fun buildAuthPayload(
         roomId: Long,
         token: String,
@@ -512,6 +493,25 @@ class LiveRoomMessageRepoImpl @Inject constructor(
             put("uid", authProvider.mid)
             put("version_name", BiliConstants.VERSION)
         }.toString()
+    }
+
+    private fun appendMessage(
+        messages: List<LiveRoomMessage>,
+        msg: LiveRoomMessage
+    ): List<LiveRoomMessage> {
+        if (messages.isEmpty()) return listOf(msg)
+        val next = if (messages.size >= MAX_MESSAGE_COUNT) {
+            ArrayList<LiveRoomMessage>(MAX_MESSAGE_COUNT).apply {
+                addAll(messages.subList(1, messages.size))
+                add(msg)
+            }
+        } else {
+            ArrayList<LiveRoomMessage>(messages.size + 1).apply {
+                addAll(messages)
+                add(msg)
+            }
+        }
+        return next
     }
 
     private fun sendAck(
