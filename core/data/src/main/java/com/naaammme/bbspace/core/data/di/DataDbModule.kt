@@ -27,7 +27,9 @@ object DataDbModule {
             context,
             PlaybackHistoryDb::class.java,
             "playback_history.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
