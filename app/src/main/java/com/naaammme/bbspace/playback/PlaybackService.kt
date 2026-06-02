@@ -9,7 +9,6 @@ import android.graphics.Bitmap
 import android.os.IBinder
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -71,23 +70,13 @@ class PlaybackService : Service() {
         }
     }
 
-    @SuppressLint("MissingPermission")
     override fun onStartCommand(
         intent: Intent?,
         flags: Int,
         startId: Int
     ): Int {
-        if (!isForeground) {
-            val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_monochrome)
-                .setContentTitle(currentTitle())
-                .setContentText(currentSubText())
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-            createContentIntent()?.let(builder::setContentIntent)
-            startForeground(NOTIFICATION_ID, builder.build())
-            isForeground = true
-        }
+        bindPlayer(playerEngine.player.value)
+        updateActionMode()
         notificationManager?.invalidate()
         return START_NOT_STICKY
     }
@@ -216,18 +205,16 @@ class PlaybackService : Service() {
             ongoing: Boolean
         ) {
             if (ongoing) {
-                startForeground(notificationId, notification)
-                isForeground = true
+                if (!isForeground) {
+                    startForeground(notificationId, notification)
+                    isForeground = true
+                }
                 return
             }
             if (isForeground) {
                 ServiceCompat.stopForeground(this@PlaybackService, ServiceCompat.STOP_FOREGROUND_DETACH)
                 isForeground = false
             }
-            NotificationManagerCompat.from(this@PlaybackService).notify(
-                notificationId,
-                notification
-            )
         }
 
         override fun onNotificationCancelled(

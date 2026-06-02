@@ -18,7 +18,6 @@ import com.naaammme.bbspace.core.model.DanmakuSessionState
 import com.naaammme.bbspace.core.model.LivePlaybackError
 import com.naaammme.bbspace.core.model.LivePlaybackViewState
 import com.naaammme.bbspace.core.model.LiveRoute
-import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.PlayReportParams
 import com.naaammme.bbspace.core.model.PlaybackAudio
 import com.naaammme.bbspace.core.model.PlaybackControlMode
@@ -55,7 +54,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -67,7 +65,7 @@ import kotlinx.coroutines.withContext
 class StreamPlaybackSessionImpl @Inject constructor(
     private val videoRepository: VideoPlayerRepository,
     private val detailRepository: VideoDetailRepository,
-    private val danmakuRepository: VodDanmakuRepository,
+    danmakuRepository: VodDanmakuRepository,
     private val appSettings: AppSettings,
     private val playerSettings: PlayerSettings,
     private val reporter: PlaybackReporter,
@@ -190,7 +188,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
                 playWhenReady = true,
                 metadata = MediaMetadata.Builder()
                     .setTitle(route.title?.takeIf(String::isNotBlank))
-                    .setArtist(source.currentDescription?.takeIf(String::isNotBlank))
+                    .setArtist(source.currentDescription.takeIf(String::isNotBlank))
                     .setArtworkUri(route.cover?.takeIf(String::isNotBlank)?.let(android.net.Uri::parse))
                     .build()
             )
@@ -753,7 +751,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
         )
     }
 
-    private suspend fun onVideoPlayerState(state: PlayerPlaybackState) {
+    private fun onVideoPlayerState(state: PlayerPlaybackState) {
         val isNewSeekEvent = state.seekEventSeq != lastDiscontinuitySeq
         lastDiscontinuitySeq = state.seekEventSeq
         refreshVideoState(isNewSeekEvent = isNewSeekEvent)

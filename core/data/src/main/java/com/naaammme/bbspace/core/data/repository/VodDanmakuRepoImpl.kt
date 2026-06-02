@@ -65,7 +65,7 @@ class VodDanmakuRepoImpl @Inject constructor(
                 progressMs = elem.progress,
                 mode = elem.mode,
                 fontSize = elem.fontsize,
-                color = elem.color.toInt(),
+                color = elem.color,
                 midHash = elem.midHash,
                 content = elem.content,
                 createdAtEpochSecond = elem.ctime,

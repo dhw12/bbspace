@@ -94,8 +94,12 @@ fun VideoScreen(
         val height = videoState.currentStream?.height ?: return@remember false
         width in 1..<height
     }
-    val openTarget = remember(viewModel) { viewModel::openTarget }
-    val switchPage = remember(viewModel) { viewModel::switchPage }
+    val openTarget = remember(viewModel) {
+        { target: VideoTarget -> viewModel.openTarget(target) }
+    }
+    val switchPage = remember(viewModel) {
+        { cid: Long -> viewModel.switchPage(cid) }
+    }
     val downloadClick = remember { { downloadSheetOn = true } }
     val handleBack = {
         if (fullOn) {
