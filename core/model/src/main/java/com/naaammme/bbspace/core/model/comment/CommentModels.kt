@@ -62,9 +62,11 @@ data class CommentPage(
     val selectedFilter: String = COMMENT_FILTER_ALL,
     val items: List<CommentReply> = emptyList(),
     val nextOffset: String? = null,
-    val hasMore: Boolean = false,
     val endText: String? = null
-)
+) {
+    val hasMore: Boolean
+        get() = nextOffset != null
+}
 
 @Immutable
 data class CommentReplyDetailPage(
@@ -73,9 +75,11 @@ data class CommentReplyDetailPage(
     val sort: CommentSort = CommentSort.HOT,
     val canSwitchSort: Boolean = true,
     val items: List<CommentReply> = emptyList(),
-    val nextOffset: String? = null,
-    val hasMore: Boolean = false
-)
+    val nextOffset: String? = null
+) {
+    val hasMore: Boolean
+        get() = nextOffset != null
+}
 
 @Immutable
 data class CommentReply(

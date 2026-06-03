@@ -6,6 +6,8 @@ import com.naaammme.bbspace.core.model.CommentFilterTag
 import com.naaammme.bbspace.core.model.CommentReply
 import com.naaammme.bbspace.core.model.CommentSort
 import com.naaammme.bbspace.core.model.CommentSubject
+import com.naaammme.bbspace.feature.comment.editor.CommentEditorState
+import com.naaammme.bbspace.feature.comment.thread.CommentThreadState
 
 @Immutable
 data class CommentUiState(
@@ -26,39 +28,8 @@ data class CommentUiState(
     val threadPane: CommentThreadState? = null,
     val editor: CommentEditorState = CommentEditorState(),
     val nextOffset: String? = null,
-    val hasMore: Boolean = false,
     val endText: String? = null
-)
-
-@Immutable
-data class CommentThreadState(
-    val title: String = "回复详情",
-    val root: CommentReply,
-    val count: Long = 0L,
-    val sort: CommentSort = CommentSort.HOT,
-    val canSwitchSort: Boolean = true,
-    val loading: Boolean = false,
-    val loadingMore: Boolean = false,
-    val error: String? = null,
-    val loadMoreError: String? = null,
-    val items: List<CommentReply> = emptyList(),
-    val nextOffset: String? = null,
-    val hasMore: Boolean = false
-)
-
-@Immutable
-data class CommentEditorState(
-    val visible: Boolean = false,
-    val loading: Boolean = false,
-    val target: CommentEditorTarget = CommentEditorTarget()
-)
-
-@Immutable
-data class CommentEditorTarget(
-    val rootRpid: Long = 0L,
-    val parentRpid: Long = 0L,
-    val parentName: String? = null
 ) {
-    val isReply: Boolean
-        get() = rootRpid > 0L
+    val hasMore: Boolean
+        get() = nextOffset != null
 }

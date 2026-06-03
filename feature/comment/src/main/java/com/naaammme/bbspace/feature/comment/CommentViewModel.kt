@@ -9,6 +9,9 @@ import com.naaammme.bbspace.core.model.CommentPage
 import com.naaammme.bbspace.core.model.CommentReply
 import com.naaammme.bbspace.core.model.CommentSort
 import com.naaammme.bbspace.core.model.CommentSubject
+import com.naaammme.bbspace.feature.comment.editor.CommentEditorState
+import com.naaammme.bbspace.feature.comment.editor.CommentEditorTarget
+import com.naaammme.bbspace.feature.comment.thread.CommentThreadState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -47,20 +50,17 @@ class CommentViewModel @Inject constructor(
 
     fun bind(subject: CommentSubject?) {
         if (_uiState.value.subject == subject) return
-        reqId += 1L
         val currentMid = _uiState.value.currentMid
-        _uiState.value = CommentUiState(
-            subject = subject,
-            currentMid = currentMid,
-            loading = subject != null
-        )
-        if (subject != null) {
-            refresh(
-                subject = subject,
-                sort = CommentSort.HOT,
-                filter = COMMENT_FILTER_ALL
-            )
+        if (subject == null) {
+            reqId += 1L
+            _uiState.value = CommentUiState(currentMid = currentMid)
+            return
         }
+        refresh(
+            subject = subject,
+            sort = CommentSort.HOT,
+            filter = COMMENT_FILTER_ALL
+        )
     }
 
     fun selectSort(sort: CommentSort) {
@@ -88,7 +88,7 @@ class CommentViewModel @Inject constructor(
         val state = _uiState.value
         val subject = state.subject ?: return
         val nextOffset = state.nextOffset ?: return
-        if (state.loading || state.loadingMore || !state.hasMore) return
+        if (state.loading || state.loadingMore) return
         val callId = reqId
         _uiState.update {
             it.copy(
@@ -122,7 +122,6 @@ class CommentViewModel @Inject constructor(
                             selectedFilter = page.selectedFilter,
                             items = mergeReplies(cur.items, page.items),
                             nextOffset = page.nextOffset,
-                            hasMore = page.hasMore,
                             endText = page.endText
                         )
                     }
@@ -197,7 +196,7 @@ class CommentViewModel @Inject constructor(
         val subject = state.subject ?: return
         val thread = state.threadPane ?: return
         val nextOffset = thread.nextOffset ?: return
-        if (thread.loading || thread.loadingMore || !thread.hasMore) return
+        if (thread.loading || thread.loadingMore) return
         _uiState.update {
             it.copy(
                 threadPane = thread.copy(
@@ -234,8 +233,7 @@ class CommentViewModel @Inject constructor(
                     error = null,
                     loadMoreError = null,
                     items = emptyList(),
-                    nextOffset = null,
-                    hasMore = false
+                    nextOffset = null
                 )
             )
         }
@@ -432,23 +430,14 @@ class CommentViewModel @Inject constructor(
     ) {
         val callId = reqId + 1L
         reqId = callId
-        _uiState.update {
-            it.copy(
-                subject = subject,
-                loading = true,
-                loadingMore = false,
-                error = null,
-                loadMoreError = null,
-                sort = sort,
-                selectedFilter = filter,
-                items = emptyList(),
-                threadPane = null,
-                editor = CommentEditorState(),
-                nextOffset = null,
-                hasMore = false,
-                endText = null
-            )
-        }
+        val currentMid = _uiState.value.currentMid
+        _uiState.value = CommentUiState(
+            subject = subject,
+            currentMid = currentMid,
+            loading = true,
+            sort = sort,
+            selectedFilter = filter
+        )
         viewModelScope.launch {
             val result = runCatching {
                 repo.fetchMainPage(
@@ -481,7 +470,6 @@ class CommentViewModel @Inject constructor(
         offset: String,
         append: Boolean
     ) {
-        val callId = reqId
         viewModelScope.launch {
             val result = runCatching {
                 repo.fetchReplyDetail(
@@ -491,14 +479,13 @@ class CommentViewModel @Inject constructor(
                     offset = offset
                 )
             }
-            if (callId != reqId || _uiState.value.subject != subject) return@launch
+            if (_uiState.value.subject != subject) return@launch
             result.fold(
                 onSuccess = { page ->
                     _uiState.update { cur ->
-                        val thread = cur.threadPane ?: return@update cur
-                        if (thread.root.rpid != rootRpid && thread.root.rpid != page.root.rpid) {
-                            return@update cur
-                        }
+                        val thread = cur.threadPane
+                            ?.takeIf { it.root.rpid == rootRpid }
+                            ?: return@update cur
                         val items = if (append) {
                             mergeReplies(thread.items, page.items)
                         } else {
@@ -515,8 +502,7 @@ class CommentViewModel @Inject constructor(
                                 error = null,
                                 loadMoreError = null,
                                 items = items,
-                                nextOffset = page.nextOffset,
-                                hasMore = page.hasMore
+                                nextOffset = page.nextOffset
                             )
                         )
                     }
@@ -528,8 +514,9 @@ class CommentViewModel @Inject constructor(
                         "加载回复失败"
                     }
                     _uiState.update { cur ->
-                        val thread = cur.threadPane ?: return@update cur
-                        if (thread.root.rpid != rootRpid) return@update cur
+                        val thread = cur.threadPane
+                            ?.takeIf { it.root.rpid == rootRpid }
+                            ?: return@update cur
                         cur.copy(
                             threadPane = if (append) {
                                 thread.copy(
@@ -599,7 +586,6 @@ class CommentViewModel @Inject constructor(
             selectedFilter = selectedFilter,
             items = items,
             nextOffset = nextOffset,
-            hasMore = hasMore,
             endText = endText
         )
     }

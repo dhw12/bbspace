@@ -1,4 +1,4 @@
-package com.naaammme.bbspace.feature.comment
+package com.naaammme.bbspace.feature.comment.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,20 +42,23 @@ import com.naaammme.bbspace.core.designsystem.component.PreviewImage
 import com.naaammme.bbspace.core.designsystem.component.PreviewImageRow
 import com.naaammme.bbspace.core.model.CommentReply
 import com.naaammme.bbspace.core.model.CommentUser
-import java.util.Locale
+
+internal sealed interface CommentReplyAction {
+    data class Translate(val rpid: Long) : CommentReplyAction
+    data class Delete(val reply: CommentReply) : CommentReplyAction
+    data class Reply(val reply: CommentReply) : CommentReplyAction
+    data class SaveImage(val image: PreviewImage) : CommentReplyAction
+    data class OpenReplies(val reply: CommentReply) : CommentReplyAction
+    data class OpenUser(val user: CommentUser) : CommentReplyAction
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun CommentCard(
     reply: CommentReply,
     currentMid: Long,
-    isBusy: (Long) -> Boolean,
-    onTranslate: (Long) -> Unit,
-    onDelete: (CommentReply) -> Unit,
-    onReply: (CommentReply) -> Unit,
-    onSaveImage: (PreviewImage) -> Unit,
-    onOpenReplies: (CommentReply) -> Unit,
-    onOpenUser: (CommentUser) -> Unit
+    busyReplyIds: Set<Long>,
+    onAction: (CommentReplyAction) -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -66,19 +69,15 @@ internal fun CommentCard(
             ReplyBody(
                 reply = reply,
                 currentMid = currentMid,
-                isBusy = isBusy,
-                onTranslate = onTranslate,
-                onDelete = onDelete,
-                onReply = onReply,
-                onSaveImage = onSaveImage,
-                onOpenUser = onOpenUser,
+                busyReplyIds = busyReplyIds,
+                onAction = onAction,
                 modifier = Modifier.padding(16.dp)
             )
 
             if (reply.replyCount > 0L) {
                 HorizontalDivider()
                 TextButton(
-                    onClick = { onOpenReplies(reply) },
+                    onClick = { onAction(CommentReplyAction.OpenReplies(reply)) },
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = ButtonDefaults.TextButtonContentPadding
                 ) {
@@ -101,12 +100,8 @@ internal fun CommentCard(
 internal fun ThreadReplyCard(
     reply: CommentReply,
     currentMid: Long,
-    isBusy: (Long) -> Boolean,
-    onTranslate: (Long) -> Unit,
-    onDelete: (CommentReply) -> Unit,
-    onReply: (CommentReply) -> Unit,
-    onSaveImage: (PreviewImage) -> Unit,
-    onOpenUser: (CommentUser) -> Unit,
+    busyReplyIds: Set<Long>,
+    onAction: (CommentReplyAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -117,12 +112,8 @@ internal fun ThreadReplyCard(
         ReplyBody(
             reply = reply,
             currentMid = currentMid,
-            isBusy = isBusy,
-            onTranslate = onTranslate,
-            onDelete = onDelete,
-            onReply = onReply,
-            onSaveImage = onSaveImage,
-            onOpenUser = onOpenUser,
+            busyReplyIds = busyReplyIds,
+            onAction = onAction,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
         )
     }
@@ -133,12 +124,8 @@ internal fun ThreadReplyCard(
 private fun ReplyBody(
     reply: CommentReply,
     currentMid: Long,
-    isBusy: (Long) -> Boolean,
-    onTranslate: (Long) -> Unit,
-    onDelete: (CommentReply) -> Unit,
-    onReply: (CommentReply) -> Unit,
-    onSaveImage: (PreviewImage) -> Unit,
-    onOpenUser: (CommentUser) -> Unit,
+    busyReplyIds: Set<Long>,
+    onAction: (CommentReplyAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val previewImages = remember(reply.pictures) {
@@ -156,7 +143,7 @@ private fun ReplyBody(
         verticalAlignment = Alignment.Top
     ) {
         Surface(
-            onClick = { onOpenUser(reply.user) },
+            onClick = { onAction(CommentReplyAction.OpenUser(reply.user)) },
             modifier = Modifier.size(44.dp),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surface
@@ -190,7 +177,9 @@ private fun ReplyBody(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        modifier = Modifier.clickable { onOpenUser(reply.user) },
+                        modifier = Modifier.clickable {
+                            onAction(CommentReplyAction.OpenUser(reply.user))
+                        },
                         text = reply.user.name,
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary
@@ -226,7 +215,7 @@ private fun ReplyBody(
             if (previewImages.isNotEmpty()) {
                 PreviewImageRow(
                     images = previewImages,
-                    onSaveImage = onSaveImage
+                    onSaveImage = { onAction(CommentReplyAction.SaveImage(it)) }
                 )
             }
 
@@ -257,14 +246,14 @@ private fun ReplyBody(
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = { onReply(reply) }) {
+                TextButton(onClick = { onAction(CommentReplyAction.Reply(reply)) }) {
                     Text("回复")
                 }
                 ReplyMenuButton(
-                    busy = isBusy(reply.rpid),
+                    busy = reply.rpid in busyReplyIds,
                     canDelete = currentMid > 0L && reply.user.mid == currentMid,
-                    onTranslate = { onTranslate(reply.rpid) },
-                    onDelete = { onDelete(reply) }
+                    onTranslate = { onAction(CommentReplyAction.Translate(reply.rpid)) },
+                    onDelete = { onAction(CommentReplyAction.Delete(reply)) }
                 )
             }
         }
@@ -381,20 +370,4 @@ private fun MiniChip(text: String) {
             overflow = TextOverflow.Ellipsis
         )
     }
-}
-
-internal fun Long.formatCount(): String {
-    return when {
-        this >= 100_000_000L -> formatDecimal(this / 100_000_000f, "亿")
-        this >= 10_000L -> formatDecimal(this / 10_000f, "万")
-        else -> toString()
-    }
-}
-
-private fun formatDecimal(
-    value: Float,
-    suffix: String
-): String {
-    val text = String.format(Locale.ROOT, "%.1f", value).trimEnd('0').trimEnd('.')
-    return "$text$suffix"
 }

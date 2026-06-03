@@ -168,8 +168,7 @@ class CommentRepoImpl @Inject constructor(
                 sort = reply.mode.toModelSort(sort),
                 canSwitchSort = reply.subjectControl.switcherType > 0L,
                 items = mapChildReplies(reply.root.repliesList),
-                nextOffset = nextOffset,
-                hasMore = nextOffset != null
+                nextOffset = nextOffset
             )
         }
     }
@@ -315,7 +314,6 @@ class CommentRepoImpl @Inject constructor(
             selectedFilter = filterTag.ifBlank { COMMENT_FILTER_ALL },
             items = items,
             nextOffset = nextOffset,
-            hasMore = nextOffset != null,
             endText = reply.paginationEndText.ifBlank { null }
         )
     }

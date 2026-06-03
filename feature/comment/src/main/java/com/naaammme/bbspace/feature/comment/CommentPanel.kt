@@ -14,7 +14,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -25,13 +24,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -45,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,6 +53,14 @@ import com.naaammme.bbspace.core.model.CommentSort
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.CommentUser
 import com.naaammme.bbspace.core.model.SpaceRoute
+import com.naaammme.bbspace.feature.comment.component.CommentCard
+import com.naaammme.bbspace.feature.comment.component.CommentReplyAction
+import com.naaammme.bbspace.feature.comment.component.RetryCard
+import com.naaammme.bbspace.feature.comment.component.StateCard
+import com.naaammme.bbspace.feature.comment.component.formatCount
+import com.naaammme.bbspace.feature.comment.editor.CommentEditorFab
+import com.naaammme.bbspace.feature.comment.editor.CommentEditorSheet
+import com.naaammme.bbspace.feature.comment.thread.CommentThreadPane
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -67,8 +69,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun CommentPanel(
     subject: CommentSubject?,
-    onOpenSpace: (SpaceRoute) -> Unit = {},
     modifier: Modifier = Modifier,
+    onOpenSpace: (SpaceRoute) -> Unit = {},
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     header: (@Composable () -> Unit)? = null,
     viewModel: CommentViewModel = hiltViewModel()
@@ -76,7 +78,8 @@ fun CommentPanel(
     LaunchedEffect(subject) {
         viewModel.bind(subject)
     }
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiStateState = viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by uiStateState
     val layoutDirection = LocalLayoutDirection.current
     val replyThread = uiState.threadPane
     val isInitLoading = subject != null && uiState.loading && uiState.items.isEmpty()
@@ -110,21 +113,20 @@ fun CommentPanel(
                 }
         }
     }
-    val isBusy = remember(uiState.busyReplyIds) {
-        { rpid: Long -> rpid in uiState.busyReplyIds }
-    }
     val listState = rememberLazyListState()
     val threadListState = rememberLazyListState()
     var fabVisible by remember { mutableStateOf(true) }
     val shouldLoadMore by remember {
         derivedStateOf {
+            val state = uiStateState.value
             val total = listState.layoutInfo.totalItemsCount
             val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            replyThread == null &&
-            uiState.hasMore &&
-                !uiState.loading &&
-                !uiState.loadingMore &&
-                uiState.items.isNotEmpty() &&
+            state.threadPane == null &&
+                state.hasMore &&
+                !state.loading &&
+                !state.loadingMore &&
+                state.loadMoreError.isNullOrBlank() &&
+                state.items.isNotEmpty() &&
                 total > 0 &&
                 last >= total - 3
         }
@@ -160,6 +162,25 @@ fun CommentPanel(
 
     BackHandler(enabled = replyThread != null) {
         viewModel.closeReplyThread()
+    }
+
+    val onReplyAction: (CommentReplyAction) -> Unit = remember(
+        subject,
+        onOpenSpace,
+        onSaveImage
+    ) {
+        { action ->
+            when (action) {
+                is CommentReplyAction.Translate -> viewModel.translateReply(action.rpid)
+                is CommentReplyAction.Delete -> viewModel.deleteReply(action.reply)
+                is CommentReplyAction.Reply -> viewModel.replyTo(action.reply)
+                is CommentReplyAction.SaveImage -> onSaveImage(action.image)
+                is CommentReplyAction.OpenReplies -> viewModel.openReplyThread(action.reply)
+                is CommentReplyAction.OpenUser -> {
+                    action.user.toSpaceRoute(subject)?.let(onOpenSpace)
+                }
+            }
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -247,15 +268,8 @@ fun CommentPanel(
                         CommentCard(
                             reply = reply,
                             currentMid = uiState.currentMid,
-                            isBusy = isBusy,
-                            onTranslate = viewModel::translateReply,
-                            onDelete = viewModel::deleteReply,
-                            onReply = viewModel::replyTo,
-                            onSaveImage = onSaveImage,
-                            onOpenReplies = viewModel::openReplyThread,
-                            onOpenUser = { user ->
-                                user.toSpaceRoute(subject)?.let(onOpenSpace)
-                            }
+                            busyReplyIds = uiState.busyReplyIds,
+                            onAction = onReplyAction
                         )
                     }
                 }
@@ -311,18 +325,12 @@ fun CommentPanel(
                     state = threadPane,
                     listState = threadListState,
                     currentMid = uiState.currentMid,
-                    isBusy = isBusy,
-                    onReply = viewModel::replyTo,
-                    onSaveImage = onSaveImage,
+                    busyReplyIds = uiState.busyReplyIds,
+                    onReplyAction = onReplyAction,
                     onDismiss = viewModel::closeReplyThread,
                     onToggleSort = viewModel::toggleReplyThreadSort,
-                    onTranslate = viewModel::translateReply,
-                    onDelete = viewModel::deleteReply,
                     onLoadMore = viewModel::loadMoreReplyThread,
                     onRetry = viewModel::retryReplyThread,
-                    onOpenUser = { user ->
-                        user.toSpaceRoute(subject)?.let(onOpenSpace)
-                    },
                     bottomPadding = COMMENT_FAB_SPACE,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -421,57 +429,6 @@ private fun headerCount(count: Long): String {
         "${count.formatCount()} 条评论"
     } else {
         "暂无评论"
-    }
-}
-
-@Composable
-internal fun StateCard(text: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        SelectionContainer {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-internal fun RetryCard(
-    text: String,
-    button: String,
-    onRetry: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            SelectionContainer {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            TextButton(onClick = onRetry) {
-                Text(button)
-            }
-        }
     }
 }
 

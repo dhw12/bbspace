@@ -1,4 +1,4 @@
-package com.naaammme.bbspace.feature.comment
+package com.naaammme.bbspace.feature.comment.component
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.text.InlineTextContent
@@ -19,7 +19,7 @@ import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
 import com.naaammme.bbspace.core.designsystem.component.BiliImageVariant
 import com.naaammme.bbspace.core.model.CommentEmote
 
-private val COMMENT_EMOTE_REGEX = Regex("(\\[[^\\]]+\\])")
+private val COMMENT_EMOTE_REGEX = Regex("(\\[[^]]+])")
 
 private data class ParsedCommentText(
     val text: AnnotatedString,

@@ -1,4 +1,4 @@
-package com.naaammme.bbspace.feature.comment
+package com.naaammme.bbspace.feature.comment.editor
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -60,8 +60,8 @@ internal fun CommentEditorSheet(
     onDismiss: () -> Unit,
     onSubmit: (String) -> Unit
 ) {
-    var input by rememberSaveable { mutableStateOf("") }
     if (!state.visible) return
+    var input by rememberSaveable { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = {

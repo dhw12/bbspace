@@ -1,4 +1,4 @@
-package com.naaammme.bbspace.feature.comment
+package com.naaammme.bbspace.feature.comment.thread
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,30 +20,29 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.naaammme.bbspace.core.designsystem.component.PreviewImage
-import com.naaammme.bbspace.core.model.CommentReply
 import com.naaammme.bbspace.core.model.CommentSort
-import com.naaammme.bbspace.core.model.CommentUser
+import com.naaammme.bbspace.feature.comment.component.CommentReplyAction
+import com.naaammme.bbspace.feature.comment.component.StateCard
+import com.naaammme.bbspace.feature.comment.component.RetryCard
+import com.naaammme.bbspace.feature.comment.component.ThreadReplyCard
+import com.naaammme.bbspace.feature.comment.component.formatCount
 
 @Composable
 internal fun CommentThreadPane(
     state: CommentThreadState,
     listState: LazyListState,
     currentMid: Long,
-    isBusy: (Long) -> Boolean,
-    onReply: (CommentReply) -> Unit,
-    onSaveImage: (PreviewImage) -> Unit,
+    busyReplyIds: Set<Long>,
+    onReplyAction: (CommentReplyAction) -> Unit,
     onDismiss: () -> Unit,
     onToggleSort: () -> Unit,
-    onTranslate: (Long) -> Unit,
-    onDelete: (CommentReply) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
-    onOpenUser: (CommentUser) -> Unit,
     bottomPadding: Dp,
     modifier: Modifier = Modifier
 ) {
@@ -55,16 +54,12 @@ internal fun CommentThreadPane(
             state = state,
             listState = listState,
             currentMid = currentMid,
-            isBusy = isBusy,
-            onReply = onReply,
-            onSaveImage = onSaveImage,
+            busyReplyIds = busyReplyIds,
+            onReplyAction = onReplyAction,
             onDismiss = onDismiss,
             onToggleSort = onToggleSort,
-            onTranslate = onTranslate,
-            onDelete = onDelete,
             onLoadMore = onLoadMore,
             onRetry = onRetry,
-            onOpenUser = onOpenUser,
             bottomPadding = bottomPadding,
             modifier = Modifier.fillMaxSize()
         )
@@ -76,28 +71,26 @@ private fun CommentThreadContent(
     state: CommentThreadState,
     listState: LazyListState,
     currentMid: Long,
-    isBusy: (Long) -> Boolean,
-    onReply: (CommentReply) -> Unit,
-    onSaveImage: (PreviewImage) -> Unit,
+    busyReplyIds: Set<Long>,
+    onReplyAction: (CommentReplyAction) -> Unit,
     onDismiss: () -> Unit,
     onToggleSort: () -> Unit,
-    onTranslate: (Long) -> Unit,
-    onDelete: (CommentReply) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
-    onOpenUser: (CommentUser) -> Unit,
     bottomPadding: Dp,
     modifier: Modifier = Modifier
 ) {
-    val shouldLoadMore by remember(state.hasMore, state.loading, state.loadingMore, state.loadMoreError, state.items) {
+    val stateHolder by rememberUpdatedState(state)
+    val shouldLoadMore by remember {
         derivedStateOf {
+            val cur = stateHolder
             val total = listState.layoutInfo.totalItemsCount
             val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            state.hasMore &&
-                !state.loading &&
-                !state.loadingMore &&
-                state.loadMoreError.isNullOrBlank() &&
-                state.items.isNotEmpty() &&
+            cur.hasMore &&
+                !cur.loading &&
+                !cur.loadingMore &&
+                cur.loadMoreError.isNullOrBlank() &&
+                cur.items.isNotEmpty() &&
                 total > 0 &&
                 last >= total - 3
         }
@@ -145,12 +138,8 @@ private fun CommentThreadContent(
                 ThreadReplyCard(
                     reply = state.root,
                     currentMid = currentMid,
-                    isBusy = isBusy,
-                    onTranslate = onTranslate,
-                    onDelete = onDelete,
-                    onReply = onReply,
-                    onSaveImage = onSaveImage,
-                    onOpenUser = onOpenUser
+                    busyReplyIds = busyReplyIds,
+                    onAction = onReplyAction
                 )
             }
             item(
@@ -206,12 +195,8 @@ private fun CommentThreadContent(
                         ThreadReplyCard(
                             reply = reply,
                             currentMid = currentMid,
-                            isBusy = isBusy,
-                            onTranslate = onTranslate,
-                            onDelete = onDelete,
-                            onReply = onReply,
-                            onSaveImage = onSaveImage,
-                            onOpenUser = onOpenUser
+                            busyReplyIds = busyReplyIds,
+                            onAction = onReplyAction
                         )
                     }
                 }

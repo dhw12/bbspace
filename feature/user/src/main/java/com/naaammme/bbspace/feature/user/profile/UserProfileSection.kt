@@ -120,7 +120,7 @@ private fun LabelValue(label: String, value: String) {
 private fun SocialStatRow(user: User?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
