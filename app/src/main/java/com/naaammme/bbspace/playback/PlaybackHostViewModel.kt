@@ -48,6 +48,7 @@ class PlaybackHostViewModel @Inject constructor(
     private val _hostMode = mutableStateOf(PlaybackHostMode.Hidden)
     val hostMode: PlaybackHostMode
         get() = _hostMode.value
+    private var shouldResumeAfterBackgroundPause = false
 
     init {
         viewModelScope.launch {
@@ -55,6 +56,7 @@ class PlaybackHostViewModel @Inject constructor(
                 target to enabled
             }.collect { (target, enabled) ->
                 if (target == null) {
+                    shouldResumeAfterBackgroundPause = false
                     _hostMode.value = PlaybackHostMode.Hidden
                     return@collect
                 }
@@ -83,17 +85,37 @@ class PlaybackHostViewModel @Inject constructor(
 
     fun togglePlayPause() {
         if (sessionState.value.isPlaying) {
+            shouldResumeAfterBackgroundPause = false
             playbackSession.pause()
         } else {
             playbackSession.play()
         }
     }
 
+    fun onEnterBackground() {
+        if (!sessionState.value.playWhenReady) {
+            shouldResumeAfterBackgroundPause = false
+            return
+        }
+        shouldResumeAfterBackgroundPause = true
+        playbackSession.pause()
+    }
+
+    fun onReturnForeground() {
+        if (!shouldResumeAfterBackgroundPause) return
+        shouldResumeAfterBackgroundPause = false
+        if (currentTarget.value != null && !sessionState.value.playWhenReady) {
+            playbackSession.play()
+        }
+    }
+
     fun pause() {
+        shouldResumeAfterBackgroundPause = false
         playbackSession.pause()
     }
 
     fun close() {
+        shouldResumeAfterBackgroundPause = false
         _hostMode.value = PlaybackHostMode.Hidden
         playbackSession.close()
     }

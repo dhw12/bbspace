@@ -346,7 +346,6 @@ fun AppNavHost(
                 playbackHostViewModel.expand()
             },
             onTogglePlay = playbackHostViewModel::togglePlayPause,
-            onPauseInBackground = playbackHostViewModel::pause,
             onClose = {
                 when (playbackHostViewModel.currentTarget.value) {
                     is StreamPlaybackTarget.Video -> closeVideoHost()

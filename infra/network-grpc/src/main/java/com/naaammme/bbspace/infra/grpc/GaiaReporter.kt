@@ -32,7 +32,7 @@ class GaiaReporter @Inject constructor(
         private const val PREFS_NAME = "gaia_reporter"
         private const val KEY_LAST_UPLOAD = "last_upload_time"
         private const val KEY_FIRST_INSTALL = "first_install"
-        private const val UPLOAD_INTERVAL = 24 * 60 * 60 * 1000L
+        private const val UPLOAD_INTERVAL = 7 * 24 * 60 * 60 * 1000L
 
         private const val FETCH_KEY_EP = "bilibili.gaia.gw.Gaia/ExGetAxe"
         private const val UPLOAD_EP = "bilibili.gaia.gw.Gaia/ExClimbAppleTrees"

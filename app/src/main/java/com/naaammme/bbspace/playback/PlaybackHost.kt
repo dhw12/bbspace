@@ -28,7 +28,6 @@ fun PlaybackHost(
     playbackHostViewModel: PlaybackHostViewModel,
     onExpand: () -> Unit,
     onTogglePlay: () -> Unit,
-    onPauseInBackground: () -> Unit,
     onClose: () -> Unit,
     onDismissExpanded: () -> Unit,
     onGoHome: () -> Unit,
@@ -51,8 +50,10 @@ fun PlaybackHost(
         }
         val lifecycle = procOwner.lifecycle
         val obs = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                onPauseInBackground()
+            when (event) {
+                Lifecycle.Event.ON_STOP -> playbackHostViewModel.onEnterBackground()
+                Lifecycle.Event.ON_START -> playbackHostViewModel.onReturnForeground()
+                else -> Unit
             }
         }
         lifecycle.addObserver(obs)
