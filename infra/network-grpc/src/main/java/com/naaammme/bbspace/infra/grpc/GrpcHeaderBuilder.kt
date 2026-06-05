@@ -27,6 +27,10 @@ class GrpcHeaderBuilder @Inject constructor(
     private val legalRegionCache: LegalRegionCache,
     private val ticketGenerator: TicketGenerator
 ) {
+    private val userAgent by lazy {
+        UserAgentBuilder.buildGrpcUserAgent(deviceIdentity.model, deviceIdentity.osVer)
+    }
+
     fun build(
         deviceBin: ByteArray = metadataBuilder.buildDevice(),
         compressed: Boolean = false
@@ -48,7 +52,7 @@ class GrpcHeaderBuilder @Inject constructor(
                 put("grpc-accept-encoding", "identity, gzip")
                 put("grpc-encoding", "gzip")
             }
-            put("user-agent", UserAgentBuilder.buildGrpcUserAgent(deviceIdentity.model, deviceIdentity.osVer))
+            put("user-agent", userAgent)
             if (mid > 0) {
                 val auroraEid = AuroraEidGenerator.generate(mid)
                 if (auroraEid.isNotEmpty()) {
@@ -56,8 +60,8 @@ class GrpcHeaderBuilder @Inject constructor(
                 }
             }
             put("x-bili-device-bin", Base64.encodeToString(deviceBin, Base64.NO_WRAP or Base64.NO_PADDING))
-            put("x-bili-fawkes-req-bin", Base64.encodeToString(metadataBuilder.buildFawkes(), Base64.NO_WRAP or Base64.NO_PADDING))
-            put("x-bili-locale-bin", Base64.encodeToString(metadataBuilder.buildLocale(), Base64.NO_WRAP or Base64.NO_PADDING))
+            put("x-bili-fawkes-req-bin", metadataBuilder.buildFawkesBase64())
+            put("x-bili-locale-bin", metadataBuilder.buildLocaleBase64())
             put("x-bili-metadata-ip-region", regionCodeCache.get())
             val legalRegion = legalRegionCache.get()
             if (mid > 0 && legalRegion.isNotEmpty()) {
@@ -67,7 +71,7 @@ class GrpcHeaderBuilder @Inject constructor(
             if (mid > 0) {
                 put("x-bili-mid", mid.toString())
             }
-            put("x-bili-network-bin", Base64.encodeToString(metadataBuilder.buildNetwork(), Base64.NO_WRAP or Base64.NO_PADDING))
+            put("x-bili-network-bin", metadataBuilder.buildNetworkBase64())
             val ticket = ticketGenerator.getTicketForHeader(mid, accessKey)
             if (ticket.isNotEmpty()) {
                 put("x-bili-ticket", ticket)

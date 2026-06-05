@@ -14,8 +14,10 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import okhttp3.brotli.BrotliInterceptor
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -42,9 +44,19 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(biliDns: BiliDns): OkHttpClient {
+    fun provideOkHttpConnectionPool(): ConnectionPool {
+        return ConnectionPool(10, 5, TimeUnit.MINUTES)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        biliDns: BiliDns,
+        connectionPool: ConnectionPool
+    ): OkHttpClient {
         return OkHttpClient.Builder()
             .dns(biliDns)
+            .connectionPool(connectionPool)
             .addInterceptor(BrotliInterceptor)
             .build()
     }

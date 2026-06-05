@@ -1,5 +1,6 @@
 package com.naaammme.bbspace.infra.network
 
+import android.util.Base64
 import bilibili.metadata.MetadataOuterClass
 import bilibili.metadata.device.DeviceOuterClass
 import bilibili.metadata.fawkes.Fawkes
@@ -57,6 +58,18 @@ class BiliMetadataBuilder @Inject constructor(
         }.build().toByteArray()
     }
 
+    private val localeBase64 by lazy {
+        Base64.encodeToString(localeBytes, BASE64_FLAGS)
+    }
+
+    private val fawkesBase64 by lazy {
+        Base64.encodeToString(fawkesBytes, BASE64_FLAGS)
+    }
+
+    private val networkBase64 by lazy {
+        Base64.encodeToString(networkBytes, BASE64_FLAGS)
+    }
+
     fun buildMetadata(accessKey: String = ""): ByteArray {
         return MetadataOuterClass.Metadata.newBuilder().apply {
             if (accessKey.isNotEmpty()) {
@@ -95,8 +108,18 @@ class BiliMetadataBuilder @Inject constructor(
         return localeBytes
     }
 
+    fun buildLocaleBase64(): String = localeBase64
+
     fun buildFawkes(): ByteArray = fawkesBytes
+
+    fun buildFawkesBase64(): String = fawkesBase64
 
     // TODO 动态化 type用ConnectivityManager检测WiFi或蜂窝 oid用TelephonyManager.getNetworkOperator读运营商 cellular读蜂窝代数 tf等免流模块实现后接入
     fun buildNetwork(): ByteArray = networkBytes
+
+    fun buildNetworkBase64(): String = networkBase64
+
+    private companion object {
+        const val BASE64_FLAGS = Base64.NO_WRAP or Base64.NO_PADDING
+    }
 }

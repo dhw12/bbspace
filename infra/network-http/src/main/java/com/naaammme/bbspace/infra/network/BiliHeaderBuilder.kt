@@ -1,6 +1,5 @@
 package com.naaammme.bbspace.infra.network
 
-import android.util.Base64
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.BiliConstants
 import com.naaammme.bbspace.core.common.UserAgentBuilder
@@ -28,6 +27,10 @@ class BiliHeaderBuilder @Inject constructor(
     private val ticketGenerator: TicketGenerator,
     private val guestIdGenerator: GuestIdGenerator
 ) {
+    private val userAgent by lazy {
+        UserAgentBuilder.buildRestfulUserAgent(deviceIdentity.model, deviceIdentity.osVer)
+    }
+
     fun build(profile: BiliRestProfile = BiliRestProfile.APP): Map<String, String> {
         val mid = authProvider.mid
         return buildMap {
@@ -47,11 +50,11 @@ class BiliHeaderBuilder @Inject constructor(
             if (sessionId.isNotEmpty()) {
                 put("session_id", sessionId)
             }
-            put("user-agent", UserAgentBuilder.buildRestfulUserAgent(deviceIdentity.model, deviceIdentity.osVer))
+            put("user-agent", userAgent)
             if (mid > 0) {
                 put("x-bili-aurora-eid", AuroraEidGenerator.generate(mid))
             }
-            put("x-bili-locale-bin", Base64.encodeToString(metadataBuilder.buildLocale(), Base64.NO_WRAP or Base64.NO_PADDING))
+            put("x-bili-locale-bin", metadataBuilder.buildLocaleBase64())
             put("x-bili-metadata-ip-region", regionCodeCache.get())
             val legalRegion = legalRegionCache.get()
             if (mid > 0 && legalRegion.isNotEmpty()) {
@@ -60,7 +63,7 @@ class BiliHeaderBuilder @Inject constructor(
             if (mid > 0) {
                 put("x-bili-mid", mid.toString())
             }
-            put("x-bili-network-bin", Base64.encodeToString(metadataBuilder.buildNetwork(), Base64.NO_WRAP or Base64.NO_PADDING))
+            put("x-bili-network-bin", metadataBuilder.buildNetworkBase64())
             val ticket = ticketGenerator.getTicketForHeader(mid, authProvider.accessToken)
             if (ticket.isNotEmpty()) {
                 put("x-bili-ticket", ticket)

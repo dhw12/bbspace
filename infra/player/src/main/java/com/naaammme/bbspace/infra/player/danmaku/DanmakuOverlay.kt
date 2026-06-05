@@ -13,7 +13,7 @@ import com.naaammme.bbspace.core.model.DanmakuConfig
 import com.naaammme.bbspace.core.model.DanmakuSessionState
 import master.flame.danmaku.api.SegmentDanmakuSession
 import master.flame.danmaku.controller.IDanmakuView
-import master.flame.danmaku.ui.widget.DanmakuSurfaceView
+import master.flame.danmaku.ui.widget.DanmakuView
 
 enum class DanmakuRenderMode {
     Segmented,
@@ -30,12 +30,10 @@ fun rememberDanmakuOverlayState(
 ): DanmakuOverlayState {
     val context = LocalContext.current
     return remember(context) {
-        val danmakuView = DanmakuSurfaceView(context).apply {
-            // 绘制缓存 内存换cpu占用
+        val danmakuView = DanmakuView(context).apply {
             enableDanmakuDrawingCache(true)
             showFPS(false)
             setDrawingThreadType(IDanmakuView.THREAD_TYPE_LOW_PRIORITY)
-            setZOrderMediaOverlay(true)
             isClickable = false
             isFocusable = false
             isFocusableInTouchMode = false
