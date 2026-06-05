@@ -1,11 +1,9 @@
 package com.naaammme.bbspace.feature.live
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
-import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -56,8 +53,7 @@ fun LiveScreen(
     val player by viewModel.player.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val owner = LocalLifecycleOwner.current
-    val ctx = LocalContext.current
-    val act = remember(ctx) { ctx.findActivity() }
+    val act = LocalActivity.current
     val widthClass = currentWindowAdaptiveInfo().windowSizeClass.windowWidthSizeClass
     var isFull by rememberSaveable { mutableStateOf(false) }
     val fullOn = hostExpanded && isFull
@@ -118,8 +114,7 @@ fun LiveScreen(
     }
 
     DisposableEffect(act, fullOn, settingsState.playback.autoRotateFullscreen) {
-        val activity = act ?: return@DisposableEffect onDispose { }
-        activity.requestedOrientation = if (fullOn && settingsState.playback.autoRotateFullscreen) {
+        act?.requestedOrientation = if (fullOn && settingsState.playback.autoRotateFullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
             ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -219,10 +214,4 @@ private fun TopBarPanel(
     )
 }
 
-private tailrec fun Context.findActivity(): Activity? {
-    return when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> null
-    }
-}
+

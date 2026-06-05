@@ -192,7 +192,7 @@ class DanmakuOverlayState internal constructor(
     fun appendDanmaku(item: DanmakuItem) {
         if (released.get()) return
         val danmaku = itemMapper.map(item, danmakuContext) ?: return
-        danmaku.setTime(danmaku.time.coerceAtLeast(timeProvider.getCurrentTimeMs()) + LIVE_DANMAKU_LEAD_MS)
+        danmaku.time = danmaku.time.coerceAtLeast(timeProvider.getCurrentTimeMs()) + LIVE_DANMAKU_LEAD_MS
         danmaku.priority = LIVE_DANMAKU_PRIORITY
         danmakuCtrl.addDanmaku(danmaku)
     }

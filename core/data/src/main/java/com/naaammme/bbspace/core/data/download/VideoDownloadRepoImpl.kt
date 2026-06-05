@@ -287,7 +287,7 @@ class VideoDownloadRepoImpl @Inject constructor(
             }
         } catch (c: CancellationException) {
             throw c
-        } catch (e: IOException) {
+        } catch (_: IOException) {
             currentCoroutineContext().ensureActive()
             val latest = dao.find(task.id) ?: return
             dao.update(latest.pause("下载中断，已暂停"))
@@ -468,7 +468,7 @@ class VideoDownloadRepoImpl @Inject constructor(
             progressMs = elem.progress,
             mode = elem.mode,
             fontSize = elem.fontsize,
-            color = elem.color.toInt(),
+            color = elem.color,
             midHash = elem.midHash,
             content = elem.content,
             createdAtEpochSecond = elem.ctime,

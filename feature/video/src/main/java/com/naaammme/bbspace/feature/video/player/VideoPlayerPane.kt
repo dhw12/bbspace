@@ -2,6 +2,7 @@ package com.naaammme.bbspace.feature.video.player
 
 import android.media.AudioManager
 import android.os.BatteryManager
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -428,7 +429,7 @@ private fun VideoPlayerOverlay(
     var lastGestureBrightness by remember { mutableFloatStateOf(Float.NaN) }
     var lastGestureVolumeFrac by remember { mutableFloatStateOf(Float.NaN) }
     val audioManager = remember(context) { context.getSystemService(AudioManager::class.java) }
-    val act = remember(context) { context.findActivity() }
+    val act = LocalActivity.current
 
     LaunchedEffect(
         showCtrl,

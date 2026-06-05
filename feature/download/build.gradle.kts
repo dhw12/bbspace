@@ -37,6 +37,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
     implementation(libs.coil.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
 

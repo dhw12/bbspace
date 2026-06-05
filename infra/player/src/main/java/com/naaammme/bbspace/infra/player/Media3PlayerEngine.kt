@@ -260,6 +260,7 @@ class Media3PlayerEngine @Inject constructor(
 
         return ExoPlayer.Builder(context, renderersFactory)
             .setLoadControl(buildLoadControl(config))
+            .setWakeMode(C.WAKE_MODE_NONE)
             .build()
             .apply {
                 setAudioAttributes(

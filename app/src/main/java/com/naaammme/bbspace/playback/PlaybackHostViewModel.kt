@@ -109,11 +109,6 @@ class PlaybackHostViewModel @Inject constructor(
         }
     }
 
-    fun pause() {
-        shouldResumeAfterBackgroundPause = false
-        playbackSession.pause()
-    }
-
     fun close() {
         shouldResumeAfterBackgroundPause = false
         _hostMode.value = PlaybackHostMode.Hidden

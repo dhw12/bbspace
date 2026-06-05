@@ -38,6 +38,7 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)

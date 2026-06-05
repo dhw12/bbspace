@@ -1,10 +1,9 @@
 package com.naaammme.bbspace.feature.video
 
 import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -37,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -82,8 +80,7 @@ fun VideoScreen(
 ) {
     val videoState by viewModel.videoState.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
-    val ctx = LocalContext.current
-    val act = remember(ctx) { ctx.findActivity() }
+    val act = LocalActivity.current
     val widthClass = currentWindowAdaptiveInfo().windowSizeClass.windowWidthSizeClass
     val themeUsesDarkSystemBarIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f
     var isFull by rememberSaveable { mutableStateOf(false) }
@@ -153,8 +150,7 @@ fun VideoScreen(
     }
 
     DisposableEffect(act, fullOn, settingsState.playback.autoRotateFullscreen, isPortraitVideo) {
-        act ?: return@DisposableEffect onDispose { }
-        act.requestedOrientation = if (
+        act?.requestedOrientation = if (
             fullOn &&
             settingsState.playback.autoRotateFullscreen &&
             !isPortraitVideo
@@ -431,10 +427,4 @@ internal fun getQualityName(
     return label.substringBefore(' ').ifBlank { label }
 }
 
-private tailrec fun Context.findActivity(): Activity? {
-    return when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> null
-    }
-}
+

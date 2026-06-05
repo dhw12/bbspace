@@ -1,8 +1,6 @@
 package com.naaammme.bbspace.feature.video.player
 
 import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.media.AudioManager
 import android.os.SystemClock
 import androidx.compose.foundation.background
@@ -417,14 +415,6 @@ private fun formatSeekDelta(ms: Long): String {
     if (totalSec == 0L) return "0s"
     val sign = if (totalSec > 0) "+" else ""
     return "$sign${totalSec}s"
-}
-
-internal fun Context.findActivity(): Activity? {
-    var ctx = this
-    while (true) {
-        if (ctx is Activity) return ctx
-        ctx = (ctx as? ContextWrapper)?.baseContext ?: return null
-    }
 }
 
 internal fun adjustWindowBrightness(activity: Activity?, fraction: Float) {

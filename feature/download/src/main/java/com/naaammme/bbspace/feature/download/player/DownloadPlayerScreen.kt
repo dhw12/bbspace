@@ -1,10 +1,8 @@
 package com.naaammme.bbspace.feature.download.player
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,7 +32,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+
+
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
@@ -58,8 +57,7 @@ fun DownloadPlayerScreen(
     viewModel: DownloadPlayerViewModel = hiltViewModel()
 ) {
     val procOwner = remember { ProcessLifecycleOwner.get() }
-    val ctx = LocalContext.current
-    val act = remember(ctx) { ctx.findActivity() }
+    val act = LocalActivity.current
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     var isFull by rememberSaveable { mutableStateOf(false) }
 
@@ -84,11 +82,10 @@ fun DownloadPlayerScreen(
     }
 
     DisposableEffect(act, isFull) {
-        val activity = act
-        if (activity == null) {
+        if (act == null) {
             onDispose { }
         } else {
-            val win = activity.window
+            val win = act.window
             val ctrl = WindowInsetsControllerCompat(win, win.decorView)
             if (isFull) {
                 ctrl.systemBarsBehavior =
@@ -104,8 +101,7 @@ fun DownloadPlayerScreen(
     }
 
     DisposableEffect(act, isFull, settingsState.playback.autoRotateFullscreen) {
-        val activity = act ?: return@DisposableEffect onDispose { }
-        activity.requestedOrientation = if (isFull && settingsState.playback.autoRotateFullscreen) {
+        act?.requestedOrientation = if (isFull && settingsState.playback.autoRotateFullscreen) {
             ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         } else {
             ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -273,10 +269,4 @@ private data class DownloadPlayerMetaUiState(
     val error: String? = null
 )
 
-private tailrec fun Context.findActivity(): Activity? {
-    return when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> null
-    }
-}
+
