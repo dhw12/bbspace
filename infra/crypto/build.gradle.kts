@@ -36,7 +36,4 @@ dependencies {
 
     // 网络请求
     implementation(libs.okhttp)
-
-    // 协程
-    implementation(libs.kotlinx.coroutines.android)
 }

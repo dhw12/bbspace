@@ -30,6 +30,4 @@ dependencies {
 
     implementation(project(":infra:network-http"))
     implementation(project(":infra:crypto"))
-    implementation(libs.okhttp)
-    implementation(libs.kotlinx.coroutines.core)
 }

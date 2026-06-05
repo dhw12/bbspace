@@ -28,5 +28,4 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     api(libs.okhttp)
-    implementation(libs.kotlinx.coroutines.core)
 }

@@ -50,5 +50,4 @@ dependencies {
     api(libs.datastore.preferences)
 
     implementation(libs.coil.core)
-    implementation(libs.kotlinx.coroutines.android)
 }

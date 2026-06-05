@@ -32,9 +32,8 @@ dependencies {
     api(libs.okhttp)
     api(libs.okhttp.brotli)
     api(libs.okhttp.logging)
-    api(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(project(":infra:crypto"))
     implementation(project(":infra:protobuf"))
-    implementation(libs.kotlinx.coroutines.core)
 }

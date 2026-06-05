@@ -116,12 +116,16 @@ internal fun VideoPlayerPane(
         }
     }
     val danmakuOn = settingsState.danmaku.enabled
-    val danmakuOverlayState = rememberDanmakuOverlayState(
-        initialConfig = settingsState.danmaku,
-        initialPositionMs = viewModel.playbackProgress.value.positionMs,
-        initialIsPlaying = state.isPlaying,
-        initialSpeed = state.speed
-    )
+    val danmakuOverlayState = if (danmakuOn) {
+        rememberDanmakuOverlayState(
+            initialConfig = settingsState.danmaku,
+            initialPositionMs = viewModel.playbackProgress.value.positionMs,
+            initialIsPlaying = state.isPlaying,
+            initialSpeed = state.speed
+        )
+    } else {
+        null
+    }
     val videoAspect = remember(state.currentStream) {
         val width = state.currentStream?.width?.takeIf { it > 0 } ?: return@remember null
         val height = state.currentStream?.height?.takeIf { it > 0 } ?: return@remember null
@@ -178,13 +182,15 @@ internal fun VideoPlayerPane(
                 modifier = Modifier.fillMaxSize()
             )
 
-            VideoDanmakuLayer(
-                viewModel = viewModel,
-                state = state,
-                settingsState = settingsState,
-                danmakuOverlayState = danmakuOverlayState,
-                playerView = playerView
-            )
+            if (danmakuOverlayState != null) {
+                VideoDanmakuLayer(
+                    viewModel = viewModel,
+                    state = state,
+                    settingsState = settingsState,
+                    danmakuOverlayState = danmakuOverlayState,
+                    playerView = playerView
+                )
+            }
 
             VideoPlayerOverlay(
                 viewModel = viewModel,
