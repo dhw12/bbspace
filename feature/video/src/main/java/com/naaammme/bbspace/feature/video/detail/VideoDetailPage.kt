@@ -1,7 +1,6 @@
 ﻿package com.naaammme.bbspace.feature.video.detail
 
 import android.text.format.DateFormat
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +15,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -41,6 +38,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,7 +47,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -74,18 +71,16 @@ import com.naaammme.bbspace.core.model.VideoStat
 import com.naaammme.bbspace.feature.comment.CommentPanel
 import com.naaammme.bbspace.feature.video.formatDuration
 import kotlinx.coroutines.launch
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun VideoDetailPage(
+    modifier: Modifier = Modifier,
     detail: VideoDetail?,
     ids: ResolvedVideoIds,
     detailLoading: Boolean,
     detailError: String?,
     commentSubject: CommentSubject?,
-    isExpanded: Boolean,
-    playerSpaceWidth: Dp,
-    playerSpaceHeight: Dp,
+    contentHorizontalPad: Dp,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
@@ -97,69 +92,60 @@ internal fun VideoDetailPage(
     var descOn by rememberSaveable(aidKey) { mutableStateOf(false) }
     var tagOn by rememberSaveable(aidKey) { mutableStateOf(false) }
     var sheetTp by rememberSaveable(aidKey) { mutableStateOf<String?>(null) }
+    val pagerState = rememberPagerState(pageCount = { 2 })
+    val scope = rememberCoroutineScope()
 
-    if (isExpanded) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .statusBarsPadding()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(playerSpaceWidth)
-                    .height(playerSpaceHeight)
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .background(Color.Black)
-            )
+    LaunchedEffect(aidKey) {
+        pagerState.scrollToPage(0)
+    }
 
-            DetailPager(
-                modifier = Modifier
-                    .weight(1f),
+    HorizontalPager(
+        state = pagerState,
+        beyondViewportPageCount = 0,
+        modifier = modifier.fillMaxSize()
+    ) { page ->
+        when (page) {
+            0 -> DetailPageContent(
+                modifier = Modifier.fillMaxSize(),
                 detail = detail,
                 ids = ids,
                 detailLoading = detailLoading,
                 detailError = detailError,
-                commentSubject = commentSubject,
-                horizontalPad = 0.dp,
-                infoTopPad = 0.dp,
+                horizontalPad = contentHorizontalPad,
                 descOn = descOn,
                 tagOn = tagOn,
                 onToggleDesc = { descOn = !descOn },
                 onToggleTag = { tagOn = !tagOn },
                 onSeasonClick = { sheetTp = SHEET_SEASON },
                 onPageClick = { sheetTp = SHEET_PAGE },
+                onOpenComments = {
+                    scope.launch {
+                        pagerState.animateScrollToPage(1)
+                    }
+                },
                 onOpenVideo = onOpenVideo,
                 onOpenSpace = onOpenSpace,
                 onDownloadClick = onDownloadClick
             )
+
+            else -> {
+                if (pagerState.currentPage == 1) {
+                    CommentPanel(
+                        subject = commentSubject,
+                        onOpenSpace = onOpenSpace,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = contentHorizontalPad,
+                            top = 12.dp,
+                            end = contentHorizontalPad,
+                            bottom = 20.dp
+                        )
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize())
+                }
+            }
         }
-    } else {
-        DetailPager(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(top = playerSpaceHeight),
-            detail = detail,
-            ids = ids,
-            detailLoading = detailLoading,
-            detailError = detailError,
-            commentSubject = commentSubject,
-            horizontalPad = 16.dp,
-            infoTopPad = 16.dp,
-            descOn = descOn,
-            tagOn = tagOn,
-            onToggleDesc = { descOn = !descOn },
-            onToggleTag = { tagOn = !tagOn },
-            onSeasonClick = { sheetTp = SHEET_SEASON },
-            onPageClick = { sheetTp = SHEET_PAGE },
-            onOpenVideo = onOpenVideo,
-            onOpenSpace = onOpenSpace,
-            onDownloadClick = onDownloadClick
-        )
     }
 
     detail?.season?.takeIf { sheetTp == SHEET_SEASON }?.let { season ->
@@ -187,82 +173,56 @@ internal fun VideoDetailPage(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DetailPager(
+private fun DetailPageContent(
     modifier: Modifier,
     detail: VideoDetail?,
     ids: ResolvedVideoIds,
     detailLoading: Boolean,
     detailError: String?,
-    commentSubject: CommentSubject?,
     horizontalPad: Dp,
-    infoTopPad: Dp,
     descOn: Boolean,
     tagOn: Boolean,
     onToggleDesc: () -> Unit,
     onToggleTag: () -> Unit,
     onSeasonClick: () -> Unit,
     onPageClick: () -> Unit,
+    onOpenComments: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit
 ) {
-    val pagerState = rememberPagerState(pageCount = { 2 })
     val itemMod = remember(horizontalPad) {
         if (horizontalPad > 0.dp) Modifier.padding(horizontal = horizontalPad) else Modifier
     }
-    val infoListState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    val switchToComments: () -> Unit = {
-        scope.launch {
-            pagerState.scrollToPage(1)
-        }
+    val infoTopPad = remember(horizontalPad) {
+        if (horizontalPad > 0.dp) 16.dp else 0.dp
     }
+    val infoListState = rememberLazyListState()
 
-    HorizontalPager(
-        state = pagerState,
-        beyondViewportPageCount = 0,
-        modifier = modifier.fillMaxSize()
-    ) { page ->
-        when (page) {
-            0 -> LazyColumn(
-                state = infoListState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = infoTopPad, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                detailItems(
-                    detail = detail,
-                    ids = ids,
-                    detailLoading = detailLoading,
-                    detailError = detailError,
-                    itemMod = itemMod,
-                    descOn = descOn,
-                    tagOn = tagOn,
-                    onToggleDesc = onToggleDesc,
-                    onToggleTag = onToggleTag,
-                    onSeasonClick = onSeasonClick,
-                    onPageClick = onPageClick,
-                    onOpenVideo = onOpenVideo,
-                    onOpenSpace = onOpenSpace,
-                    onDownloadClick = onDownloadClick,
-                    onOpenComments = switchToComments
-                )
-            }
-
-            else -> CommentPanel(
-                subject = commentSubject,
-                onOpenSpace = onOpenSpace,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = horizontalPad,
-                    top = 12.dp,
-                    end = horizontalPad,
-                    bottom = 20.dp
-                )
-            )
-        }
+    LazyColumn(
+        state = infoListState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = infoTopPad, bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        detailItems(
+            detail = detail,
+            ids = ids,
+            detailLoading = detailLoading,
+            detailError = detailError,
+            itemMod = itemMod,
+            descOn = descOn,
+            tagOn = tagOn,
+            onToggleDesc = onToggleDesc,
+            onToggleTag = onToggleTag,
+            onSeasonClick = onSeasonClick,
+            onPageClick = onPageClick,
+            onOpenVideo = onOpenVideo,
+            onOpenSpace = onOpenSpace,
+            onDownloadClick = onDownloadClick,
+            onOpenComments = onOpenComments
+        )
     }
 }
 

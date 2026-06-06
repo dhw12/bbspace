@@ -1,6 +1,5 @@
 package com.naaammme.bbspace.feature.video
 
-import android.app.Activity
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
@@ -87,9 +86,8 @@ fun VideoScreen(
     var downloadSheetOn by rememberSaveable { mutableStateOf(false) }
     val fullOn = hostExpanded && isFull
     val isPortraitVideo = remember(videoState.currentStream) {
-        val width = videoState.currentStream?.width ?: return@remember false
-        val height = videoState.currentStream?.height ?: return@remember false
-        width in 1..<height
+        val stream = videoState.currentStream ?: return@remember false
+        (stream.width ?: 0) in 1..<(stream.height ?: 0)
     }
     val openTarget = remember(viewModel) {
         { target: VideoTarget -> viewModel.openTarget(target) }
@@ -175,58 +173,99 @@ fun VideoScreen(
         val expandedPlayerW = expandedContentW * 0.54f
         val expandedPlayerH = (maxHeight - statusTop - (playerTopPad * 2)).coerceAtLeast(0.dp)
 
-        if (hostExpanded && !fullOn) {
-            VideoDetailPage(
-                detail = videoState.detail,
-                ids = videoState.ids,
-                detailLoading = videoState.detailLoading,
-                detailError = videoState.detailError,
-                commentSubject = viewModel.commentSubject,
-                isExpanded = isExpanded,
-                playerSpaceWidth = expandedPlayerW,
-                playerSpaceHeight = if (isExpanded) expandedPlayerH else compactPlayerSpaceH,
-                onOpenVideo = openTarget,
-                onOpenSpace = onOpenSpace,
-                onDownloadClick = downloadClick,
-                onOpenEpisode = openTarget,
-                onSwitchPage = switchPage
-            )
-        }
+        when {
+            !hostExpanded || fullOn -> {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    VideoPlayerPane(
+                        modifier = Modifier.fillMaxSize(),
+                        viewModel = viewModel,
+                        videoTitle = videoState.detail?.title,
+                        isFull = fullOn,
+                        onToggleFull = { isFull = !isFull },
+                        onBackClick = handleBack,
+                        onGoHome = onGoHome
+                    )
+                }
+            }
 
-        val playerHostMod = when {
-            fullOn -> Modifier.fillMaxSize()
-            isExpanded -> Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(playerTopPad)
-            else -> Modifier
-                .fillMaxWidth()
-                .height(compactPlayerSpaceH)
-                .background(Color.Black)
-        }
+            isExpanded -> {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .statusBarsPadding()
+                        .padding(playerTopPad),
+                    horizontalArrangement = Arrangement.spacedBy(playerGap),
+                    verticalAlignment = androidx.compose.ui.Alignment.Top
+                ) {
+                    VideoPlayerPane(
+                        modifier = Modifier
+                            .width(expandedPlayerW)
+                            .height(expandedPlayerH)
+                            .clip(MaterialTheme.shapes.extraLarge),
+                        viewModel = viewModel,
+                        videoTitle = videoState.detail?.title,
+                        isFull = false,
+                        onToggleFull = { isFull = true },
+                        onBackClick = handleBack,
+                        onGoHome = onGoHome
+                    )
+                    VideoDetailPage(
+                        modifier = Modifier.weight(1f),
+                        detail = videoState.detail,
+                        ids = videoState.ids,
+                        detailLoading = videoState.detailLoading,
+                        detailError = videoState.detailError,
+                        commentSubject = viewModel.commentSubject,
+                        contentHorizontalPad = 0.dp,
+                        onOpenVideo = openTarget,
+                        onOpenSpace = onOpenSpace,
+                        onDownloadClick = downloadClick,
+                        onOpenEpisode = openTarget,
+                        onSwitchPage = switchPage
+                    )
+                }
+            }
 
-        val playerPaneMod = when {
-            fullOn -> Modifier.fillMaxSize()
-            isExpanded -> Modifier
-                .width(expandedPlayerW)
-                .height(expandedPlayerH)
-                .clip(MaterialTheme.shapes.extraLarge)
-            else -> Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(compactVideoH)
-        }
-
-        Box(modifier = playerHostMod) {
-            VideoPlayerPane(
-                modifier = playerPaneMod,
-                viewModel = viewModel,
-                videoTitle = videoState.detail?.title,
-                isFull = fullOn,
-                onToggleFull = { isFull = !isFull },
-                onBackClick = handleBack,
-                onGoHome = onGoHome
-            )
+            else -> {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(compactPlayerSpaceH)
+                            .background(Color.Black)
+                    ) {
+                        VideoPlayerPane(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .height(compactVideoH),
+                            viewModel = viewModel,
+                            videoTitle = videoState.detail?.title,
+                            isFull = false,
+                            onToggleFull = { isFull = true },
+                            onBackClick = handleBack,
+                            onGoHome = onGoHome
+                        )
+                    }
+                    VideoDetailPage(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(MaterialTheme.colorScheme.background),
+                        detail = videoState.detail,
+                        ids = videoState.ids,
+                        detailLoading = videoState.detailLoading,
+                        detailError = videoState.detailError,
+                        commentSubject = viewModel.commentSubject,
+                        contentHorizontalPad = 16.dp,
+                        onOpenVideo = openTarget,
+                        onOpenSpace = onOpenSpace,
+                        onDownloadClick = downloadClick,
+                        onOpenEpisode = openTarget,
+                        onSwitchPage = switchPage
+                    )
+                }
+            }
         }
     }
 
