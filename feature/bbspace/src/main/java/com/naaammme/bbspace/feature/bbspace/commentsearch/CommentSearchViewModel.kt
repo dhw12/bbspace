@@ -23,7 +23,6 @@ import okhttp3.Request
 import org.json.JSONObject
 
 data class CommentSearchUiState(
-    val source: CommentSearchSource = CommentSearchSource.AICU,
     val uidInput: String = "",
     val keywordInput: String = "",
     val mode: CommentSearchMode = CommentSearchMode.ALL,
@@ -36,13 +35,6 @@ data class CommentSearchUiState(
     val error: String? = null,
     val appendError: String? = null
 )
-
-enum class CommentSearchSource(
-    val title: String
-) {
-    AICU("AICU"),
-    SYRDS("SYRDS")
-}
 
 enum class CommentSearchMode(
     val value: Int,
@@ -72,13 +64,6 @@ class CommentSearchViewModel @Inject constructor(
     private var activeQuery: CommentSearchQuery? = null
     private var nextPage = FIRST_PAGE
     private var reqJob: Job? = null
-
-    fun selectSource(source: CommentSearchSource) {
-        if (uiState.value.source == source) return
-        updateQueryInput {
-            it.copy(source = source)
-        }
-    }
 
     fun updateUidInput(value: String) {
         updateQueryInput {
@@ -224,12 +209,7 @@ class CommentSearchViewModel @Inject constructor(
     private suspend fun fetchComments(
         query: CommentSearchQuery,
         pageNum: Int
-    ): CommentSearchPage {
-        return when (query.source) {
-            CommentSearchSource.AICU -> fetchAicuComments(query, pageNum)
-            CommentSearchSource.SYRDS -> fetchSyrdsComments(query, pageNum)
-        }
-    }
+    ): CommentSearchPage = fetchAicuComments(query, pageNum)
 
     private fun executeRequest(
         url: HttpUrl,
@@ -299,61 +279,11 @@ class CommentSearchViewModel @Inject constructor(
         )
     }
 
-    private suspend fun fetchSyrdsComments(
-        query: CommentSearchQuery,
-        pageNum: Int
-    ): CommentSearchPage = withContext(Dispatchers.IO) {
-        val url = SYRDS_API_ENDPOINT.toHttpUrl()
-            .newBuilder()
-            .addQueryParameter("uid", query.uid.toString())
-            .addQueryParameter("pageSize", SYRDS_PAGE_SIZE.toString())
-            .addQueryParameter("pageNum", pageNum.toString())
-            .addQueryParameter("keyword", query.keyword)
-            .addQueryParameter("start_dt", "")
-            .addQueryParameter("end_dt", "")
-            .build()
-
-        val json = executeRequest(url, SYRDS_ORIGIN)
-        check(json.optInt("code", -1) == 0) { json.optString("msg", "查询失败") }
-        val data = json.optJSONArray("data") ?: error("响应缺少 data")
-        val allCount = json.optInt("review_num", data.length())
-
-        val items = buildList {
-            for (i in 0 until data.length()) {
-                val item = data.optJSONObject(i) ?: continue
-                val link = item.optString("link")
-                val bvid = item.optString("bvid")
-                val ownerName = item.optString("video_owner_name")
-                add(
-                    CommentSearchItem(
-                        id = buildSyrdsItemId(link, bvid, pageNum, i),
-                        message = normalizeText(item.optString("content")),
-                        title = item.optString("title").takeIf(String::isNotBlank),
-                        metaLine = buildSyrdsMetaLine(
-                            ownerName = ownerName,
-                            bvid = bvid,
-                            link = link
-                        ),
-                        timeText = item.optString("pubdate")
-                            .takeIf(String::isNotBlank)
-                            ?: item.optString("dt")
-                    )
-                )
-            }
-        }
-        CommentSearchPage(
-            allCount = allCount,
-            isEnd = pageNum * SYRDS_PAGE_SIZE >= allCount || items.size < SYRDS_PAGE_SIZE,
-            items = items
-        )
-    }
-
     private fun buildCurrentQuery(): CommentSearchQuery? {
         val state = uiState.value
         val uid = state.uidInput.toLongOrNull()
         if (uid == null || uid <= 0L) return null
         return CommentSearchQuery(
-            source = state.source,
             uid = uid,
             mode = state.mode,
             keyword = state.keywordInput.trim()
@@ -364,10 +294,9 @@ class CommentSearchViewModel @Inject constructor(
         query: CommentSearchQuery,
         state: CommentSearchUiState
     ): Boolean {
-        return state.source != query.source ||
-                state.uidInput != query.uid.toString() ||
+        return state.uidInput != query.uid.toString() ||
                 state.keywordInput.trim() != query.keyword ||
-                (query.source == CommentSearchSource.AICU && state.mode != query.mode)
+                state.mode != query.mode
     }
 
     private fun buildAicuMetaLine(
@@ -380,33 +309,6 @@ class CommentSearchViewModel @Inject constructor(
             if (type != null) add("type $type")
             if (rpid.isNotBlank()) add("rpid $rpid")
         }.joinToString(" · ")
-    }
-
-    private fun buildSyrdsMetaLine(
-        ownerName: String,
-        bvid: String,
-        link: String
-    ): String {
-        return buildList {
-            if (ownerName.isNotBlank()) add("UP $ownerName")
-            if (bvid.isNotBlank()) add(bvid)
-            if (isEmpty() && link.isNotBlank()) add(link)
-        }.joinToString(" · ")
-    }
-
-    private fun buildSyrdsItemId(
-        link: String,
-        bvid: String,
-        pageNum: Int,
-        index: Int
-    ): String {
-        val rpid = if (link.contains("#reply")) {
-            link.substringAfter("#reply").takeWhile { it.isDigit() }
-        } else { "" }
-        val rawId = rpid.takeIf(String::isNotBlank)
-            ?: bvid.takeIf(String::isNotBlank)?.let { "${it}_${pageNum}_$index" }
-            ?: "$pageNum:$index"
-        return "syrds:$rawId"
     }
 
     private fun normalizeText(text: String): String {
@@ -430,17 +332,13 @@ class CommentSearchViewModel @Inject constructor(
     private companion object {
         const val AICU_API_ENDPOINT = "https://api.aicu.cc/api/v3/search/getreply"
         const val AICU_ORIGIN = "https://www.aicu.cc"
-        const val SYRDS_API_ENDPOINT = "https://api.syrds.pro/get_replies"
-        const val SYRDS_ORIGIN = "https://syrds.pro"
         const val WEB_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0"
         const val FIRST_PAGE = 1
         const val AICU_PAGE_SIZE = 100
-        const val SYRDS_PAGE_SIZE = 75
     }
 
     private data class CommentSearchQuery(
-        val source: CommentSearchSource,
         val uid: Long,
         val mode: CommentSearchMode,
         val keyword: String

@@ -68,13 +68,11 @@ fun CommentSearchPane(
     ) {
         item {
             CommentSearchHeaderCard(
-                source = state.source,
                 uidInput = state.uidInput,
                 keywordInput = state.keywordInput,
                 mode = state.mode,
                 isLoading = state.isLoading,
                 isLoadingMore = state.isLoadingMore,
-                onSourceSelected = vm::selectSource,
                 onUidChanged = vm::updateUidInput,
                 onKeywordChanged = vm::updateKeywordInput,
                 onModeSelected = vm::selectMode,
@@ -151,13 +149,11 @@ fun CommentSearchPane(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CommentSearchHeaderCard(
-    source: CommentSearchSource,
     uidInput: String,
     keywordInput: String,
     mode: CommentSearchMode,
     isLoading: Boolean,
     isLoadingMore: Boolean,
-    onSourceSelected: (CommentSearchSource) -> Unit,
     onUidChanged: (String) -> Unit,
     onKeywordChanged: (String) -> Unit,
     onModeSelected: (CommentSearchMode) -> Unit,
@@ -173,20 +169,6 @@ private fun CommentSearchHeaderCard(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            CommentSearchSource.entries.forEach { src ->
-                FilterChip(
-                    selected = source == src,
-                    onClick = { onSourceSelected(src) },
-                    enabled = !isLoading && !isLoadingMore,
-                    label = { Text(src.title) }
-                )
-            }
-        }
         OutlinedTextField(
             value = uidInput,
             onValueChange = onUidChanged,
@@ -206,20 +188,18 @@ private fun CommentSearchHeaderCard(
             label = { Text("关键词") },
             singleLine = true
         )
-        if (source == CommentSearchSource.AICU) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CommentSearchMode.entries.forEach { md ->
-                    FilterChip(
-                        selected = mode == md,
-                        onClick = { onModeSelected(md) },
-                        enabled = !isLoading && !isLoadingMore,
-                        label = { Text(md.title) }
-                    )
-                }
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CommentSearchMode.entries.forEach { md ->
+                FilterChip(
+                    selected = mode == md,
+                    onClick = { onModeSelected(md) },
+                    enabled = !isLoading && !isLoadingMore,
+                    label = { Text(md.title) }
+                )
             }
         }
         Button(

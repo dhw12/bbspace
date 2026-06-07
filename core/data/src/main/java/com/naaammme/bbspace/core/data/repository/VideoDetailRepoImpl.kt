@@ -243,22 +243,24 @@ class VideoDetailRepoImpl @Inject constructor(
     }
 
     private fun mapSectionDataSeason(section: com.bapis.bilibili.app.viewunite.common.SectionData): VideoSeason? {
+        val sectionTitle = section.title.ifBlank { "选集" }
+        val src = VideoTargetTool.relate()
         val eps = section.episodesList.mapNotNull { ep ->
             val epId = ep.epId.takeIf { it > 0L } ?: return@mapNotNull null
             val title = ep.showTitle.ifBlank {
-                listOfNotNull(
-                    ep.title.takeIf(String::isNotBlank)?.let { "第${it}话" },
-                    ep.longTitle.takeIf(String::isNotBlank)
-                ).joinToString(" ")
-            }.ifBlank {
-                ep.longTitle.ifBlank { return@mapNotNull null }
+                when {
+                    ep.title.isNotBlank() && ep.longTitle.isNotBlank() -> "第${ep.title}话 ${ep.longTitle}"
+                    ep.title.isNotBlank() -> "第${ep.title}话"
+                    ep.longTitle.isNotBlank() -> ep.longTitle
+                    else -> return@mapNotNull null
+                }
             }
             VideoSeasonEpisode(
                 target = VideoTarget.Pgc(
                     aid = ep.aid,
                     cid = ep.cid,
                     epId = epId,
-                    src = VideoTargetTool.relate()
+                    src = src
                 ),
                 cid = ep.cid,
                 title = title,
@@ -268,11 +270,11 @@ class VideoDetailRepoImpl @Inject constructor(
         }
         if (eps.isEmpty()) return null
         return VideoSeason(
-            title = section.title.ifBlank { "选集" },
+            title = sectionTitle,
             subTitle = section.more.ifBlank { null },
             sections = listOf(
                 VideoSeasonSection(
-                    title = section.title.ifBlank { "选集" },
+                    title = sectionTitle,
                     eps = eps
                 )
             )
