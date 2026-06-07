@@ -18,6 +18,7 @@ import com.naaammme.bbspace.core.model.DanmakuSessionState
 import com.naaammme.bbspace.core.model.LivePlaybackError
 import com.naaammme.bbspace.core.model.LivePlaybackViewState
 import com.naaammme.bbspace.core.model.LiveRoute
+import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.PlayReportParams
 import com.naaammme.bbspace.core.model.PlaybackAudio
 import com.naaammme.bbspace.core.model.PlaybackControlMode
@@ -84,8 +85,8 @@ class StreamPlaybackSessionImpl @Inject constructor(
     override val danmakuState: StateFlow<DanmakuSessionState> = danmakuSession.state
 
     // vod state
-    private val vodSession = MutableStateFlow(PlayerSessionState())
-    private val _videoState = MutableStateFlow(VideoPlaybackState())
+    private val vodSession = MutableStateFlow(PlayerSessionState(biz = PlayBiz.UGC))
+    private val _videoState = MutableStateFlow(VideoPlaybackState(biz = PlayBiz.UGC))
     override val videoState: StateFlow<VideoPlaybackState> = _videoState.asStateFlow()
     override val playbackProgress: StateFlow<PlaybackProgress> = playerEngine.playbackProgress
     private val prepMu = Mutex()
@@ -421,8 +422,8 @@ class StreamPlaybackSessionImpl @Inject constructor(
                 if (openId.get() == token && vodSession.value.playbackSource == null) {
                     nextPlayWhenReady = true
                     _currentTarget.value = null
-                    vodSession.value = PlayerSessionState()
-                    _videoState.value = VideoPlaybackState()
+                    vodSession.value = PlayerSessionState(biz = PlayBiz.UGC)
+                    _videoState.value = VideoPlaybackState(biz = PlayBiz.UGC)
                     danmakuSession.clear()
                     syncSessionState()
                 }
@@ -468,12 +469,12 @@ class StreamPlaybackSessionImpl @Inject constructor(
         if (invalidateOpen) openId.incrementAndGet()
         _currentTarget.value = nextTarget?.let { StreamPlaybackTarget.Video(it) }
         nextPlayWhenReady = true
-        vodSession.value = nextState ?: PlayerSessionState()
+        vodSession.value = nextState ?: PlayerSessionState(biz = PlayBiz.UGC)
         _videoState.value = nextState?.toVideoPlaybackState(
             state = playerEngine.playbackState.value,
             prev = _videoState.value,
             isNewSeekEvent = false
-        ) ?: VideoPlaybackState()
+        ) ?: VideoPlaybackState(biz = PlayBiz.UGC)
         if (nextState?.playbackSource == null) {
             danmakuSession.clear()
         }

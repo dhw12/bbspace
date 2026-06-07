@@ -216,9 +216,12 @@ class HistoryRepoImpl @Inject constructor(
     }
 
     private fun buildPgcTarget(item: CursorItem): HistoryTarget.Video? {
-        val epId = VideoTargetTool.epId(item.uri) ?: return null
+        val aid = item.oid.takeIf { it > 0L } ?: VideoTargetTool.aid(item.uri) ?: 0L
+        val epId = VideoTargetTool.epId(item.uri) ?: 0L
+        if (aid <= 0L && epId <= 0L) return null
         return HistoryTarget.Video(
             VideoTarget.Pgc(
+                aid = aid,
                 epId = epId,
                 src = HISTORY_VIDEO_SRC
             )
@@ -229,9 +232,11 @@ class HistoryRepoImpl @Inject constructor(
         item: CursorItem,
         card: CardCheese
     ): HistoryTarget.Video? {
+        val aid = item.oid.takeIf { it > 0L } ?: VideoTargetTool.aid(item.uri) ?: 0L
         val epId = VideoTargetTool.epId(item.uri) ?: return null
         return HistoryTarget.Video(
             VideoTarget.Pugv(
+                aid = aid,
                 epId = epId,
                 seasonId = card.seasonId.takeIf { it > 0L },
                 src = HISTORY_VIDEO_SRC

@@ -298,10 +298,12 @@ class DownloadViewModel @Inject constructor(
             page?.part?.takeIf(String::isNotBlank)
         ).joinToString(" - ").takeIf(String::isNotBlank)
         return VideoDownloadRequest(
-            biz = PlayBiz.UGC,
+            biz = result.biz,
             aid = result.ids.aid,
             cid = targetCid,
             bvid = result.ids.bvid?.takeIf(String::isNotBlank),
+            epId = result.ids.epId,
+            seasonId = result.ids.seasonId,
             kind = state.kind,
             videoQuality = state.videoQuality,
             audioQuality = state.audioQuality,

@@ -174,49 +174,23 @@ class VideoViewModel @Inject constructor(
         audioQuality: Int
     ): VideoDownloadRequest? {
         val state = videoState.value
-        val detail = state.detail ?: return null
-        val pageTarget = currentTarget() ?: return null
+        state.detail ?: return null
+        currentTarget() ?: return null
         val ids = state.ids
+        if (!ids.hasAny) return null
         val meta = buildDownloadMeta()
-        return when (pageTarget) {
-            is VideoTarget.Ugc -> {
-                if (ids.aid <= 0L || ids.cid <= 0L) return null
-                VideoDownloadRequest(
-                    biz = PlayBiz.UGC,
-                    aid = ids.aid,
-                    cid = ids.cid,
-                    bvid = ids.bvid,
-                    kind = kind,
-                    videoQuality = videoQuality,
-                    audioQuality = audioQuality,
-                    meta = meta
-                )
-            }
-
-            is VideoTarget.Pgc -> VideoDownloadRequest(
-                biz = state.biz,
-                aid = ids.aid,
-                cid = ids.cid,
-                epId = ids.epId,
-                seasonId = ids.seasonId,
-                kind = kind,
-                videoQuality = videoQuality,
-                audioQuality = audioQuality,
-                meta = meta
-            )
-
-            is VideoTarget.Pugv -> VideoDownloadRequest(
-                biz = state.biz,
-                aid = ids.aid,
-                cid = ids.cid,
-                epId = ids.epId,
-                seasonId = ids.seasonId,
-                kind = kind,
-                videoQuality = videoQuality,
-                audioQuality = audioQuality,
-                meta = meta
-            )
-        }
+        return VideoDownloadRequest(
+            biz = state.biz,
+            aid = ids.aid,
+            cid = ids.cid,
+            bvid = ids.bvid,
+            epId = ids.epId,
+            seasonId = ids.seasonId,
+            kind = kind,
+            videoQuality = videoQuality,
+            audioQuality = audioQuality,
+            meta = meta
+        )
     }
 
     private fun buildDownloadMeta(): VideoDownloadMeta {

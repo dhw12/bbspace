@@ -17,7 +17,6 @@ import com.naaammme.bbspace.core.model.InterestItem
 import com.naaammme.bbspace.core.model.InterestSubItem
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.LiveRouteTool
-import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.RcmdReason
 import com.naaammme.bbspace.core.model.ThreePointItem
 import com.naaammme.bbspace.core.model.ThreePointReasonKind
@@ -229,18 +228,14 @@ class FeedRepoImpl @Inject constructor(
             ?.takeIf { it.isNotEmpty() }
             ?: args?.optString("up_name")?.takeIf { it.isNotEmpty() }
         val isLive = isLiveCard(cardGoto, goto, uri, player)
-        val biz = when {
-            cardGoto == "ketang" || goto == "ketang" ||
-                    uri.contains("/cheese/play/") -> PlayBiz.PUGV
-            cardGoto == "bangumi" || goto == "bangumi" ||
-                    cardGoto == "ad_ogv" || goto == "ad_ogv" ||
-                    uri.contains("/bangumi/play/") -> PlayBiz.PGC
-            else -> PlayBiz.UGC
-        }
-        val aid = if (biz == PlayBiz.UGC) {
-            param.toLongOrNull() ?: VideoTargetTool.aid(uri)
-        } else {
-            VideoTargetTool.aid(uri)
+        val isPugv = cardGoto == "ketang" || goto == "ketang" || uri.contains("/cheese/play/")
+        val isPgc = cardGoto == "bangumi" || goto == "bangumi" ||
+            cardGoto == "ad_ogv" || goto == "ad_ogv" ||
+            uri.contains("/bangumi/play/")
+        val aid = when {
+            isPugv -> param.toLongOrNull() ?: args?.optLong("aid")?.takeIf { it > 0L }
+            isPgc -> null
+            else -> param.toLongOrNull() ?: VideoTargetTool.aid(uri)
         }
         val cid = player?.optLong("cid")
             ?.takeIf { it > 0L }
@@ -248,11 +243,9 @@ class FeedRepoImpl @Inject constructor(
         val seasonId = player?.optLong("season_id")
             ?.takeIf { it > 0L }
             ?: VideoTargetTool.arg(uri, "season_id")?.toLongOrNull()
-        val epId = when (biz) {
-            PlayBiz.PGC -> param.toLongOrNull()
-                ?: VideoTargetTool.epId(uri)
-            PlayBiz.PUGV -> VideoTargetTool.epId(uri)
-            PlayBiz.UGC -> null
+        val epId = when {
+            isPugv -> VideoTargetTool.epId(uri)
+            else -> param.toLongOrNull() ?: VideoTargetTool.epId(uri)
         }
         val target = if (isLiveCard(cardGoto, goto, uri, player)) {
             null
@@ -263,25 +256,26 @@ class FeedRepoImpl @Inject constructor(
                     ?: obj.optString("track_id").takeIf { value -> value.isNotEmpty() },
                 reportFlowData = reportFlowData
             )
-            when (biz) {
-                PlayBiz.UGC -> {
-                    if (aid != null) {
-                        VideoTarget.Ugc(
-                            aid = aid,
-                            cid = cid ?: 0L,
-                            bvid = player?.optString("bvid")?.takeIf { value -> value.isNotEmpty() }
-                                ?: VideoTargetTool.bvid(uri),
+            when {
+                isPugv -> {
+                    if (epId == null && seasonId == null) {
+                        null
+                    } else {
+                        VideoTarget.Pugv(
+                            aid = aid ?: 0L,
+                            epId = epId ?: 0L,
+                            seasonId = seasonId,
                             src = src
                         )
-                    } else {
-                        null
                     }
                 }
 
-                PlayBiz.PGC -> {
-                    epId?.let {
+                isPgc -> {
+                    if (epId == null && seasonId == null) {
+                        null
+                    } else {
                         VideoTarget.Pgc(
-                            epId = it,
+                            epId = epId ?: 0L,
                             seasonId = seasonId,
                             subType = player?.optInt("sub_type")?.takeIf { value -> value >= 0 },
                             src = src
@@ -289,11 +283,13 @@ class FeedRepoImpl @Inject constructor(
                     }
                 }
 
-                PlayBiz.PUGV -> {
-                    epId?.let {
-                        VideoTarget.Pugv(
-                            epId = it,
-                            seasonId = seasonId,
+                else -> {
+                    aid?.let {
+                        VideoTarget.Ugc(
+                            aid = it,
+                            cid = cid ?: 0L,
+                            bvid = player?.optString("bvid")?.takeIf { value -> value.isNotEmpty() }
+                                ?: VideoTargetTool.bvid(uri),
                             src = src
                         )
                     }

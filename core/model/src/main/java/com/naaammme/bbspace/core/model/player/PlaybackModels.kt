@@ -18,7 +18,7 @@ enum class PlayBiz(
 
 @Immutable
 data class PlayBizInfo(
-    val biz: PlayBiz = PlayBiz.UGC,
+    val biz: PlayBiz,
     val type: Int? = null,
     val playType: Int? = null,
     val subType: Int? = null,
@@ -108,7 +108,7 @@ enum class PlaybackControlMode {
 data class PlayableParams(
     val ids: VideoRequestIds,
     val src: VideoSrc = VideoTargetTool.feed(),
-    val biz: PlayBizInfo = PlayBizInfo(),
+    val biz: PlayBizInfo,
     val fromScene: String = DEFAULT_FROM_SCENE,
     val adExtra: String? = null,
     val extraResolve: Map<String, String> = emptyMap()
@@ -130,21 +130,14 @@ data class PlayableParams(
         return buildMap {
             src.trackId?.takeIf(String::isNotBlank)?.let { put("track_id", it) }
             src.reportFlowData?.takeIf(String::isNotBlank)?.let { put("report_flow_data", it) }
-            when (biz.biz) {
-                PlayBiz.UGC -> Unit
-                PlayBiz.PGC -> {
-                    biz.epId?.takeIf { it > 0L }?.let { put("ep_id", it.toString()) }
-                    biz.seasonId?.takeIf { it > 0L }?.let { put("season_id", it.toString()) }
-                    biz.roomId?.takeIf { it > 0L }?.let { put("room_id", it.toString()) }
-                    biz.inlineScene?.takeIf(String::isNotBlank)?.let { put("inline_scene", it) }
-                    biz.materialNo?.takeIf(String::isNotBlank)?.let { put("material_no", it) }
-                    biz.securityLevel?.takeIf(String::isNotBlank)?.let { put("security_level", it) }
-                }
-                PlayBiz.PUGV -> {
-                    biz.epId?.takeIf { it > 0L }?.let { put("ep_id", it.toString()) }
-                    biz.seasonId?.takeIf { it > 0L }?.let { put("season_id", it.toString()) }
-                    put("biz_type", PUGV_BIZ_TYPE)
-                }
+            biz.epId?.takeIf { it > 0L }?.let { put("ep_id", it.toString()) }
+            biz.seasonId?.takeIf { it > 0L }?.let { put("season_id", it.toString()) }
+            biz.roomId?.takeIf { it > 0L }?.let { put("room_id", it.toString()) }
+            biz.inlineScene?.takeIf(String::isNotBlank)?.let { put("inline_scene", it) }
+            biz.materialNo?.takeIf(String::isNotBlank)?.let { put("material_no", it) }
+            biz.securityLevel?.takeIf(String::isNotBlank)?.let { put("security_level", it) }
+            if (biz.biz == PlayBiz.PUGV) {
+                put("biz_type", PUGV_BIZ_TYPE)
             }
             putAll(extraResolve)
         }
@@ -277,7 +270,7 @@ sealed interface PlaybackError {
 @Immutable
 data class PlayerSessionState(
     val request: PlaybackRequest? = null,
-    val biz: PlayBiz = PlayBiz.UGC,
+    val biz: PlayBiz,
     val ids: ResolvedVideoIds = ResolvedVideoIds(),
     val detail: VideoDetail? = null,
     val detailLoading: Boolean = false,

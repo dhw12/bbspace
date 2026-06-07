@@ -188,12 +188,14 @@ class FavoriteRepoImpl @Inject constructor(
             }
 
             TYPE_PGC -> {
-                val epId = oid.takeIf { it > 0L } ?: return null
+                val aid = oid.takeIf { it > 0L } ?: 0L
                 val ogv = item.optJSONObject("ogv")
+                val seasonId = ogv?.optLong("season_id")?.takeIf { it > 0L }
+                if (aid <= 0L && seasonId == null) return null
                 FavoriteContentTarget.Video(
                     VideoTarget.Pgc(
-                        epId = epId,
-                        seasonId = ogv?.optLong("season_id")?.takeIf { it > 0L },
+                        aid = aid,
+                        seasonId = seasonId,
                         subType = ogv?.optInt("type_id")?.takeIf { it > 0 },
                         src = VideoTargetTool.favorite()
                     )

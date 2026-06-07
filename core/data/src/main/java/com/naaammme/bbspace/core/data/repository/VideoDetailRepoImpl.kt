@@ -349,10 +349,8 @@ class VideoDetailRepoImpl @Inject constructor(
         reply: ViewReply
     ): PlayBiz {
         return when {
-            requestIds.aid > 0L || requestIds.cid > 0L || !requestIds.bvid.isNullOrBlank() -> PlayBiz.UGC
             reply.supplement.typeUrl.endsWith("ViewPugvAny") -> PlayBiz.PUGV
             reply.supplement.typeUrl.endsWith("ViewPgcAny") -> PlayBiz.PGC
-            requestIds.epId > 0L || requestIds.seasonId > 0L -> PlayBiz.PGC
             else -> PlayBiz.UGC
         }
     }

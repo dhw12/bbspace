@@ -4,7 +4,7 @@ import androidx.compose.runtime.Immutable
 
 @Immutable
 data class VideoDownloadRequest(
-    val biz: PlayBiz = PlayBiz.UGC,
+    val biz: PlayBiz,
     val aid: Long = 0L,
     val cid: Long = 0L,
     val bvid: String? = null,
