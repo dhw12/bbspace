@@ -35,6 +35,8 @@ interface CommentRepository {
         offset: String = ""
     ): CommentReplyDetailPage
 
+    suspend fun fetchReplyInfo(rpid: Long): CommentReply?
+
     suspend fun fetchTranslatedReply(
         subject: CommentSubject,
         rpid: Long

@@ -44,6 +44,7 @@ import com.naaammme.bbspace.core.model.CommentReply
 import com.naaammme.bbspace.core.model.CommentUser
 
 internal sealed interface CommentReplyAction {
+    data class Check(val rpid: Long) : CommentReplyAction
     data class Translate(val rpid: Long) : CommentReplyAction
     data class Delete(val reply: CommentReply) : CommentReplyAction
     data class Reply(val reply: CommentReply) : CommentReplyAction
@@ -223,6 +224,7 @@ private fun ReplyBody(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val isSelf = currentMid > 0L && reply.user.mid == currentMid
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -251,7 +253,9 @@ private fun ReplyBody(
                 }
                 ReplyMenuButton(
                     busy = reply.rpid in busyReplyIds,
-                    canDelete = currentMid > 0L && reply.user.mid == currentMid,
+                    showCheck = isSelf,
+                    canDelete = isSelf,
+                    onCheck = { onAction(CommentReplyAction.Check(reply.rpid)) },
                     onTranslate = { onAction(CommentReplyAction.Translate(reply.rpid)) },
                     onDelete = { onAction(CommentReplyAction.Delete(reply)) }
                 )
@@ -295,7 +299,9 @@ private fun ReplyMessage(reply: CommentReply) {
 @Composable
 private fun ReplyMenuButton(
     busy: Boolean,
+    showCheck: Boolean,
     canDelete: Boolean,
+    onCheck: () -> Unit,
     onTranslate: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -313,6 +319,15 @@ private fun ReplyMenuButton(
             expanded = show,
             onDismissRequest = { show = false }
         ) {
+            if (showCheck) {
+                DropdownMenuItem(
+                    text = { Text("评论检查") },
+                    onClick = {
+                        show = false
+                        onCheck()
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = { Text("评论翻译") },
                 onClick = {

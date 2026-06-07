@@ -8,6 +8,8 @@ import com.bapis.bilibili.main.community.reply.v1.MainListReply
 import com.bapis.bilibili.main.community.reply.v1.MainListReq
 import com.bapis.bilibili.main.community.reply.v1.Mode
 import com.bapis.bilibili.main.community.reply.v1.ReplyInfo
+import com.bapis.bilibili.main.community.reply.v1.ReplyInfoReply
+import com.bapis.bilibili.main.community.reply.v1.ReplyInfoReq
 import com.bapis.bilibili.main.community.reply.v1.TranslateReplyReq
 import com.bapis.bilibili.main.community.reply.v1.TranslateReplyResp
 import com.bapis.bilibili.main.community.reply.v1.WordSearchParam
@@ -189,6 +191,22 @@ class CommentRepoImpl @Inject constructor(
         )
         return withContext(Dispatchers.Default) {
             reply.translatedRepliesMap[rpid]?.translatedContent?.message?.trim()
+        }
+    }
+
+    override suspend fun fetchReplyInfo(rpid: Long): CommentReply? {
+        val reply = callCommentGrpc(
+            endpoint = REPLY_INFO_ENDPOINT,
+            requestBytes = ReplyInfoReq.newBuilder()
+                .setRpid(rpid)
+                .setScene(ReplyInfoReq.ReplyInfoScene.Insert)
+                .build()
+                .toByteArray(),
+            parser = ReplyInfoReply.parser()
+        )
+        return withContext(Dispatchers.Default) {
+            if (!reply.hasReply()) return@withContext null
+            mapReply(reply.reply) ?: error("ReplyInfo 缺少评论数据")
         }
     }
 
@@ -609,6 +627,7 @@ class CommentRepoImpl @Inject constructor(
         const val DAY_MS = 86_400_000L
         const val ENDPOINT = "bilibili.main.community.reply.v1.Reply/MainList"
         const val DETAIL_ENDPOINT = "bilibili.main.community.reply.v1.Reply/DetailList"
+        const val REPLY_INFO_ENDPOINT = "bilibili.main.community.reply.v1.Reply/ReplyInfo"
         const val TRANSLATE_ENDPOINT = "bilibili.main.community.reply.v1.Reply/TranslateReply"
         const val ADD_ENDPOINT = "/x/v2/reply/add"
         const val DEL_ENDPOINT = "/x/v2/reply/del"

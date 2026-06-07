@@ -296,6 +296,43 @@ class CommentViewModel @Inject constructor(
         }
     }
 
+    fun checkReply(rpid: Long) {
+        val state = _uiState.value
+        val subject = state.subject ?: return
+        if (rpid in state.busyReplyIds) return
+        _uiState.update {
+            it.copy(
+                busyReplyIds = it.busyReplyIds + rpid,
+                replyCheckDialogText = null
+            )
+        }
+        viewModelScope.launch {
+            val result = runCatching {
+                repo.fetchReplyInfo(rpid)
+            }
+            if (_uiState.value.subject != subject) return@launch
+            _uiState.update {
+                it.copy(busyReplyIds = it.busyReplyIds - rpid)
+            }
+            result.fold(
+                onSuccess = { reply ->
+                    _uiState.update {
+                        it.copy(
+                            replyCheckDialogText = if (reply == null) {
+                                "评论不可见"
+                            } else {
+                                "评论正常"
+                            }
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    _msg.tryEmit(err.message ?: "评论检查失败")
+                }
+            )
+        }
+    }
+
     fun deleteReply(reply: CommentReply) {
         val state = _uiState.value
         val subject = state.subject ?: return
@@ -360,6 +397,13 @@ class CommentViewModel @Inject constructor(
         if (editor.loading || !editor.visible) return
         _uiState.update {
             it.copy(editor = editor.copy(visible = false))
+        }
+    }
+
+    fun dismissReplyCheckDialog() {
+        if (_uiState.value.replyCheckDialogText == null) return
+        _uiState.update {
+            it.copy(replyCheckDialogText = null)
         }
     }
 

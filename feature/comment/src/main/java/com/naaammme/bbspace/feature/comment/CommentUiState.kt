@@ -27,6 +27,7 @@ data class CommentUiState(
     val items: List<CommentReply> = emptyList(),
     val threadPane: CommentThreadState? = null,
     val editor: CommentEditorState = CommentEditorState(),
+    val replyCheckDialogText: String? = null,
     val nextOffset: String? = null,
     val endText: String? = null
 ) {
