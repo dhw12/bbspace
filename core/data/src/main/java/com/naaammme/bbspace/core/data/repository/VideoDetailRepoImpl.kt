@@ -24,6 +24,7 @@ import com.naaammme.bbspace.core.model.VideoOwner
 import com.naaammme.bbspace.core.model.VideoPagePart
 import com.naaammme.bbspace.core.model.VideoRelate
 import com.naaammme.bbspace.core.model.VideoRequestIds
+import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.core.model.VideoSeason
 import com.naaammme.bbspace.core.model.VideoSeasonEpisode
@@ -149,6 +150,12 @@ class VideoDetailRepoImpl @Inject constructor(
                         season = mapSeason(mod.ugcSeason)
                     }
 
+                    Module.DataCase.SECTION_DATA -> {
+                        if (season == null) {
+                            season = mapSectionDataSeason(mod.sectionData)
+                        }
+                    }
+
                     Module.DataCase.RELATES -> {
                         relates += mapRelates(mod.relates.cardsList)
                     }
@@ -156,7 +163,6 @@ class VideoDetailRepoImpl @Inject constructor(
                     else -> Unit
                 }
             }
-
         return VideoDetailResult(
             detail = VideoDetail(
                 title = title.ifBlank { "视频详情" },
@@ -214,6 +220,7 @@ class VideoDetailRepoImpl @Inject constructor(
                 )
                 VideoSeasonEpisode(
                     target = ids.toUgcTarget(VideoTargetTool.relate()),
+                    cid = ids.cid,
                     title = epTitle,
                     subTitle = ep.coverRightText.ifBlank { null },
                     cover = ep.cover.toHttps().ifBlank { null }
@@ -232,6 +239,43 @@ class VideoDetailRepoImpl @Inject constructor(
             title = title,
             subTitle = season.supernatantTitle.ifBlank { season.unionTitle }.ifBlank { null },
             sections = sections
+        )
+    }
+
+    private fun mapSectionDataSeason(section: com.bapis.bilibili.app.viewunite.common.SectionData): VideoSeason? {
+        val eps = section.episodesList.mapNotNull { ep ->
+            val epId = ep.epId.takeIf { it > 0L } ?: return@mapNotNull null
+            val title = ep.showTitle.ifBlank {
+                listOfNotNull(
+                    ep.title.takeIf(String::isNotBlank)?.let { "第${it}话" },
+                    ep.longTitle.takeIf(String::isNotBlank)
+                ).joinToString(" ")
+            }.ifBlank {
+                ep.longTitle.ifBlank { return@mapNotNull null }
+            }
+            VideoSeasonEpisode(
+                target = VideoTarget.Pgc(
+                    aid = ep.aid,
+                    cid = ep.cid,
+                    epId = epId,
+                    src = VideoTargetTool.relate()
+                ),
+                cid = ep.cid,
+                title = title,
+                subTitle = ep.subtitle.ifBlank { null },
+                cover = ep.cover.toHttps().ifBlank { null }
+            )
+        }
+        if (eps.isEmpty()) return null
+        return VideoSeason(
+            title = section.title.ifBlank { "选集" },
+            subTitle = section.more.ifBlank { null },
+            sections = listOf(
+                VideoSeasonSection(
+                    title = section.title.ifBlank { "选集" },
+                    eps = eps
+                )
+            )
         )
     }
 

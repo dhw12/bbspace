@@ -95,6 +95,9 @@ fun VideoScreen(
     val switchPage = remember(viewModel) {
         { cid: Long -> viewModel.switchPage(cid) }
     }
+    val switchEpisode = remember(viewModel) {
+        { target: VideoTarget -> viewModel.switchEpisode(target) }
+    }
     val downloadClick = remember { { downloadSheetOn = true } }
     val handleBack = {
         if (fullOn) {
@@ -221,7 +224,7 @@ fun VideoScreen(
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
                         onDownloadClick = downloadClick,
-                        onOpenEpisode = openTarget,
+                        onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
                     )
                 }
@@ -261,7 +264,7 @@ fun VideoScreen(
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
                         onDownloadClick = downloadClick,
-                        onOpenEpisode = openTarget,
+                        onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
                     )
                 }

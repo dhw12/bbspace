@@ -65,7 +65,8 @@ data class VideoSeasonSection(
 
 @Immutable
 data class VideoSeasonEpisode(
-    val target: VideoTarget.Ugc,
+    val target: VideoTarget,
+    val cid: Long,
     val title: String,
     val subTitle: String?,
     val cover: String?

@@ -99,9 +99,13 @@ class VideoPlayerRepoImpl @Inject constructor(
             .setFromSpmid(playable.src.fromSpmid)
             .setFromScene(playable.fromScene)
             .setPlayCtrl(playCtrl)
-            .putAllExtraContent(playable.getResolveExtraContent())
+            .putAllExtraContent(
+                playable.getResolveExtraContent() + mapOf(
+                    "short_edge" to SHORT_EDGE,
+                    "long_edge" to LONG_EDGE
+                )
+            )
 
-        ids.cid.takeIf { it > 0L }?.let { builder.putExtraContent("cid", it.toString()) }
         ids.epId.takeIf { it > 0L }?.let { builder.putExtraContent("ep_id", it.toString()) }
         ids.seasonId.takeIf { it > 0L }?.let { builder.putExtraContent("season_id", it.toString()) }
 
@@ -272,5 +276,7 @@ class VideoPlayerRepoImpl @Inject constructor(
     private companion object {
         const val TAG = "PlayViewUnite"
         const val ENDPOINT = "bilibili.app.playerunite.v1.Player/PlayViewUnite"
+        const val SHORT_EDGE = "1080"
+        const val LONG_EDGE = "1920"
     }
 }

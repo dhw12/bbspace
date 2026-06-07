@@ -168,6 +168,13 @@ class VideoViewModel @Inject constructor(
         playbackController.openVideo(nextTarget)
     }
 
+    fun switchEpisode(target: VideoTarget) {
+        val cur = currentTarget() ?: return
+        if (cur == target) return
+        _targetStack.value = _targetStack.value.dropLast(1) + target
+        playbackController.openVideo(target)
+    }
+
     fun currentDownloadRequest(
         kind: VideoDownloadKind,
         videoQuality: Int,

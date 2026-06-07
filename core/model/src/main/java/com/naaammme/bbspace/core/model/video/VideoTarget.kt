@@ -18,6 +18,7 @@ sealed interface VideoTarget {
     @Immutable
     data class Pgc(
         val aid: Long = 0L,
+        val cid: Long = 0L,
         val epId: Long = 0L,
         val seasonId: Long? = null,
         val subType: Int? = null,
@@ -62,6 +63,7 @@ fun VideoTarget.toPlayableParams(): PlayableParams {
 
         is VideoTarget.Pgc -> VideoRequestIds(
             aid = aid,
+            cid = cid,
             epId = epId,
             seasonId = seasonId ?: 0L
         )

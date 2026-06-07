@@ -232,10 +232,15 @@ class FeedRepoImpl @Inject constructor(
         val isPgc = cardGoto == "bangumi" || goto == "bangumi" ||
             cardGoto == "ad_ogv" || goto == "ad_ogv" ||
             uri.contains("/bangumi/play/")
-        val aid = when {
-            isPugv -> param.toLongOrNull() ?: args?.optLong("aid")?.takeIf { it > 0L }
-            isPgc -> null
-            else -> param.toLongOrNull() ?: VideoTargetTool.aid(uri)
+        val ugcAid = if (!isPgc && !isPugv) {
+            param.toLongOrNull() ?: VideoTargetTool.aid(uri)
+        } else {
+            null
+        }
+        val pugvAid = if (isPugv) {
+            param.toLongOrNull() ?: args?.optLong("aid")?.takeIf { it > 0L }
+        } else {
+            null
         }
         val cid = player?.optLong("cid")
             ?.takeIf { it > 0L }
@@ -243,11 +248,17 @@ class FeedRepoImpl @Inject constructor(
         val seasonId = player?.optLong("season_id")
             ?.takeIf { it > 0L }
             ?: VideoTargetTool.arg(uri, "season_id")?.toLongOrNull()
-        val epId = when {
-            isPugv -> VideoTargetTool.epId(uri)
-            else -> param.toLongOrNull() ?: VideoTargetTool.epId(uri)
+        val pugvEpId = if (isPugv) {
+            VideoTargetTool.epId(uri)
+        } else {
+            null
         }
-        val target = if (isLiveCard(cardGoto, goto, uri, player)) {
+        val pgcEpId = if (isPgc) {
+            param.toLongOrNull() ?: VideoTargetTool.epId(uri)
+        } else {
+            null
+        }
+        val target = if (isLive) {
             null
         } else {
             val src = VideoTargetTool.feed(
@@ -258,12 +269,12 @@ class FeedRepoImpl @Inject constructor(
             )
             when {
                 isPugv -> {
-                    if (epId == null && seasonId == null) {
+                    if (pugvEpId == null && seasonId == null) {
                         null
                     } else {
                         VideoTarget.Pugv(
-                            aid = aid ?: 0L,
-                            epId = epId ?: 0L,
+                            aid = pugvAid ?: 0L,
+                            epId = pugvEpId ?: 0L,
                             seasonId = seasonId,
                             src = src
                         )
@@ -271,11 +282,11 @@ class FeedRepoImpl @Inject constructor(
                 }
 
                 isPgc -> {
-                    if (epId == null && seasonId == null) {
+                    if (pgcEpId == null && seasonId == null) {
                         null
                     } else {
                         VideoTarget.Pgc(
-                            epId = epId ?: 0L,
+                            epId = pgcEpId ?: 0L,
                             seasonId = seasonId,
                             subType = player?.optInt("sub_type")?.takeIf { value -> value >= 0 },
                             src = src
@@ -284,7 +295,7 @@ class FeedRepoImpl @Inject constructor(
                 }
 
                 else -> {
-                    aid?.let {
+                    ugcAid?.let {
                         VideoTarget.Ugc(
                             aid = it,
                             cid = cid ?: 0L,

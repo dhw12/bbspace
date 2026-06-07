@@ -84,7 +84,7 @@ internal fun VideoDetailPage(
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
-    onOpenEpisode: (VideoTarget.Ugc) -> Unit,
+    onOpenEpisode: (VideoTarget) -> Unit,
     onSwitchPage: (Long) -> Unit
 ) {
     val aidKey = ids.aid.takeIf { it > 0L }
@@ -771,7 +771,7 @@ private fun SeasonSheet(
     season: VideoSeason,
     curCid: Long?,
     onDismiss: () -> Unit,
-    onOpenEpisode: (VideoTarget.Ugc) -> Unit
+    onOpenEpisode: (VideoTarget) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val initIdx = remember(season, curCid) { seasonSheetIndex(season, curCid) }
@@ -827,14 +827,14 @@ private fun SeasonSheet(
 
                 items(
                     items = sec.eps,
-                    key = { "ep_${it.target.aid}_${it.target.cid}" },
+                    key = { "ep_${it.cid}_${it.title}" },
                     contentType = { "episode" }
                 ) { ep ->
                     SeasonEpisodeRow(
                         ep = ep,
-                        selected = ep.target.cid == curCid,
+                        selected = ep.cid == curCid,
                         onClick = {
-                            if (ep.target.cid != curCid) {
+                            if (ep.cid != curCid) {
                                 onOpenEpisode(ep.target)
                             }
                         }
@@ -1185,7 +1185,7 @@ private fun seasonEntryText(
     val curEp = season.sections
         .asSequence()
         .flatMap { it.eps.asSequence() }
-        .firstOrNull { it.target.cid == curCid }
+        .firstOrNull { it.cid == curCid }
     return Triple(
         curEp?.title ?: season.title,
         curEp?.subTitle.orEmpty().ifBlank { season.subTitle.orEmpty() },
@@ -1210,7 +1210,7 @@ private fun seasonSheetIndex(season: VideoSeason, curCid: Long?): Int {
     if (curCid == null) return 0
     var secItemIdx = 1
     season.sections.forEach { sec ->
-        val epIdx = sec.eps.indexOfFirst { it.target.cid == curCid }
+        val epIdx = sec.eps.indexOfFirst { it.cid == curCid }
         if (epIdx >= 0) {
             return secItemIdx + 1 + epIdx
         }
