@@ -83,8 +83,7 @@ fun CommentPanel(
     LaunchedEffect(subject) {
         viewModel.bind(subject)
     }
-    val uiStateState = viewModel.uiState.collectAsStateWithLifecycle()
-    val uiState by uiStateState
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val layoutDirection = LocalLayoutDirection.current
     val replyThread = uiState.threadPane
     val isInitLoading = subject != null && uiState.loading && uiState.items.isEmpty()
@@ -121,15 +120,14 @@ fun CommentPanel(
     var fabVisible by remember { mutableStateOf(true) }
     val shouldLoadMore by remember {
         derivedStateOf {
-            val state = uiStateState.value
             val total = listState.layoutInfo.totalItemsCount
             val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            state.threadPane == null &&
-                state.hasMore &&
-                !state.loading &&
-                !state.loadingMore &&
-                state.loadMoreError.isNullOrBlank() &&
-                state.items.isNotEmpty() &&
+            uiState.threadPane == null &&
+                uiState.hasMore &&
+                !uiState.loading &&
+                !uiState.loadingMore &&
+                uiState.loadMoreError.isNullOrBlank() &&
+                uiState.items.isNotEmpty() &&
                 total > 0 &&
                 last >= total - 3
         }
@@ -147,12 +145,15 @@ fun CommentPanel(
 
     LaunchedEffect(listState, threadListState, replyThread != null) {
         val activeListState = if (replyThread != null) threadListState else listState
-        var lastIndex = activeListState.firstVisibleItemIndex
-        snapshotFlow { activeListState.firstVisibleItemIndex }
+        var lastPos = activeListState.firstVisibleItemIndex to activeListState.firstVisibleItemScrollOffset
+        snapshotFlow {
+            activeListState.firstVisibleItemIndex to activeListState.firstVisibleItemScrollOffset
+        }
             .collectLatest { index ->
-                if (index != lastIndex) {
-                    fabVisible = index <= lastIndex
-                    lastIndex = index
+                if (index != lastPos) {
+                    fabVisible = index.first < lastPos.first ||
+                        (index.first == lastPos.first && index.second <= lastPos.second)
+                    lastPos = index
                 }
             }
     }

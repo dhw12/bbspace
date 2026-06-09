@@ -82,6 +82,12 @@ internal enum class PlayerVideoResizeMode {
     Fill
 }
 
+private enum class PlayerDialog {
+    Quality,
+    Audio,
+    Speed
+}
+
 internal val LocalVideoResizeModeState = compositionLocalOf<MutableState<PlayerVideoResizeMode>> {
     error("Missing player video resize mode state")
 }
@@ -103,9 +109,7 @@ internal fun VideoPlayerPane(
     val state by viewModel.videoState.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
-    var showQ by remember { mutableStateOf(false) }
-    var showA by remember { mutableStateOf(false) }
-    var showSp by remember { mutableStateOf(false) }
+    var activeDialog by remember { mutableStateOf<PlayerDialog?>(null) }
     var showPlaybackSheet by remember { mutableStateOf(false) }
     var showCtrl by remember { mutableStateOf(true) }
     val videoResizeMode = rememberSaveable { mutableStateOf(PlayerVideoResizeMode.Fit) }
@@ -200,22 +204,20 @@ internal fun VideoPlayerPane(
                 settingsState = settingsState,
                 isFull = isFull,
                 showCtrl = showCtrl,
-                showA = showA,
-                showQ = showQ,
-                showSp = showSp,
+                activeDialog = activeDialog,
                 showPlaybackSheet = showPlaybackSheet,
                 onShowCtrlChange = { showCtrl = it },
                 onShowA = {
                     showCtrl = true
-                    showA = true
+                    activeDialog = PlayerDialog.Audio
                 },
                 onShowQ = {
                     showCtrl = true
-                    showQ = true
+                    activeDialog = PlayerDialog.Quality
                 },
                 onShowSp = {
                     showCtrl = true
-                    showSp = true
+                    activeDialog = PlayerDialog.Speed
                 },
                 onToggleFull = {
                     showCtrl = true
@@ -327,43 +329,43 @@ internal fun VideoPlayerPane(
             }
         }
 
-        if (showQ) {
+        if (activeDialog == PlayerDialog.Quality) {
             val src = state.playbackSource
             if (src != null) {
                 QualitySelectionDialog(
                     options = src.qualityOptions,
                     curQuality = state.currentStream?.quality,
-                    onDismiss = { showQ = false },
+                    onDismiss = { activeDialog = null },
                     onSelect = { quality ->
                         viewModel.switchQuality(quality)
-                        showQ = false
+                        activeDialog = null
                     }
                 )
             }
         }
 
-        if (showA) {
+        if (activeDialog == PlayerDialog.Audio) {
             val src = state.playbackSource
             if (src != null) {
                 AudioSelectionDialog(
                     audios = src.audios,
                     curAudioId = state.currentAudio?.id,
-                    onDismiss = { showA = false },
+                    onDismiss = { activeDialog = null },
                     onSelect = { audioId ->
                         viewModel.switchAudio(audioId)
-                        showA = false
+                        activeDialog = null
                     }
                 )
             }
         }
 
-        if (showSp) {
+        if (activeDialog == PlayerDialog.Speed) {
             SpeedSelectionDialog(
                 curSpeed = state.speed,
-                onDismiss = { showSp = false },
+                onDismiss = { activeDialog = null },
                 onSelect = { speed ->
                     viewModel.setSpeed(speed)
-                    showSp = false
+                    activeDialog = null
                 }
             )
         }
@@ -410,9 +412,7 @@ private fun VideoPlayerOverlay(
     settingsState: PlayerSettingsState,
     isFull: Boolean,
     showCtrl: Boolean,
-    showA: Boolean,
-    showQ: Boolean,
-    showSp: Boolean,
+    activeDialog: PlayerDialog?,
     showPlaybackSheet: Boolean,
     onShowCtrlChange: (Boolean) -> Unit,
     onShowA: () -> Unit,
@@ -437,9 +437,7 @@ private fun VideoPlayerOverlay(
         dragMs,
         gestureState.dragType,
         gestureState.showSpeedBadge,
-        showA,
-        showQ,
-        showSp,
+        activeDialog,
         showPlaybackSheet
     ) {
         if (
@@ -448,9 +446,7 @@ private fun VideoPlayerOverlay(
             dragMs == null &&
             gestureState.dragType == DragType.None &&
             !gestureState.showSpeedBadge &&
-            !showA &&
-            !showQ &&
-            !showSp &&
+            activeDialog == null &&
             !showPlaybackSheet
         ) {
             delay(2_000)

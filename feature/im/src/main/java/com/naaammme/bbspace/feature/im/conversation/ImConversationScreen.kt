@@ -29,7 +29,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -73,7 +72,7 @@ fun ImConversationScreen(
         messageItems.size,
         listState
     ) {
-        derivedStateOf {
+        androidx.compose.runtime.derivedStateOf {
             state.hasMoreHistory &&
                 messageItems.isNotEmpty() &&
                 !state.isLoadingMore &&

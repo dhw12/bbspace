@@ -9,6 +9,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.EnterTransition.Companion.None
+import androidx.compose.animation.ExitTransition.Companion.None as ExitNone
 
 private val Emphasized = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 private val Standard = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
@@ -33,6 +35,12 @@ fun <T> buildNavTransitions(style: TransitionStyle, speed: AnimationSpeed): NavT
     val shortDur = (dur * 0.6f).toInt().coerceAtLeast(1)
 
     return when (style) {
+        TransitionStyle.NONE -> NavTransitions(
+            enter = { None },
+            exit = { ExitNone },
+            popEnter = { None },
+            popExit = { ExitNone }
+        )
         TransitionStyle.SHARED_AXIS_X -> NavTransitions(
             enter = {
                 slideIntoContainer(
@@ -97,25 +105,25 @@ fun <T> buildNavTransitions(style: TransitionStyle, speed: AnimationSpeed): NavT
             enter = {
                 scaleIn(
                     animationSpec = tween(dur, easing = Emphasized),
-                    initialScale = 0.94f
+                    initialScale = 0.98f
                 ) + fadeIn(tween(shortDur, easing = Standard))
             },
             exit = {
                 scaleOut(
                     animationSpec = tween(dur, easing = Emphasized),
-                    targetScale = 1.03f
+                    targetScale = 1.02f
                 ) + fadeOut(tween(shortDur, easing = Standard))
             },
             popEnter = {
                 scaleIn(
                     animationSpec = tween(dur, easing = Emphasized),
-                    initialScale = 1.03f
+                    initialScale = 1.02f
                 ) + fadeIn(tween(shortDur, easing = Standard))
             },
             popExit = {
                 scaleOut(
                     animationSpec = tween(dur, easing = Emphasized),
-                    targetScale = 0.94f
+                    targetScale = 0.98f
                 ) + fadeOut(tween(shortDur, easing = Standard))
             }
         )

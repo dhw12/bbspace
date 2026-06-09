@@ -12,7 +12,7 @@ data class ThemeConfig(
     val fontScale: Float = 1.0f,
     val pullRefreshDistanceDp: Float = DEFAULT_PULL_REFRESH_DISTANCE_DP,
     val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
-    val transitionStyle: TransitionStyle = TransitionStyle.SHARED_AXIS_X,
+    val transitionStyle: TransitionStyle = TransitionStyle.FADE_THROUGH,
     val isPureBlack: Boolean = false,
     val preferredFrameRate: FrameRateMode = FrameRateMode.AUTO,
     val cornerStyle: CornerStyle = CornerStyle.STANDARD
@@ -31,6 +31,7 @@ enum class CornerStyle {
 }
 
 enum class TransitionStyle {
+    NONE,
     SHARED_AXIS_X,
     SHARED_AXIS_Y,
     SHARED_AXIS_Z,

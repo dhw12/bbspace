@@ -336,25 +336,43 @@ private fun TransitionStyleSelector(
             Text("过渡动画", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
             TransitionStyle.entries.forEach { style ->
-                FilterChip(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    selected = selected == style,
-                    onClick = { onSelect(style) },
-                    label = {
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = { onSelect(style) },
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
-                            when (style) {
-                                TransitionStyle.SHARED_AXIS_X -> "水平滑动"
-                                TransitionStyle.SHARED_AXIS_Y -> "垂直滑动"
-                                TransitionStyle.SHARED_AXIS_Z -> "缩放"
-                                TransitionStyle.FADE_THROUGH -> "淡入淡出"
-                                TransitionStyle.SLIDE -> "滑动"
-                            }
+                            text = transitionStyleLabel(style),
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                )
+                    if (style == selected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Spacer(Modifier.size(24.dp))
+                    }
+                }
             }
         }
     }
+}
+
+private fun transitionStyleLabel(style: TransitionStyle): String = when (style) {
+    TransitionStyle.NONE -> "无动画"
+    TransitionStyle.SHARED_AXIS_X -> "水平滑动"
+    TransitionStyle.SHARED_AXIS_Y -> "垂直滑动"
+    TransitionStyle.SHARED_AXIS_Z -> "缩放"
+    TransitionStyle.FADE_THROUGH -> "淡入淡出"
+    TransitionStyle.SLIDE -> "滑动"
 }
 
 @Composable
