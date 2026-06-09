@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
@@ -73,6 +74,8 @@ fun CommentPanel(
     subject: CommentSubject?,
     modifier: Modifier = Modifier,
     onOpenSpace: (SpaceRoute) -> Unit = {},
+    listState: LazyListState = rememberLazyListState(),
+    threadListState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     header: (@Composable () -> Unit)? = null,
     viewModel: CommentViewModel = hiltViewModel()
@@ -115,8 +118,6 @@ fun CommentPanel(
                 }
         }
     }
-    val listState = rememberLazyListState()
-    val threadListState = rememberLazyListState()
     var fabVisible by remember { mutableStateOf(true) }
     val shouldLoadMore by remember {
         derivedStateOf {

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -66,11 +67,19 @@ fun HomeVideoPage(
     onToastShown: () -> Unit
 ) {
     val context = LocalContext.current
+    val gridState = rememberLazyStaggeredGridState()
+    var wasRefreshing by remember { mutableStateOf(false) }
     LaunchedEffect(toastMessage, context) {
         if (toastMessage.isNotEmpty()) {
             Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
             onToastShown()
         }
+    }
+    LaunchedEffect(isRefreshing, items) {
+        if (wasRefreshing && !isRefreshing && items.isNotEmpty()) {
+            gridState.scrollToItem(0)
+        }
+        wasRefreshing = isRefreshing
     }
     AdaptiveMediaGrid(
         items = items,
@@ -79,8 +88,8 @@ fun HomeVideoPage(
         onRefresh = onRefresh,
         onLoadMore = onLoadMore,
         modifier = Modifier.fillMaxSize(),
+        state = gridState,
         errorMessage = errorMessage,
-        scrollToTopOnRefresh = true,
         key = { _, item -> item.actionKey() },
         contentType = { _, item -> item.cardType },
         loadingContent = {

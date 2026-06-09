@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemScope
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
@@ -53,9 +54,9 @@ fun <T> AdaptiveMediaGrid(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
+    state: LazyStaggeredGridState? = null,
     errorMessage: String? = null,
     loadMoreEnabled: Boolean = true,
-    scrollToTopOnRefresh: Boolean = false,
     columns: Int = rememberAdaptiveGridColumnCount(),
     loadingPlaceholderCount: Int = 10,
     horizontalSpacing: Dp = 6.dp,
@@ -79,7 +80,7 @@ fun <T> AdaptiveMediaGrid(
     },
     itemContent: @Composable LazyStaggeredGridItemScope.(item: T) -> Unit
 ) {
-    val gridState = rememberLazyStaggeredGridState()
+    val gridState = state ?: rememberLazyStaggeredGridState()
     val currentItems by rememberUpdatedState(items)
     val shouldLoadMore by remember(gridState, loadMoreEnabled) {
         derivedStateOf {
@@ -90,14 +91,6 @@ fun <T> AdaptiveMediaGrid(
     LaunchedEffect(shouldLoadMore, loadMoreEnabled, isRefreshing, isLoadingMore) {
         if (loadMoreEnabled && shouldLoadMore && !isRefreshing && !isLoadingMore) {
             onLoadMore()
-        }
-    }
-
-    if (scrollToTopOnRefresh) {
-        LaunchedEffect(isRefreshing) {
-            if (!isRefreshing && items.isNotEmpty()) {
-                gridState.scrollToItem(0)
-            }
         }
     }
 

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -92,6 +93,9 @@ internal fun VideoDetailPage(
     var descOn by rememberSaveable(aidKey) { mutableStateOf(false) }
     var tagOn by rememberSaveable(aidKey) { mutableStateOf(false) }
     var sheetTp by rememberSaveable(aidKey) { mutableStateOf<String?>(null) }
+    val detailListState = remember(aidKey) { LazyListState() }
+    val commentListState = remember(aidKey) { LazyListState() }
+    val commentThreadListState = remember(aidKey) { LazyListState() }
     val pagerState = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
 
@@ -112,6 +116,7 @@ internal fun VideoDetailPage(
                 detailLoading = detailLoading,
                 detailError = detailError,
                 horizontalPad = contentHorizontalPad,
+                infoListState = detailListState,
                 descOn = descOn,
                 tagOn = tagOn,
                 onToggleDesc = { descOn = !descOn },
@@ -134,6 +139,8 @@ internal fun VideoDetailPage(
                         subject = commentSubject,
                         onOpenSpace = onOpenSpace,
                         modifier = Modifier.fillMaxSize(),
+                        listState = commentListState,
+                        threadListState = commentThreadListState,
                         contentPadding = PaddingValues(
                             start = contentHorizontalPad,
                             top = 12.dp,
@@ -181,6 +188,7 @@ private fun DetailPageContent(
     detailLoading: Boolean,
     detailError: String?,
     horizontalPad: Dp,
+    infoListState: LazyListState,
     descOn: Boolean,
     tagOn: Boolean,
     onToggleDesc: () -> Unit,
@@ -198,7 +206,6 @@ private fun DetailPageContent(
     val infoTopPad = remember(horizontalPad) {
         if (horizontalPad > 0.dp) 16.dp else 0.dp
     }
-    val infoListState = rememberLazyListState()
 
     LazyColumn(
         state = infoListState,

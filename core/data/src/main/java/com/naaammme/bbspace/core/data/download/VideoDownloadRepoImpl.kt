@@ -652,6 +652,8 @@ class VideoDownloadRepoImpl @Inject constructor(
         return buildMap {
             epId.takeIf { it > 0L }?.let { put("ep_id", it.toString()) }
             seasonId.takeIf { it > 0L }?.let { put("season_id", it.toString()) }
+            put("short_edge", SHORT_EDGE)
+            put("long_edge", LONG_EDGE)
             if (biz == PlayBiz.PUGV) {
                 put("biz_type", PUGV_BIZ_TYPE)
             }
@@ -799,6 +801,8 @@ class VideoDownloadRepoImpl @Inject constructor(
         const val ENDPOINT = "bilibili.app.playerunite.v1.Player/PlayViewUnite"
         const val DM_SEG_CACHE_ENDPOINT = "bilibili.community.service.dm.v1.DM/DmSegCache"
         const val FROM_SCENE = "normal"
+        const val SHORT_EDGE = "1080"
+        const val LONG_EDGE = "1920"
         const val PUGV_BIZ_TYPE = "3"
         const val DOWNLOAD_FNVAL = 4048
         const val DM_TYPE_VIDEO = 1
