@@ -4,25 +4,52 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface PlaybackHistoryDao {
+abstract class PlaybackHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(item: PlaybackHistoryEntity)
+    protected abstract suspend fun upsert(item: PlaybackHistoryEntity)
 
     @Query("SELECT * FROM playback_history WHERE id = :id LIMIT 1")
-    suspend fun getById(id: String): PlaybackHistoryEntity?
+    abstract suspend fun getById(id: String): PlaybackHistoryEntity?
 
     @Query("SELECT COUNT(*) FROM playback_history")
-    fun observeCount(): Flow<Int>
+    abstract fun observeCount(): Flow<Int>
 
     @Query("SELECT * FROM playback_history ORDER BY updatedAt DESC, id DESC")
-    fun observeVideos(): Flow<List<PlaybackHistoryEntity>>
+    abstract fun observeVideos(): Flow<List<PlaybackHistoryEntity>>
 
     @Query("DELETE FROM playback_history WHERE id = :id")
-    suspend fun deleteById(id: String)
+    abstract suspend fun deleteById(id: String)
+
+    @Query(
+        """
+        DELETE FROM playback_history
+        WHERE uid = :uid
+          AND id NOT IN (
+            SELECT id FROM playback_history
+            WHERE uid = :uid
+            ORDER BY updatedAt DESC, id DESC
+            LIMIT :limit
+          )
+        """
+    )
+    protected abstract suspend fun trimByUid(
+        uid: Long,
+        limit: Int
+    )
+
+    @Transaction
+    open suspend fun upsertAndTrim(
+        item: PlaybackHistoryEntity,
+        limit: Int
+    ) {
+        upsert(item)
+        trimByUid(item.uid, limit)
+    }
 
     @Query("DELETE FROM playback_history")
-    suspend fun clear()
+    abstract suspend fun clear()
 }

@@ -16,7 +16,7 @@ class PlaybackHistoryRepoImpl @Inject constructor(
 ) : PlaybackHistoryRepository {
 
     override suspend fun upsertVideo(item: PlaybackHistory) {
-         dao.upsert(item.toEntity())
+        dao.upsertAndTrim(item.toEntity(), MAX_VIDEOS_PER_UID)
     }
 
     override suspend fun getVideo(
@@ -40,6 +40,10 @@ class PlaybackHistoryRepoImpl @Inject constructor(
 
     override suspend fun clearVideos() {
         dao.clear()
+    }
+
+    private companion object {
+        const val MAX_VIDEOS_PER_UID = 1000
     }
 }
 
