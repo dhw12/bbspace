@@ -6,6 +6,8 @@ import com.naaammme.bbspace.core.data.download.VideoDownloadDao
 import com.naaammme.bbspace.core.data.download.VideoDownloadDb
 import com.naaammme.bbspace.core.data.history.PlaybackHistoryDao
 import com.naaammme.bbspace.core.data.history.PlaybackHistoryDb
+import com.naaammme.bbspace.core.data.published.PublishedRecordDao
+import com.naaammme.bbspace.core.data.published.PublishedRecordDb
 import com.naaammme.bbspace.core.data.search.SearchHistoryDao
 import com.naaammme.bbspace.core.data.search.SearchHistoryDb
 import dagger.Module
@@ -34,6 +36,25 @@ object DataDbModule {
 
     @Provides
     fun providePlaybackHistoryDao(db: PlaybackHistoryDb): PlaybackHistoryDao {
+        return db.dao()
+    }
+
+    @Provides
+    @Singleton
+    fun providePublishedRecordDb(
+        @ApplicationContext context: Context
+    ): PublishedRecordDb {
+        return Room.databaseBuilder(
+            context,
+            PublishedRecordDb::class.java,
+            "published_record.db"
+        )
+            .fallbackToDestructiveMigration()
+            .build()
+    }
+
+    @Provides
+    fun providePublishedRecordDao(db: PublishedRecordDb): PublishedRecordDao {
         return db.dao()
     }
 

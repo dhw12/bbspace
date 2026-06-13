@@ -12,10 +12,10 @@ import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
 class BbSpaceViewModel @Inject constructor(
-    repo: PlaybackHistoryRepository
+    playbackRepo: PlaybackHistoryRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<BbSpaceUiState> = repo.observeVideoCount()
+    val uiState: StateFlow<BbSpaceUiState> = playbackRepo.observeVideoCount()
         .map { count -> BbSpaceUiState(playbackCount = count) }
         .stateIn(
             scope = viewModelScope,

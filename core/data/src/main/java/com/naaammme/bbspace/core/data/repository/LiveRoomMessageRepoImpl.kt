@@ -4,12 +4,17 @@ import android.os.SystemClock
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.BiliConstants
 import com.naaammme.bbspace.core.common.log.Logger
+import com.naaammme.bbspace.core.domain.auth.AuthRepository
 import com.naaammme.bbspace.core.domain.live.LiveRoomMessageRepository
+import com.naaammme.bbspace.core.domain.published.PublishedRecordRepository
 import com.naaammme.bbspace.core.model.LiveRoomMedal
 import com.naaammme.bbspace.core.model.LiveRoomMessage
 import com.naaammme.bbspace.core.model.LiveRoomPanelState
 import com.naaammme.bbspace.core.model.LiveRoomSessionState
 import com.naaammme.bbspace.core.model.LiveRoomUser
+import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_LIVE_DANMAKU
+import com.naaammme.bbspace.core.model.PublishedRecord
+import com.naaammme.bbspace.core.model.PublishedRecordKeyTool
 import com.naaammme.bbspace.core.model.merge
 import com.naaammme.bbspace.infra.crypto.DeviceIdentity
 import com.naaammme.bbspace.infra.crypto.HwIdGenerator
@@ -54,7 +59,9 @@ import org.json.JSONObject
 class LiveRoomMessageRepoImpl @Inject constructor(
     private val restClient: BiliRestClient,
     private val restParamBuilder: BiliRestParamBuilder,
+    private val authRepository: AuthRepository,
     private val authProvider: AuthProvider,
+    private val publishedRecordRepo: PublishedRecordRepository,
     private val deviceIdentity: DeviceIdentity,
     private val hwIdGenerator: HwIdGenerator
 ) : LiveRoomMessageRepository {
@@ -140,6 +147,7 @@ class LiveRoomMessageRepoImpl @Inject constructor(
             ?: throw IllegalStateException("请先登录后再发送弹幕")
         val mid = authProvider.mid.takeIf { it > 0L }
             ?: throw IllegalStateException("当前账号信息无效")
+        val sentAtMs = System.currentTimeMillis()
         val ts = System.currentTimeMillis() / 1000L
         val dataExtend = buildBasicDataExtend()
         val liveStatistics = buildBasicLiveStatistics(
@@ -183,6 +191,44 @@ class LiveRoomMessageRepoImpl @Inject constructor(
                 put("type", "json")
             },
             profile = BiliRestProfile.APP
+        )
+        runCatching {
+            publishedRecordRepo.save(
+                buildLiveDanmakuRecord(
+                    roomId = roomId,
+                    senderMid = mid,
+                    content = msg,
+                    sentAtMs = sentAtMs
+                )
+            )
+        }.onFailure { err ->
+            Logger.e(TAG, err) { "save live danmaku record failed roomId=$roomId" }
+        }
+    }
+
+    private fun buildLiveDanmakuRecord(
+        roomId: Long,
+        senderMid: Long,
+        content: String,
+        sentAtMs: Long
+    ): PublishedRecord {
+        val itemId = sentAtMs
+        val user = authRepository.getUserInfo()
+        return PublishedRecord(
+            key = PublishedRecordKeyTool.liveDanmaku(
+                roomId = roomId,
+                senderMid = senderMid,
+                itemId = itemId
+            ),
+            kind = PUBLISHED_RECORD_KIND_LIVE_DANMAKU,
+            itemId = itemId,
+            targetId = roomId,
+            targetType = 0L,
+            senderMid = senderMid,
+            senderName = user?.name?.ifBlank { null } ?: "用户$senderMid",
+            senderAvatar = user?.avatar.orEmpty(),
+            content = content,
+            ctime = sentAtMs / 1000L
         )
     }
 

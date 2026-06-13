@@ -18,7 +18,9 @@ import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.domain.comment.CommentRepository
+import com.naaammme.bbspace.core.domain.published.PublishedRecordRepository
 import com.naaammme.bbspace.core.model.COMMENT_FILTER_ALL
 import com.naaammme.bbspace.core.model.CommentEmote
 import com.naaammme.bbspace.core.model.CommentFilterTag
@@ -30,6 +32,9 @@ import com.naaammme.bbspace.core.model.CommentReplyDetailPage
 import com.naaammme.bbspace.core.model.CommentSort
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.CommentUser
+import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_COMMENT
+import com.naaammme.bbspace.core.model.PublishedRecord
+import com.naaammme.bbspace.core.model.PublishedRecordKeyTool
 import com.naaammme.bbspace.infra.grpc.BiliGrpcClient
 import com.naaammme.bbspace.infra.grpc.GrpcFrameCodec
 import com.naaammme.bbspace.infra.grpc.GrpcHeaderBuilder
@@ -54,7 +59,8 @@ class CommentRepoImpl @Inject constructor(
     private val grpcHeaderBuilder: GrpcHeaderBuilder,
     private val restClient: BiliRestClient,
     private val restParamBuilder: BiliRestParamBuilder,
-    private val authProvider: AuthProvider
+    private val authProvider: AuthProvider,
+    private val publishedRecordRepo: PublishedRecordRepository
 ) : CommentRepository {
 
     override suspend fun deleteReply(
@@ -121,6 +127,11 @@ class CommentRepoImpl @Inject constructor(
         val reply = json.optJSONObject("data")
             ?.optJSONObject("reply")
             ?: error("发评响应缺少评论数据")
+        runCatching {
+            publishedRecordRepo.save(mapPublishedRecord(reply))
+        }.onFailure { err ->
+            Logger.e(TAG, err) { "save published record failed" }
+        }
         return mapPublishedReply(reply)
     }
 
@@ -456,6 +467,28 @@ class CommentRepoImpl @Inject constructor(
         )
     }
 
+    private fun mapPublishedRecord(reply: JSONObject): PublishedRecord {
+        val member = reply.getJSONObject("member")
+        val content = reply.getJSONObject("content")
+        val pictures = content.optJSONArray("pictures")
+        val itemId = reply.getLong("rpid")
+        return PublishedRecord(
+            key = PublishedRecordKeyTool.comment(itemId),
+            kind = PUBLISHED_RECORD_KIND_COMMENT,
+            itemId = itemId,
+            targetId = reply.getLong("oid"),
+            targetType = reply.getLong("type"),
+            senderMid = reply.getLong("mid"),
+            senderName = member.getString("uname"),
+            senderAvatar = member.getString("avatar"),
+            content = content.getString("message").trim(),
+            ctime = reply.getLong("ctime"),
+            rootId = reply.getLong("root"),
+            parentId = reply.getLong("parent"),
+            imageListJson = pictures?.takeIf { it.length() > 0 }?.toString()
+        )
+    }
+
     private fun mapChildReplies(items: List<ReplyInfo>): List<CommentReply> {
         return items.asSequence()
             .filter { info ->
@@ -631,5 +664,6 @@ class CommentRepoImpl @Inject constructor(
         const val TRANSLATE_ENDPOINT = "bilibili.main.community.reply.v1.Reply/TranslateReply"
         const val ADD_ENDPOINT = "/x/v2/reply/add"
         const val DEL_ENDPOINT = "/x/v2/reply/del"
+        const val TAG = "CommentRepo"
     }
 }
