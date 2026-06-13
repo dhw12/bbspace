@@ -175,9 +175,10 @@ internal fun UserCollageSection(
             onClick = { onNavigate(UserDest.History) }
         ) {
             UserEntryTileContent(
-                icon = Icons.Default.DateRange,
+                icon = null,
                 title = "历史记录",
-                subtitle = "继续看"
+                subtitle = "继续看",
+                centered = true
             )
         }
         CollageItem(
@@ -189,7 +190,7 @@ internal fun UserCollageSection(
             UserEntryTileContent(
                 icon = Icons.Default.FavoriteBorder,
                 title = "收藏",
-                subtitle = "我的合集"
+                centered = true
             )
         }
         CollageItem(

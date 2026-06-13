@@ -114,7 +114,7 @@ internal fun UserEntryTileContent(
     modifier: Modifier = Modifier,
     icon: ImageVector?,
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     centered: Boolean = false
 ) {
     Column(
@@ -145,13 +145,15 @@ internal fun UserEntryTileContent(
             textAlign = if (centered) TextAlign.Center else null,
             overflow = TextOverflow.Ellipsis
         )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            textAlign = if (centered) TextAlign.Center else null,
-            overflow = TextOverflow.Ellipsis
-        )
+        subtitle?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                textAlign = if (centered) TextAlign.Center else null,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
