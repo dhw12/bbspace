@@ -103,7 +103,7 @@ fun BbSpaceScreen(
                             BbSpacePage.HOME -> "bb空间"
                             BbSpacePage.PLAYBACK_HISTORY -> "播放历史(${playbackHistoryState.items.size})"
                             BbSpacePage.PUBLISHED_RECORD -> "我发布的(${publishedRecordState.totalCount})"
-                            BbSpacePage.RELATION_CHECK -> "拉黑关系"
+                            BbSpacePage.RELATION_CHECK -> "查询关系"
                             BbSpacePage.COMMENT_SEARCH -> "查评论"
                         }
                     )
@@ -223,7 +223,7 @@ private fun BbSpaceHomePane(
         )
         BbSpaceEntryCard(
             title = "查询关系",
-            subtitle = "输入两个 UID 查询 关系",
+            subtitle = "输入两个 UID 查询拉黑和关注关系",
             icon = Icons.Default.Person,
             modifier = Modifier.fillMaxWidth(),
             onClick = onOpenRelationCheck
