@@ -11,8 +11,6 @@ interface PlaybackHistoryRepository {
         key: String
     ): PlaybackHistory?
 
-    fun observeVideoCount(): Flow<Int>
-
     fun observeVideos(): Flow<List<PlaybackHistory>>
 
     suspend fun deleteVideo(id: String)

@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.feature.bbspace.commentsearch.CommentSearchPane
 import com.naaammme.bbspace.feature.bbspace.playback.PlaybackHistoryPane
+import com.naaammme.bbspace.feature.bbspace.playback.PlaybackHistoryViewModel
 import com.naaammme.bbspace.feature.bbspace.publishedrecord.PublishedRecordPane
 import com.naaammme.bbspace.feature.bbspace.publishedrecord.PublishedRecordViewModel
 import com.naaammme.bbspace.feature.bbspace.relation.RelationCheckPane
@@ -50,10 +51,10 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BbSpaceScreen(
-    onBack: () -> Unit,
-    vm: BbSpaceViewModel = hiltViewModel()
+    onBack: () -> Unit
 ) {
-    val state by vm.uiState.collectAsStateWithLifecycle()
+    val playbackHistoryVm: PlaybackHistoryViewModel = hiltViewModel()
+    val playbackHistoryState by playbackHistoryVm.uiState.collectAsStateWithLifecycle()
     val publishedRecordVm: PublishedRecordViewModel = hiltViewModel()
     val publishedRecordState by publishedRecordVm.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -100,7 +101,7 @@ fun BbSpaceScreen(
                     Text(
                         text = when (page) {
                             BbSpacePage.HOME -> "bb空间"
-                            BbSpacePage.PLAYBACK_HISTORY -> "播放历史"
+                            BbSpacePage.PLAYBACK_HISTORY -> "播放历史(${playbackHistoryState.items.size})"
                             BbSpacePage.PUBLISHED_RECORD -> "我发布的(${publishedRecordState.totalCount})"
                             BbSpacePage.RELATION_CHECK -> "拉黑关系"
                             BbSpacePage.COMMENT_SEARCH -> "查评论"
@@ -147,7 +148,6 @@ fun BbSpaceScreen(
         when (page) {
             BbSpacePage.HOME -> {
                 BbSpaceHomePane(
-                    playbackCount = state.playbackCount,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
@@ -159,6 +159,7 @@ fun BbSpaceScreen(
             }
             BbSpacePage.PLAYBACK_HISTORY -> {
                 PlaybackHistoryPane(
+                    vm = playbackHistoryVm,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
@@ -196,7 +197,6 @@ fun BbSpaceScreen(
 
 @Composable
 private fun BbSpaceHomePane(
-    playbackCount: Int,
     modifier: Modifier = Modifier,
     onOpenPlaybackHistory: () -> Unit,
     onOpenPublishedRecord: () -> Unit,
@@ -209,7 +209,7 @@ private fun BbSpaceHomePane(
     ) {
         BbSpaceEntryCard(
             title = "播放历史",
-            subtitle = "当前有 $playbackCount 条本地记录",
+            subtitle = "查看本地播放记录",
             icon = Icons.Default.DateRange,
             modifier = Modifier.fillMaxWidth(),
             onClick = onOpenPlaybackHistory

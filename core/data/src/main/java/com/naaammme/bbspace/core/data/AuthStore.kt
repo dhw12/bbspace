@@ -1,11 +1,14 @@
 package com.naaammme.bbspace.core.data
 
 import android.content.Context
+import androidx.core.content.edit
+import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.model.Cookie
 import com.naaammme.bbspace.core.model.LoginCredential
 import com.naaammme.bbspace.core.model.User
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,6 +22,7 @@ class AuthStore @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
     companion object {
+        private const val TAG = "AuthStore"
         private const val KEY_HD_KEY_PREFIX = "hd_key_"
         private const val KEY_HD_EXP_PREFIX = "hd_exp_"
     }
@@ -29,7 +33,7 @@ class AuthStore @Inject constructor(
 
     var guestMode: Boolean
         get() = prefs.getBoolean("guest_mode", false)
-        set(value) = prefs.edit().putBoolean("guest_mode", value).apply()
+        set(value) = prefs.edit { putBoolean("guest_mode", value) }
 
     val mid: Long get() = if (guestMode) 0L else prefs.getLong("mid", 0)
     val accessToken: String get() = if (guestMode) "" else prefs.getString("access_token", "") ?: ""
@@ -38,10 +42,9 @@ class AuthStore @Inject constructor(
     fun saveHdAccessKey(mid: Long, key: String, expiresIn: Long) {
         if (mid == 0L || key.isEmpty()) return
         val expiresAt = System.currentTimeMillis() + expiresIn * 1000
-        prefs.edit().apply {
+        prefs.edit {
             putString(hdKeyKey(mid), key)
             putLong(hdExpKey(mid), expiresAt)
-            apply()
         }
     }
 
@@ -68,10 +71,9 @@ class AuthStore @Inject constructor(
     }
 
     private fun clearHdAccessKeyFor(mid: Long) {
-        prefs.edit().apply {
+        prefs.edit {
             remove(hdKeyKey(mid))
             remove(hdExpKey(mid))
-            apply()
         }
     }
 
@@ -80,14 +82,13 @@ class AuthStore @Inject constructor(
     private fun hdExpKey(mid: Long): String = "$KEY_HD_EXP_PREFIX$mid"
 
     fun saveCredential(credential: LoginCredential) {
-        prefs.edit().apply {
+        prefs.edit {
             putLong("mid", credential.mid)
             putString("access_token", credential.accessToken)
             putString("refresh_token", credential.refreshToken)
             putLong("expires_in", credential.expiresIn)
             putLong("login_time", System.currentTimeMillis())
             putString("cookies_json", cookiesToJson(credential.cookies))
-            apply()
         }
         saveToAccountList(credential)
     }
@@ -108,9 +109,8 @@ class AuthStore @Inject constructor(
     fun clearCredential() {
         val currentMid = prefs.getLong("mid", 0)
         val keys = listOf("mid", "access_token", "refresh_token", "expires_in", "login_time", "cookies_json")
-        prefs.edit().apply {
-            keys.forEach { remove(it) }
-            apply()
+        prefs.edit {
+            keys.forEach(::remove)
         }
         if (currentMid != 0L) {
             clearHdAccessKeyFor(currentMid)
@@ -120,9 +120,9 @@ class AuthStore @Inject constructor(
     // 多账号
 
     private fun saveToAccountList(credential: LoginCredential) {
-        prefs.edit()
-            .putString("account_${credential.mid}", credentialToJson(credential))
-            .apply()
+        prefs.edit {
+            putString("account_${credential.mid}", credentialToJson(credential))
+        }
     }
 
     fun getAllAccounts(): List<LoginCredential> {
@@ -139,11 +139,13 @@ class AuthStore @Inject constructor(
     }
 
     fun removeAccount(mid: Long) {
-        prefs.edit().remove("account_$mid").apply()
+        prefs.edit {
+            remove("account_$mid")
+            remove(userInfoKey(mid))
+        }
         clearHdAccessKeyFor(mid)
         if (this.mid == mid) {
             clearCredential()
-            clearHdAccessKey()
         }
     }
 
@@ -165,18 +167,6 @@ class AuthStore @Inject constructor(
         }
         return result
     }
-
-    fun exportCredential(): String? {
-        val credential = getSavedCredential() ?: return null
-        return credentialToJson(credential)
-    }
-
-    fun importCredential(json: String): LoginCredential? {
-        val credential = credentialFromJson(json) ?: return null
-        saveCredential(credential)
-        return credential
-    }
-
 
     private fun credentialToJson(credential: LoginCredential): String {
         return JSONObject().apply {
@@ -200,7 +190,8 @@ class AuthStore @Inject constructor(
                 expiresIn = obj.optLong("expires_in", 0),
                 cookies = cookiesFromJson(obj.optJSONArray("cookies")?.toString())
             )
-        } catch (_: Exception) {
+        } catch (e: JSONException) {
+            Logger.w(TAG) { "credential json parse failed: ${e.message}" }
             null
         }
     }
@@ -233,33 +224,16 @@ class AuthStore @Inject constructor(
                     secure = obj.optBoolean("secure", false)
                 )
             }
-        } catch (_: Exception) {
+        } catch (e: JSONException) {
+            Logger.w(TAG) { "cookies json parse failed: ${e.message}" }
             emptyList()
         }
     }
 
     // 用户信息
     fun saveUserInfo(user: User) {
-        prefs.edit().apply {
-            putLong("user_mid", user.mid)
-            putString("user_name", user.name)
-            putString("user_avatar", user.avatar)
-            putString("user_sign", user.sign)
-            putInt("user_level", user.level)
-            putFloat("user_coins", user.coins.toFloat())
-            putInt("user_sex", user.sex)
-            putString("user_birthday", user.birthday)
-            putInt("user_vip_type", user.vipType)
-            putInt("user_vip_status", user.vipStatus)
-            putBoolean("user_email_verified", user.emailVerified)
-            putBoolean("user_phone_verified", user.phoneVerified)
-            putInt("user_official_role", user.officialRole)
-            putBoolean("user_silence", user.silence)
-            putInt("user_dynamic", user.dynamic)
-            putInt("user_following", user.following)
-            putInt("user_follower", user.follower)
-            putString("uinfo_${user.mid}", userToJson(user))
-            apply()
+        prefs.edit {
+            putString(userInfoKey(user.mid), userToJson(user))
         }
     }
 
@@ -275,41 +249,17 @@ class AuthStore @Inject constructor(
     }
 
     fun getUserInfo(): User? {
-        val mid = prefs.getLong("user_mid", 0)
-        if (mid == 0L) return null
-        return User(
-            mid = mid,
-            name = prefs.getString("user_name", "") ?: "",
-            avatar = prefs.getString("user_avatar", "") ?: "",
-            sign = prefs.getString("user_sign", "") ?: "",
-            level = prefs.getInt("user_level", 0),
-            coins = prefs.getFloat("user_coins", 0f).toDouble(),
-            sex = prefs.getInt("user_sex", 0),
-            birthday = prefs.getString("user_birthday", "") ?: "",
-            vipType = prefs.getInt("user_vip_type", 0),
-            vipStatus = prefs.getInt("user_vip_status", 0),
-            emailVerified = prefs.getBoolean("user_email_verified", false),
-            phoneVerified = prefs.getBoolean("user_phone_verified", false),
-            officialRole = prefs.getInt("user_official_role", 0),
-            silence = prefs.getBoolean("user_silence", false),
-            dynamic = prefs.getInt("user_dynamic", 0),
-            following = prefs.getInt("user_following", 0),
-            follower = prefs.getInt("user_follower", 0)
-        )
+        val currentMid = mid
+        if (currentMid == 0L) return null
+        return userFromJson(prefs.getString(userInfoKey(currentMid), null))
     }
 
-    fun clearUserInfo() {
-        val keys = listOf(
-            "user_mid", "user_name", "user_avatar", "user_sign", "user_level",
-            "user_coins", "user_sex", "user_birthday", "user_vip_type", "user_vip_status",
-            "user_email_verified", "user_phone_verified", "user_official_role", "user_silence",
-            "user_dynamic", "user_following", "user_follower"
-        )
-        prefs.edit().apply {
-            keys.forEach { remove(it) }
-            apply()
-        }
+    fun clearUserInfo(mid: Long) {
+        if (mid == 0L) return
+        prefs.edit { remove(userInfoKey(mid)) }
     }
+
+    private fun userInfoKey(mid: Long): String = "uinfo_$mid"
 
     private fun userToJson(user: User): String = JSONObject().apply {
         put("mid", user.mid)
@@ -354,7 +304,8 @@ class AuthStore @Inject constructor(
                 following = o.optInt("following"),
                 follower = o.optInt("follower")
             )
-        } catch (_: Exception) {
+        } catch (e: JSONException) {
+            Logger.w(TAG) { "user json parse failed: ${e.message}" }
             null
         }
     }

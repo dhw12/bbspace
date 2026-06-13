@@ -26,10 +26,6 @@ class PlaybackHistoryRepoImpl @Inject constructor(
         return dao.getById(PlaybackHistoryKey.videoId(uid, key))?.toModel()
     }
 
-    override fun observeVideoCount(): Flow<Int> {
-        return dao.observeCount()
-    }
-
     override fun observeVideos(): Flow<List<PlaybackHistory>> {
         return dao.observeVideos().map { list -> list.map(PlaybackHistoryEntity::toModel) }
     }

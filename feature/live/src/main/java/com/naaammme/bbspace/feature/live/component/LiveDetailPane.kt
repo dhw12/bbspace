@@ -342,6 +342,7 @@ private fun LiveDanmakuInputBar(
     enabled: Boolean,
     onSendDanmaku: suspend (String) -> Unit
 ) {
+    val maxLen = 40
     val keyboard = LocalSoftwareKeyboardController.current
     val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
@@ -402,7 +403,7 @@ private fun LiveDanmakuInputBar(
             SearchCapsuleField(
                 value = input,
                 onValueChange = {
-                    input = it
+                    input = it.take(maxLen)
                     if (error != null) {
                         error = null
                     }

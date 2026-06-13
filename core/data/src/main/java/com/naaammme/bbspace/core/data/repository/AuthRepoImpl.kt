@@ -1,5 +1,6 @@
 package com.naaammme.bbspace.core.data.repository
 
+import androidx.core.net.toUri
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.data.AuthStore
 import com.naaammme.bbspace.core.data.CacheManager
@@ -149,7 +150,7 @@ class AuthRepoImpl @Inject constructor(
         Logger.d(TAG) { "退出登录成功" }
 
         authStore.clearCredential()
-        authStore.clearUserInfo()
+        authStore.clearUserInfo(credential.mid)
         cacheManager.clearSession()
         legalRegionCache.clear()
     }
@@ -265,38 +266,35 @@ class AuthRepoImpl @Inject constructor(
         val code = json.optInt("code", -1)
         val data = json.optJSONObject("data")
 
-        when {
-            // 成功且无极验
-            code == 0 && data?.optString("recaptcha_url", "").isNullOrEmpty() -> {
-                SmsCodeResult(captchaKey = data?.optString("captcha_key", "") ?: "")
+        when (code) {
+            0 -> {
+                val recaptchaUrl = data?.optString("recaptcha_url").orEmpty()
+                if (recaptchaUrl.isEmpty()) {
+                    // 成功且无极验
+                    SmsCodeResult(captchaKey = data?.optString("captcha_key").orEmpty())
+                } else {
+                    // 成功但需要极验 (recaptcha_url 非空)
+                    val uri = recaptchaUrl.toUri()
+                    SmsCodeResult(
+                        needGeetest = true,
+                        geeGt = uri.getQueryParameter("gee_gt").orEmpty(),
+                        geeChallenge = uri.getQueryParameter("gee_challenge").orEmpty(),
+                        recaptchaToken = uri.getQueryParameter("recaptcha_token").orEmpty()
+                    )
+                }
             }
-            // 成功但需要极验 (recaptcha_url 非空)
-            code == 0 && !data?.optString("recaptcha_url", "").isNullOrEmpty() -> {
-                val url = data!!.getString("recaptcha_url")
-                val uri = android.net.Uri.parse(url)
+            86214 -> {
+                // 86214: 极验参数在 data 中
                 SmsCodeResult(
                     needGeetest = true,
-                    geeGt = uri.getQueryParameter("gee_gt") ?: "",
-                    geeChallenge = uri.getQueryParameter("gee_challenge") ?: "",
-                    recaptchaToken = uri.getQueryParameter("recaptcha_token") ?: ""
-                )
-            }
-            // 86214: 极验参数在 data 中
-            code == 86214 -> {
-                SmsCodeResult(
-                    needGeetest = true,
-                    geeGt = data?.optString("gee_gt", "") ?: "",
-                    geeChallenge = data?.optString("gee_challenge", "") ?: "",
-                    recaptchaToken = data?.optString("recaptcha_token", "") ?: ""
+                    geeGt = data?.optString("gee_gt").orEmpty(),
+                    geeChallenge = data?.optString("gee_challenge").orEmpty(),
+                    recaptchaToken = data?.optString("recaptcha_token").orEmpty()
                 )
             }
             // 2400: 需要先 preCapture
-            code == 2400 -> {
-                preCapture()
-            }
-            else -> {
-                throw Exception(json.optString("message", "发送验证码失败 (code=$code)"))
-            }
+            2400 -> preCapture()
+            else -> throw Exception(json.optString("message", "发送验证码失败 (code=$code)"))
         }
     }
 

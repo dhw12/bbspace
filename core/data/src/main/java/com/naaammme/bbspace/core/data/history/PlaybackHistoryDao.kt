@@ -15,9 +15,6 @@ abstract class PlaybackHistoryDao {
     @Query("SELECT * FROM playback_history WHERE id = :id LIMIT 1")
     abstract suspend fun getById(id: String): PlaybackHistoryEntity?
 
-    @Query("SELECT COUNT(*) FROM playback_history")
-    abstract fun observeCount(): Flow<Int>
-
     @Query("SELECT * FROM playback_history ORDER BY updatedAt DESC, id DESC")
     abstract fun observeVideos(): Flow<List<PlaybackHistoryEntity>>
 
