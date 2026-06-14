@@ -68,6 +68,7 @@ class Media3PlayerEngine @Inject constructor(
     private var lastEventsPlaybackState = Player.STATE_IDLE
     private var lastEventsIsPlaying = false
     private var progressJob: Job? = null
+    private var pendingErrorRefresh = false
 
     private val playerListener = object : Player.Listener {
         override fun onPositionDiscontinuity(
@@ -87,6 +88,10 @@ class Media3PlayerEngine @Inject constructor(
                         "videoDec=$videoDecoderName audioDec=$audioDecoderName"
             }
             updatePlaybackState(errorMessage = error.message)
+            if (!pendingErrorRefresh && error.message?.contains("Source error", ignoreCase = true) == true) {
+                pendingErrorRefresh = true
+                refreshCurrent()
+            }
         }
 
         override fun onRenderedFirstFrame() {
@@ -173,6 +178,9 @@ class Media3PlayerEngine @Inject constructor(
         metadata: MediaMetadata?
     ) {
         val player = ensurePlayer()
+        if (_currentSource.value != source) {
+            pendingErrorRefresh = false
+        }
         val itemMetadata = metadata ?: player.currentMediaItem?.mediaMetadata ?: MediaMetadata.EMPTY
         firstFrameSeq = 0L
         player.setMediaSource(buildMediaSource(source, itemMetadata))
@@ -215,6 +223,18 @@ class Media3PlayerEngine @Inject constructor(
             .setMediaMetadata(metadata)
             .build()
         player.replaceMediaItem(player.currentMediaItemIndex, next)
+    }
+
+    override fun refreshCurrent() {
+        val source = _currentSource.value ?: return
+        val player = exoPlayer ?: return
+        val metadata = player.currentMediaItem?.mediaMetadata
+        setSource(
+            source = source,
+            startPositionMs = player.currentPosition,
+            playWhenReady = player.playWhenReady,
+            metadata = metadata
+        )
     }
 
     override fun stopForReuse(resetPosition: Boolean) {
@@ -465,6 +485,7 @@ class Media3PlayerEngine @Inject constructor(
         audioDecoderName = null
         lastEventsPlaybackState = Player.STATE_IDLE
         lastEventsIsPlaying = false
+        pendingErrorRefresh = false
     }
 
     private fun Int.toPlaybackState(): PlaybackState {
