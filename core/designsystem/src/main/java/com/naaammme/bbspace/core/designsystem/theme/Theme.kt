@@ -9,10 +9,13 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import com.google.android.material.color.utilities.Hct
 import com.google.android.material.color.utilities.MaterialDynamicColors
 import com.google.android.material.color.utilities.SchemeNeutral
@@ -107,7 +110,9 @@ fun BiliTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
     val context = LocalContext.current
+    val baseDensity = LocalDensity.current
     val useMonochromeScheme = config.seedColor.isPureBlack()
+    val uiScale = config.uiScale.coerceIn(MIN_UI_SCALE, MAX_UI_SCALE)
 
     val colorScheme = remember(
         context,
@@ -137,17 +142,25 @@ fun BiliTheme(
         }
     }
 
+    val density = remember(baseDensity, uiScale) {
+        Density(
+            density = baseDensity.density * uiScale,
+            fontScale = baseDensity.fontScale / uiScale
+        )
+    }
     val typography = remember(config.fontScale) { createTypography(config.fontScale) }
     val shapes = remember(config.cornerStyle) { buildShapes(config.cornerStyle) }
 
-    ProvideAnimations(config.animationSpeed) {
-        ProvidePullRefresh(config.pullRefreshDistanceDp) {
-            MaterialTheme(
-                colorScheme = colorScheme,
-                typography = typography,
-                shapes = shapes,
-                content = content
-            )
+    CompositionLocalProvider(LocalDensity provides density) {
+        ProvideAnimations(config.animationSpeed) {
+            ProvidePullRefresh(config.pullRefreshDistanceDp) {
+                MaterialTheme(
+                    colorScheme = colorScheme,
+                    typography = typography,
+                    shapes = shapes,
+                    content = content
+                )
+            }
         }
     }
 }

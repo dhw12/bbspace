@@ -13,7 +13,9 @@ import com.naaammme.bbspace.core.designsystem.theme.CornerStyle
 import com.naaammme.bbspace.core.designsystem.theme.DEFAULT_PULL_REFRESH_DISTANCE_DP
 import com.naaammme.bbspace.core.designsystem.theme.FrameRateMode
 import com.naaammme.bbspace.core.designsystem.theme.MAX_PULL_REFRESH_DISTANCE_DP
+import com.naaammme.bbspace.core.designsystem.theme.MAX_UI_SCALE
 import com.naaammme.bbspace.core.designsystem.theme.MIN_PULL_REFRESH_DISTANCE_DP
+import com.naaammme.bbspace.core.designsystem.theme.MIN_UI_SCALE
 import com.naaammme.bbspace.core.designsystem.theme.ThemeConfig
 import com.naaammme.bbspace.core.designsystem.theme.ThemeMode
 import com.naaammme.bbspace.core.designsystem.theme.TransitionStyle
@@ -40,6 +42,7 @@ class AppSettings @Inject constructor(
     private val useDynamicColorKey = booleanPreferencesKey("use_dynamic_color")
     private val swapBaseColorsKey = booleanPreferencesKey("swap_base_colors")
     private val fontScaleKey = floatPreferencesKey("font_scale")
+    private val uiScaleKey = floatPreferencesKey("ui_scale")
     private val pullRefreshDistanceKey = floatPreferencesKey("pull_refresh_distance")
     private val animationSpeedKey = stringPreferencesKey("animation_speed")
     private val transitionStyleKey = stringPreferencesKey("transition_style")
@@ -60,6 +63,7 @@ class AppSettings @Inject constructor(
             useDynamicColor = prefs[useDynamicColorKey] ?: true,
             swapBaseColors = prefs[swapBaseColorsKey] ?: false,
             fontScale = prefs[fontScaleKey] ?: 1.0f,
+            uiScale = (prefs[uiScaleKey] ?: 1.0f).coerceIn(MIN_UI_SCALE, MAX_UI_SCALE),
             pullRefreshDistanceDp = (prefs[pullRefreshDistanceKey] ?: DEFAULT_PULL_REFRESH_DISTANCE_DP)
                 .coerceIn(MIN_PULL_REFRESH_DISTANCE_DP, MAX_PULL_REFRESH_DISTANCE_DP),
             animationSpeed = prefs[animationSpeedKey]?.let { AnimationSpeed.valueOf(it) } ?: AnimationSpeed.NORMAL,
@@ -88,6 +92,12 @@ class AppSettings @Inject constructor(
 
     suspend fun updateFontScale(scale: Float) {
         context.appSettingsDataStore.edit { it[fontScaleKey] = scale }
+    }
+
+    suspend fun updateUiScale(scale: Float) {
+        context.appSettingsDataStore.edit {
+            it[uiScaleKey] = scale.coerceIn(MIN_UI_SCALE, MAX_UI_SCALE)
+        }
     }
 
     suspend fun updatePullRefreshDistance(distanceDp: Float) {

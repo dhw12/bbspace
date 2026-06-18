@@ -18,19 +18,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.feature.settings.SettingsViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.theme.AnimationSpeed
 import com.naaammme.bbspace.core.designsystem.theme.CornerStyle
 import com.naaammme.bbspace.core.designsystem.theme.DEFAULT_PULL_REFRESH_DISTANCE_DP
 import com.naaammme.bbspace.core.designsystem.theme.MAX_PULL_REFRESH_DISTANCE_DP
+import com.naaammme.bbspace.core.designsystem.theme.MAX_UI_SCALE
 import com.naaammme.bbspace.core.designsystem.theme.MIN_PULL_REFRESH_DISTANCE_DP
+import com.naaammme.bbspace.core.designsystem.theme.MIN_UI_SCALE
 import com.naaammme.bbspace.core.designsystem.theme.PULL_REFRESH_DISTANCE_STEP_DP
 import com.naaammme.bbspace.core.designsystem.theme.PresetColors
 import com.naaammme.bbspace.core.designsystem.theme.ThemeMode
 import com.naaammme.bbspace.core.designsystem.theme.TransitionStyle
+import com.naaammme.bbspace.core.designsystem.theme.UI_SCALE_STEP
 import com.naaammme.bbspace.feature.settings.components.SettingSwitch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,18 +43,17 @@ fun AppearanceSettingsScreen(
 ) {
     val config by viewModel.themeConfig.collectAsStateWithLifecycle()
 
-    CollapsingTopBarScaffold(
-        topBar = { scrollBehavior ->
+    Scaffold(
+        topBar = {
             TopAppBar(
                 title = { Text("外观设计") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
                     }
-                },
-                scrollBehavior = scrollBehavior
+                }
             )
-        }
+        },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -105,6 +107,13 @@ fun AppearanceSettingsScreen(
                 FontScaleSelector(
                     scale = config.fontScale,
                     onScaleChange = viewModel::updateFontScale
+                )
+            }
+
+            item {
+                UiScaleSelector(
+                    scale = config.uiScale,
+                    onScaleChange = viewModel::updateUiScale
                 )
             }
 
@@ -230,10 +239,19 @@ private fun ColorItem(
 }
 
 private val FONT_SCALES = listOf(0.8f, 0.85f, 0.9f, 0.95f, 1.0f, 1.1f, 1.2f, 1.3f, 1.4f)
+private val UI_SCALES = List(
+    ((MAX_UI_SCALE - MIN_UI_SCALE) / UI_SCALE_STEP).toInt() + 1
+) { index ->
+    MIN_UI_SCALE + index * UI_SCALE_STEP
+}
 private val PULL_REFRESH_DISTANCES = List(
     ((MAX_PULL_REFRESH_DISTANCE_DP - MIN_PULL_REFRESH_DISTANCE_DP) / PULL_REFRESH_DISTANCE_STEP_DP).toInt() + 1
 ) { index ->
     MIN_PULL_REFRESH_DISTANCE_DP + index * PULL_REFRESH_DISTANCE_STEP_DP
+}
+
+private fun sliderIndex(value: Float, lastIndex: Int): Int {
+    return value.roundToInt().coerceIn(0, lastIndex)
 }
 
 @Composable
@@ -261,7 +279,7 @@ private fun FontScaleSelector(
             Spacer(Modifier.height(8.dp))
             Slider(
                 value = idx.toFloat(),
-                onValueChange = { onScaleChange(FONT_SCALES[it.toInt()]) },
+                onValueChange = { onScaleChange(FONT_SCALES[sliderIndex(it, FONT_SCALES.lastIndex)]) },
                 valueRange = 0f..(FONT_SCALES.size - 1).toFloat(),
                 steps = FONT_SCALES.size - 2
             )
@@ -278,6 +296,53 @@ private fun FontScaleSelector(
 }
 
 @Composable
+private fun UiScaleSelector(
+    scale: Float,
+    onScaleChange: (Float) -> Unit
+) {
+    val idx = remember(scale) {
+        UI_SCALES.indexOfFirst { kotlin.math.abs(it - scale) < 0.01f }
+            .takeIf { it >= 0 }
+            ?: UI_SCALES.indexOf(1.0f).coerceAtLeast(0)
+    }
+    var sliderIdx by remember(scale) { mutableIntStateOf(idx) }
+    Card {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("界面缩放", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "调整界面元素的整体大小",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    "${(UI_SCALES[sliderIdx] * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Slider(
+                value = sliderIdx.toFloat(),
+                onValueChange = { sliderIdx = sliderIndex(it, UI_SCALES.lastIndex) },
+                onValueChangeFinished = {
+                    val newScale = UI_SCALES[sliderIdx]
+                    if (kotlin.math.abs(newScale - scale) < 0.01f) return@Slider
+                    onScaleChange(newScale)
+                },
+                valueRange = 0f..(UI_SCALES.size - 1).toFloat(),
+                steps = UI_SCALES.size - 2
+            )
+        }
+    }
+}
+
+@Composable
 private fun PullRefreshDistanceSelector(
     distanceDp: Float,
     onDistanceChange: (Float) -> Unit
@@ -287,6 +352,7 @@ private fun PullRefreshDistanceSelector(
             .takeIf { it >= 0 }
             ?: PULL_REFRESH_DISTANCES.indexOf(DEFAULT_PULL_REFRESH_DISTANCE_DP).coerceAtLeast(0)
     }
+    var sliderIdx by remember(distanceDp) { mutableIntStateOf(idx) }
     Card {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -302,15 +368,22 @@ private fun PullRefreshDistanceSelector(
                     )
                 }
                 Text(
-                    "${PULL_REFRESH_DISTANCES[idx].toInt()}dp",
+                    "${PULL_REFRESH_DISTANCES[sliderIdx].toInt()}dp",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(Modifier.height(8.dp))
             Slider(
-                value = idx.toFloat(),
-                onValueChange = { onDistanceChange(PULL_REFRESH_DISTANCES[it.toInt()]) },
+                value = sliderIdx.toFloat(),
+                onValueChange = {
+                    sliderIdx = sliderIndex(it, PULL_REFRESH_DISTANCES.lastIndex)
+                },
+                onValueChangeFinished = {
+                    val newDistance = PULL_REFRESH_DISTANCES[sliderIdx]
+                    if (kotlin.math.abs(newDistance - distanceDp) < 0.01f) return@Slider
+                    onDistanceChange(newDistance)
+                },
                 valueRange = 0f..(PULL_REFRESH_DISTANCES.size - 1).toFloat(),
                 steps = PULL_REFRESH_DISTANCES.size - 2
             )

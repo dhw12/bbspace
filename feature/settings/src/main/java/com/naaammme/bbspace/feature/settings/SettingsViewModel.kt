@@ -134,6 +134,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateUiScale(scale: Float) {
+        viewModelScope.launch {
+            appSettings.updateUiScale(scale)
+        }
+    }
+
     fun updatePullRefreshDistance(distanceDp: Float) {
         viewModelScope.launch {
             appSettings.updatePullRefreshDistance(distanceDp)

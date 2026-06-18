@@ -10,6 +10,7 @@ data class ThemeConfig(
     val useDynamicColor: Boolean = false,
     val swapBaseColors: Boolean = false,
     val fontScale: Float = 1.0f,
+    val uiScale: Float = 1.0f,
     val pullRefreshDistanceDp: Float = DEFAULT_PULL_REFRESH_DISTANCE_DP,
     val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
     val transitionStyle: TransitionStyle = TransitionStyle.SHARED_AXIS_Z,
@@ -22,6 +23,9 @@ const val MIN_PULL_REFRESH_DISTANCE_DP = 16f
 const val MAX_PULL_REFRESH_DISTANCE_DP = 160f
 const val PULL_REFRESH_DISTANCE_STEP_DP = 8f
 const val DEFAULT_PULL_REFRESH_DISTANCE_DP = 80f
+const val MIN_UI_SCALE = 0.5f
+const val MAX_UI_SCALE = 1.1f
+const val UI_SCALE_STEP = 0.1f
 
 enum class CornerStyle {
     SQUARE,
