@@ -52,7 +52,7 @@ import com.naaammme.bbspace.feature.home.video.HomeVideoPage
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val homeTabs = listOf("听视频", "推荐", "直播", "专栏")
+private val homeTabs = listOf("FM", "推荐", "直播", "专栏")
 private val homeProfileAvatarSize = 38.dp
 private val homeProfileIconSize = 24.dp
 private const val homeDefaultPage = 1

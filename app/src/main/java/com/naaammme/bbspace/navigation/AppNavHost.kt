@@ -3,6 +3,8 @@
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -79,6 +81,7 @@ import com.naaammme.bbspace.feature.video.VideoViewModel
 import com.naaammme.bbspace.playback.PlaybackHost
 import com.naaammme.bbspace.playback.PlaybackHostMode
 import com.naaammme.bbspace.playback.PlaybackHostViewModel
+import androidx.compose.ui.unit.dp
 
 private const val MAIN_ROUTE = "main"
 
@@ -394,14 +397,19 @@ private fun MainTabsScaffold(
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
-            NavigationBar {
-                TopLevelRoute.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = currentTab == tab,
-                        onClick = { onTabChange(tab) },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label) }
-                    )
+            Box(modifier = Modifier.navigationBarsPadding()) {
+                NavigationBar(
+                    modifier = Modifier.height(64.dp),
+                    windowInsets = WindowInsets(0)
+                ) {
+                    TopLevelRoute.entries.forEach { tab ->
+                        NavigationBarItem(
+                            selected = currentTab == tab,
+                            onClick = { onTabChange(tab) },
+                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            label = { Text(tab.label) }
+                        )
+                    }
                 }
             }
         }

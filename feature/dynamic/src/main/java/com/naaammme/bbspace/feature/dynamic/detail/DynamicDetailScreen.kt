@@ -1,13 +1,12 @@
 package com.naaammme.bbspace.feature.dynamic.detail
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,14 +30,19 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.naaammme.bbspace.core.common.log.Logger
+import com.naaammme.bbspace.core.common.media.ImageSaver
 import com.naaammme.bbspace.core.designsystem.component.AvatarImage
-import com.naaammme.bbspace.core.designsystem.component.CoverImage
+import com.naaammme.bbspace.core.designsystem.component.PreviewImage
+import com.naaammme.bbspace.core.designsystem.component.PreviewImageGrid
 import com.naaammme.bbspace.core.designsystem.component.SelectableText
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.DynamicDetail
@@ -48,6 +52,9 @@ import com.naaammme.bbspace.core.model.DynamicImage
 import com.naaammme.bbspace.core.model.DynamicStats
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.feature.comment.CommentPanel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,21 +89,6 @@ fun DynamicDetailScreen(
     ) { padding ->
         val detail = state.detail
         when {
-            state.isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "加载中...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
             state.errorMessage != null && detail == null -> {
                 Box(
                     modifier = Modifier
@@ -264,46 +256,44 @@ private fun DynamicDetailParagraphItem(paragraph: DynamicDetailParagraph) {
 
 @Composable
 private fun DynamicDetailImageGrid(images: List<DynamicImage>, modifier: Modifier = Modifier) {
-    val columns = remember(images.size) {
-        when (images.size) {
-            1 -> 1
-            2, 4 -> 2
-            else -> 3
+    val previewImages = remember(images) {
+        images.map { image ->
+            PreviewImage(
+                url = image.url,
+                width = image.width.toFloat(),
+                height = image.height.toFloat()
+            )
         }
     }
-    val rows = remember(images, columns) {
-        images.chunked(columns)
-    }
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        rows.forEach { rowImages ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                rowImages.forEach { image ->
-                    CoverImage(
-                        url = image.url,
-                        modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(
-                                if (image.width > 0 && image.height > 0) {
-                                    image.width.toFloat() / image.height.toFloat()
-                                } else {
-                                    1f
-                                }
-                            ),
-                        shape = MaterialTheme.shapes.small
-                    )
-                }
-                repeat(columns - rowImages.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+    val context = LocalContext.current
+    val appCtx = remember(context) { context.applicationContext }
+    val scope = rememberCoroutineScope()
+    val onSaveImage: (PreviewImage) -> Unit = { image ->
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { ImageSaver.saveUrl(appCtx, image.url) }
             }
+            result
+                .onSuccess {
+                    Toast.makeText(context, "已保存到相册", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure { err ->
+                    Logger.e(DYNAMIC_DETAIL_TAG, err as? Exception) {
+                        "save dynamic detail image failed url=${image.url}"
+                    }
+                    Toast.makeText(
+                        context,
+                        err.message ?: "保存图片失败",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
         }
     }
+    PreviewImageGrid(
+        images = previewImages,
+        modifier = modifier,
+        onSaveImage = onSaveImage
+    )
 }
 
 @Composable
@@ -367,3 +357,5 @@ private fun formatCount(value: Long): String {
         else -> value.toString()
     }
 }
+
+private const val DYNAMIC_DETAIL_TAG = "DynamicDetailScreen"
