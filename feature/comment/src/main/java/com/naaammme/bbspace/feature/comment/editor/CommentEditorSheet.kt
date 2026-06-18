@@ -88,6 +88,13 @@ internal fun CommentEditorSheet(
                         text = if (state.target.isReply) "回复评论" else "发表评论",
                         style = MaterialTheme.typography.titleMedium
                     )
+                    state.target.parentName?.takeIf(String::isNotBlank)?.let { name ->
+                        Text(
+                            text = "回复 @$name",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 TextButton(
                     onClick = onSubmit,

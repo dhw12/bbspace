@@ -381,7 +381,8 @@ class CommentViewModel @Inject constructor(
             target = state.threadPane?.let { thread ->
                 CommentEditorTarget(
                     rootRpid = thread.root.rpid,
-                    parentRpid = thread.root.rpid
+                    parentRpid = thread.root.rpid,
+                    parentName = thread.root.user.name.ifBlank { null }
                 )
             } ?: CommentEditorTarget()
         )
@@ -612,12 +613,14 @@ class CommentViewModel @Inject constructor(
         return if (thread == null || thread.root.rpid == reply.rpid) {
             CommentEditorTarget(
                 rootRpid = reply.rpid,
-                parentRpid = reply.rpid
+                parentRpid = reply.rpid,
+                parentName = reply.user.name.ifBlank { null }
             )
         } else {
             CommentEditorTarget(
                 rootRpid = thread.root.rpid,
-                parentRpid = reply.rpid
+                parentRpid = reply.rpid,
+                parentName = reply.user.name.ifBlank { null }
             )
         }
     }

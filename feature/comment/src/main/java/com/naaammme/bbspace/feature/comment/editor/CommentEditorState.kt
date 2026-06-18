@@ -13,7 +13,8 @@ data class CommentEditorState(
 @Immutable
 data class CommentEditorTarget(
     val rootRpid: Long = 0L,
-    val parentRpid: Long = 0L
+    val parentRpid: Long = 0L,
+    val parentName: String? = null
 ) {
     val isReply: Boolean
         get() = rootRpid > 0L
