@@ -39,6 +39,12 @@ import javax.inject.Singleton
 class AppSettings @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) : PlayerSettings {
+    private val defaultThemeConfig = ThemeConfig()
+    private val defaultPlayerSettings = PlayerSettingsState()
+    private val defaultBufferSettings = defaultPlayerSettings.buffer
+    private val defaultPlaybackPrefs = defaultPlayerSettings.playback
+    private val defaultDanmakuConfig = defaultPlayerSettings.danmaku
+
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val seedColorKey = intPreferencesKey("seed_color")
     private val useDynamicColorKey = booleanPreferencesKey("use_dynamic_color")
@@ -61,21 +67,31 @@ class AppSettings @Inject constructor(
 
     val themeConfig: Flow<ThemeConfig> = context.appSettingsDataStore.data.map { prefs ->
         ThemeConfig(
-            themeMode = prefs[themeModeKey]?.let { ThemeMode.valueOf(it) } ?: ThemeMode.SYSTEM,
-            seedColor = Color(prefs[seedColorKey] ?: 0xFFFB7299.toInt()),
-            useDynamicColor = prefs[useDynamicColorKey] ?: true,
-            swapBaseColors = prefs[swapBaseColorsKey] ?: false,
-            fontScale = prefs[fontScaleKey] ?: 1.0f,
-            uiScale = (prefs[uiScaleKey] ?: 1.0f).coerceIn(MIN_UI_SCALE, MAX_UI_SCALE),
-            roundScreenSafePaddingScale = (prefs[roundScreenSafePaddingScaleKey] ?: 1.0f)
+            themeMode = prefs[themeModeKey]?.let { ThemeMode.valueOf(it) }
+                ?: defaultThemeConfig.themeMode,
+            seedColor = Color(prefs[seedColorKey] ?: defaultThemeConfig.seedColor.toArgb()),
+            useDynamicColor = prefs[useDynamicColorKey] ?: defaultThemeConfig.useDynamicColor,
+            swapBaseColors = prefs[swapBaseColorsKey] ?: defaultThemeConfig.swapBaseColors,
+            fontScale = prefs[fontScaleKey] ?: defaultThemeConfig.fontScale,
+            uiScale = (prefs[uiScaleKey] ?: defaultThemeConfig.uiScale)
+                .coerceIn(MIN_UI_SCALE, MAX_UI_SCALE),
+            roundScreenSafePaddingScale = (
+                prefs[roundScreenSafePaddingScaleKey] ?: defaultThemeConfig.roundScreenSafePaddingScale
+            )
                 .coerceIn(MIN_ROUND_SCREEN_SAFE_PADDING_SCALE, MAX_ROUND_SCREEN_SAFE_PADDING_SCALE),
-            pullRefreshDistanceDp = (prefs[pullRefreshDistanceKey] ?: DEFAULT_PULL_REFRESH_DISTANCE_DP)
+            pullRefreshDistanceDp = (
+                prefs[pullRefreshDistanceKey] ?: defaultThemeConfig.pullRefreshDistanceDp
+            )
                 .coerceIn(MIN_PULL_REFRESH_DISTANCE_DP, MAX_PULL_REFRESH_DISTANCE_DP),
-            animationSpeed = prefs[animationSpeedKey]?.let { AnimationSpeed.valueOf(it) } ?: AnimationSpeed.NORMAL,
-            transitionStyle = prefs[transitionStyleKey]?.let { TransitionStyle.valueOf(it) } ?: TransitionStyle.SHARED_AXIS_Z,
-            isPureBlack = prefs[isPureBlackKey] ?: false,
-            preferredFrameRate = prefs[frameRateModeKey]?.let { FrameRateMode.valueOf(it) } ?: FrameRateMode.AUTO,
-            cornerStyle = prefs[cornerStyleKey]?.let { CornerStyle.valueOf(it) } ?: CornerStyle.STANDARD
+            animationSpeed = prefs[animationSpeedKey]?.let { AnimationSpeed.valueOf(it) }
+                ?: defaultThemeConfig.animationSpeed,
+            transitionStyle = prefs[transitionStyleKey]?.let { TransitionStyle.valueOf(it) }
+                ?: defaultThemeConfig.transitionStyle,
+            isPureBlack = prefs[isPureBlackKey] ?: defaultThemeConfig.isPureBlack,
+            preferredFrameRate = prefs[frameRateModeKey]?.let { FrameRateMode.valueOf(it) }
+                ?: defaultThemeConfig.preferredFrameRate,
+            cornerStyle = prefs[cornerStyleKey]?.let { CornerStyle.valueOf(it) }
+                ?: defaultThemeConfig.cornerStyle
         )
     }.distinctUntilChanged()
 
@@ -232,35 +248,42 @@ class AppSettings @Inject constructor(
     val enableWebPlayback: Flow<Boolean> = context.appSettingsDataStore.data.map { it[enableWebPlaybackKey] ?: false }
     // 播放偏好和外观 推荐等设置一样都属于持久偏好，不在这里做会话态缓存
     override val state: Flow<PlayerSettingsState> = context.appSettingsDataStore.data.map { prefs ->
-        val defDanmaku = DanmakuConfig()
         PlayerSettingsState(
             buffer = PlayerBufferSettings(
-                profile = prefs[playerBufferProfileKey].toPlayerBufferProfile()
+                profile = prefs[playerBufferProfileKey]
+                    .toPlayerBufferProfile(defaultBufferSettings.profile)
             ),
             playback = PlayerPlaybackPrefs(
-                backgroundPlayback = prefs[bgPlayKey] ?: false,
-                inAppMiniPlayer = prefs[inAppMiniPlayerKey] ?: true,
-                reportPlayback = prefs[reportPlaybackKey] ?: true,
-                preferSoftwareDecode = prefs[preferSoftDecKey] ?: false,
-                decoderFallback = prefs[decFallbackKey] ?: true,
-                autoRotateFullscreen = prefs[autoRotateFullscreenKey] ?: true,
-                gestureSpeed = (prefs[gestureSpeedKey] ?: 2f).coerceIn(0.25f, 3f),
+                backgroundPlayback = prefs[bgPlayKey] ?: defaultPlaybackPrefs.backgroundPlayback,
+                inAppMiniPlayer = prefs[inAppMiniPlayerKey] ?: defaultPlaybackPrefs.inAppMiniPlayer,
+                reportPlayback = prefs[reportPlaybackKey] ?: defaultPlaybackPrefs.reportPlayback,
+                preferSoftwareDecode = prefs[preferSoftDecKey]
+                    ?: defaultPlaybackPrefs.preferSoftwareDecode,
+                decoderFallback = prefs[decFallbackKey] ?: defaultPlaybackPrefs.decoderFallback,
+                autoRotateFullscreen = prefs[autoRotateFullscreenKey]
+                    ?: defaultPlaybackPrefs.autoRotateFullscreen,
+                gestureSpeed = (
+                    prefs[gestureSpeedKey] ?: defaultPlaybackPrefs.gestureSpeed
+                ).coerceIn(0.25f, 3f),
                 videoCdnMode = prefs[videoCdnModeKey]
                     ?.let(VideoCdnMode::valueOf)
-                    ?: VideoCdnMode.Backup1
+                    ?: defaultPlaybackPrefs.videoCdnMode
             ),
             danmaku = DanmakuConfig(
-                enabled = prefs[danmakuEnabledKey] ?: defDanmaku.enabled,
-                areaPercent = prefs[danmakuAreaPercentKey] ?: defDanmaku.areaPercent,
-                opacity = prefs[danmakuOpacityKey] ?: defDanmaku.opacity,
-                textScale = prefs[danmakuTextScaleKey] ?: defDanmaku.textScale,
-                speed = prefs[danmakuSpeedKey] ?: defDanmaku.speed,
-                densityLevel = prefs[danmakuDensityKey] ?: defDanmaku.densityLevel,
-                weightFilterLevel = (prefs[danmakuWeightFilterLevelKey] ?: defDanmaku.weightFilterLevel).coerceIn(0, 10),
-                mergeDuplicates = prefs[danmakuMergeDuplicatesKey] ?: defDanmaku.mergeDuplicates,
-                showTop = prefs[danmakuShowTopKey] ?: defDanmaku.showTop,
-                showBottom = prefs[danmakuShowBottomKey] ?: defDanmaku.showBottom,
-                showScrollRl = prefs[danmakuShowScrollRlKey] ?: defDanmaku.showScrollRl
+                enabled = prefs[danmakuEnabledKey] ?: defaultDanmakuConfig.enabled,
+                areaPercent = prefs[danmakuAreaPercentKey] ?: defaultDanmakuConfig.areaPercent,
+                opacity = prefs[danmakuOpacityKey] ?: defaultDanmakuConfig.opacity,
+                textScale = prefs[danmakuTextScaleKey] ?: defaultDanmakuConfig.textScale,
+                speed = prefs[danmakuSpeedKey] ?: defaultDanmakuConfig.speed,
+                densityLevel = prefs[danmakuDensityKey] ?: defaultDanmakuConfig.densityLevel,
+                weightFilterLevel = (
+                    prefs[danmakuWeightFilterLevelKey] ?: defaultDanmakuConfig.weightFilterLevel
+                ).coerceIn(0, 10),
+                mergeDuplicates = prefs[danmakuMergeDuplicatesKey]
+                    ?: defaultDanmakuConfig.mergeDuplicates,
+                showTop = prefs[danmakuShowTopKey] ?: defaultDanmakuConfig.showTop,
+                showBottom = prefs[danmakuShowBottomKey] ?: defaultDanmakuConfig.showBottom,
+                showScrollRl = prefs[danmakuShowScrollRlKey] ?: defaultDanmakuConfig.showScrollRl
             )
         )
     }.distinctUntilChanged()
@@ -361,9 +384,9 @@ class AppSettings @Inject constructor(
         const val MAX_TEENAGERS_AGE = 17
     }
 
-    private fun Int?.toPlayerBufferProfile(): PlayerBufferProfile {
-        return PlayerBufferProfile.entries.getOrElse(this ?: PlayerBufferProfile.FastStart.ordinal) {
-            PlayerBufferProfile.FastStart
+    private fun Int?.toPlayerBufferProfile(defaultProfile: PlayerBufferProfile): PlayerBufferProfile {
+        return PlayerBufferProfile.entries.getOrElse(this ?: defaultProfile.ordinal) {
+            defaultProfile
         }
     }
 }
