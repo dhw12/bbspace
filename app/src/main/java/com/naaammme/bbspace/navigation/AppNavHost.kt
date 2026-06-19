@@ -27,6 +27,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.naaammme.bbspace.core.designsystem.component.roundScreenSafePadding
 import com.naaammme.bbspace.core.designsystem.theme.ThemeConfig
 import com.naaammme.bbspace.core.designsystem.theme.buildNavTransitions
 import com.naaammme.bbspace.core.model.FavoriteContentTarget
@@ -92,6 +93,7 @@ fun AppNavHost(
     onAppLinkConsumed: () -> Unit = {}
 ) {
     val rootNavController = rememberNavController()
+    val roundSafePadding = roundScreenSafePadding(themeConfig.roundScreenSafePaddingScale)
     var currentTab by rememberSaveable { mutableStateOf(TopLevelRoute.HOME) }
     val downloadViewModel: DownloadViewModel = hiltViewModel()
     val playbackHostViewModel: PlaybackHostViewModel = hiltViewModel()
@@ -198,6 +200,9 @@ fun AppNavHost(
 
     Box(modifier = Modifier.fillMaxSize()) {
         NavHost(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(roundSafePadding),
             navController = rootNavController,
             startDestination = MAIN_ROUTE,
             enterTransition = { transitions.enter(this) },

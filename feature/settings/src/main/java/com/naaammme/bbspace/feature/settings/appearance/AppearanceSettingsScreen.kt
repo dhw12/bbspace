@@ -24,11 +24,14 @@ import com.naaammme.bbspace.core.designsystem.theme.AnimationSpeed
 import com.naaammme.bbspace.core.designsystem.theme.CornerStyle
 import com.naaammme.bbspace.core.designsystem.theme.DEFAULT_PULL_REFRESH_DISTANCE_DP
 import com.naaammme.bbspace.core.designsystem.theme.MAX_PULL_REFRESH_DISTANCE_DP
+import com.naaammme.bbspace.core.designsystem.theme.MAX_ROUND_SCREEN_SAFE_PADDING_SCALE
 import com.naaammme.bbspace.core.designsystem.theme.MAX_UI_SCALE
 import com.naaammme.bbspace.core.designsystem.theme.MIN_PULL_REFRESH_DISTANCE_DP
+import com.naaammme.bbspace.core.designsystem.theme.MIN_ROUND_SCREEN_SAFE_PADDING_SCALE
 import com.naaammme.bbspace.core.designsystem.theme.MIN_UI_SCALE
 import com.naaammme.bbspace.core.designsystem.theme.PULL_REFRESH_DISTANCE_STEP_DP
 import com.naaammme.bbspace.core.designsystem.theme.PresetColors
+import com.naaammme.bbspace.core.designsystem.theme.ROUND_SCREEN_SAFE_PADDING_SCALE_STEP
 import com.naaammme.bbspace.core.designsystem.theme.ThemeMode
 import com.naaammme.bbspace.core.designsystem.theme.TransitionStyle
 import com.naaammme.bbspace.core.designsystem.theme.UI_SCALE_STEP
@@ -114,6 +117,13 @@ fun AppearanceSettingsScreen(
                 UiScaleSelector(
                     scale = config.uiScale,
                     onScaleChange = viewModel::updateUiScale
+                )
+            }
+
+            item {
+                RoundScreenSafePaddingSelector(
+                    scale = config.roundScreenSafePaddingScale,
+                    onScaleChange = viewModel::updateRoundScreenSafePaddingScale
                 )
             }
 
@@ -244,6 +254,12 @@ private val UI_SCALES = List(
 ) { index ->
     MIN_UI_SCALE + index * UI_SCALE_STEP
 }
+private val ROUND_SCREEN_SAFE_PADDING_SCALES = List(
+    ((MAX_ROUND_SCREEN_SAFE_PADDING_SCALE - MIN_ROUND_SCREEN_SAFE_PADDING_SCALE) /
+        ROUND_SCREEN_SAFE_PADDING_SCALE_STEP).toInt() + 1
+) { index ->
+    MIN_ROUND_SCREEN_SAFE_PADDING_SCALE + index * ROUND_SCREEN_SAFE_PADDING_SCALE_STEP
+}
 private val PULL_REFRESH_DISTANCES = List(
     ((MAX_PULL_REFRESH_DISTANCE_DP - MIN_PULL_REFRESH_DISTANCE_DP) / PULL_REFRESH_DISTANCE_STEP_DP).toInt() + 1
 ) { index ->
@@ -337,6 +353,55 @@ private fun UiScaleSelector(
                 },
                 valueRange = 0f..(UI_SCALES.size - 1).toFloat(),
                 steps = UI_SCALES.size - 2
+            )
+        }
+    }
+}
+
+@Composable
+private fun RoundScreenSafePaddingSelector(
+    scale: Float,
+    onScaleChange: (Float) -> Unit
+) {
+    val idx = remember(scale) {
+        ROUND_SCREEN_SAFE_PADDING_SCALES.indexOfFirst { kotlin.math.abs(it - scale) < 0.01f }
+            .takeIf { it >= 0 }
+            ?: ROUND_SCREEN_SAFE_PADDING_SCALES.indexOf(1.0f).coerceAtLeast(0)
+    }
+    var sliderIdx by remember(scale) { mutableIntStateOf(idx) }
+    Card {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("圆屏安全边距", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "仅圆形屏幕生效，0% 为关闭，100% 为默认",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    "${(ROUND_SCREEN_SAFE_PADDING_SCALES[sliderIdx] * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Slider(
+                value = sliderIdx.toFloat(),
+                onValueChange = {
+                    sliderIdx = sliderIndex(it, ROUND_SCREEN_SAFE_PADDING_SCALES.lastIndex)
+                },
+                onValueChangeFinished = {
+                    val newScale = ROUND_SCREEN_SAFE_PADDING_SCALES[sliderIdx]
+                    if (kotlin.math.abs(newScale - scale) < 0.01f) return@Slider
+                    onScaleChange(newScale)
+                },
+                valueRange = 0f..(ROUND_SCREEN_SAFE_PADDING_SCALES.size - 1).toFloat(),
+                steps = ROUND_SCREEN_SAFE_PADDING_SCALES.size - 2
             )
         }
     }

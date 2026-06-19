@@ -140,6 +140,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateRoundScreenSafePaddingScale(scale: Float) {
+        viewModelScope.launch {
+            appSettings.updateRoundScreenSafePaddingScale(scale)
+        }
+    }
+
     fun updatePullRefreshDistance(distanceDp: Float) {
         viewModelScope.launch {
             appSettings.updatePullRefreshDistance(distanceDp)

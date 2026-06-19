@@ -11,6 +11,7 @@ data class ThemeConfig(
     val swapBaseColors: Boolean = false,
     val fontScale: Float = 1.0f,
     val uiScale: Float = 1.0f,
+    val roundScreenSafePaddingScale: Float = DEFAULT_ROUND_SCREEN_SAFE_PADDING_SCALE,
     val pullRefreshDistanceDp: Float = DEFAULT_PULL_REFRESH_DISTANCE_DP,
     val animationSpeed: AnimationSpeed = AnimationSpeed.NORMAL,
     val transitionStyle: TransitionStyle = TransitionStyle.SHARED_AXIS_Z,
@@ -26,6 +27,10 @@ const val DEFAULT_PULL_REFRESH_DISTANCE_DP = 80f
 const val MIN_UI_SCALE = 0.5f
 const val MAX_UI_SCALE = 1.1f
 const val UI_SCALE_STEP = 0.1f
+const val MIN_ROUND_SCREEN_SAFE_PADDING_SCALE = 0f
+const val MAX_ROUND_SCREEN_SAFE_PADDING_SCALE = 1.5f
+const val ROUND_SCREEN_SAFE_PADDING_SCALE_STEP = 0.1f
+const val DEFAULT_ROUND_SCREEN_SAFE_PADDING_SCALE = 1.0f
 
 enum class CornerStyle {
     SQUARE,
