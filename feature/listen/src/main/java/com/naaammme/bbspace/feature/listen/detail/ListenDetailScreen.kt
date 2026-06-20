@@ -163,7 +163,7 @@ fun ListenDetailScreen(
                         CircularProgressIndicator(modifier = Modifier.size(20.dp))
                     } else {
                         Icon(
-                            imageVector = if (state.isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
+                            painter = if (state.isPlaying) AppIcons.Pause else AppIcons.PlayArrow,
                             contentDescription = if (state.isPlaying) "暂停" else "播放",
                             modifier = Modifier.size(24.dp)
                         )

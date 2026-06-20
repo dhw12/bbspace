@@ -364,7 +364,7 @@ fun VideoGestureFeedback(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (hint == DoubleTapHint.Pause) AppIcons.Pause else Icons.Default.PlayArrow,
+                            painter = if (hint == DoubleTapHint.Pause) AppIcons.Pause else AppIcons.PlayArrow,
                             contentDescription = if (hint == DoubleTapHint.Pause) "暂停" else "播放",
                             tint = Color.White,
                             modifier = Modifier.size(32.dp)

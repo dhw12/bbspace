@@ -161,7 +161,7 @@ fun InAppMiniPlayer(
                 ) {
                     IconButton(onClick = onTogglePlay) {
                         Icon(
-                            imageVector = if (sessionState.isPlaying) AppIcons.Pause else Icons.Default.PlayArrow,
+                            painter = if (sessionState.isPlaying) AppIcons.Pause else AppIcons.PlayArrow,
                             contentDescription = if (sessionState.isPlaying) "暂停" else "播放",
                             tint = Color.White
                         )
