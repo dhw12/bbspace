@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -130,7 +129,7 @@ class DownloadPlaybackControllerImpl @Inject constructor(
         val videoUri = videoPath?.let { Uri.fromFile(java.io.File(it)).toString() }
         val audioUri = audioPath?.let { Uri.fromFile(java.io.File(it)).toString() }
         return when {
-            !videoUri.isNullOrBlank() -> EngineSource.Dash(
+            !videoUri.isNullOrBlank() -> EngineSource.LocalMerged(
                 videoUrl = videoUri,
                 audioUrl = audioUri
             )

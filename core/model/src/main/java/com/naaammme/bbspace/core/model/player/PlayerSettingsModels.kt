@@ -25,10 +25,10 @@ enum class PlayerBufferProfile(
         backBufferMs = 5_000
     ),
     Stable(
-        minBufferMs = 15_000,
-        maxBufferMs = 50_000,
-        playBufferMs = 500,
-        rebufferMs = 1_000,
+        minBufferMs = 10_000,
+        maxBufferMs = 30_000,
+        playBufferMs = 750,
+        rebufferMs = 1_500,
         backBufferMs = 5_000
     )
 }

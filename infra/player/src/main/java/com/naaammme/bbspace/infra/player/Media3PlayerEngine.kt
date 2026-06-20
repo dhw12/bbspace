@@ -21,14 +21,14 @@ import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
-import com.naaammme.bbspace.core.common.UserAgentBuilder
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.model.PlaybackProgress
 import com.naaammme.bbspace.core.model.PlaybackState
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -51,7 +51,10 @@ class Media3PlayerEngine @Inject constructor(
 
     private val appContext = context.applicationContext
     private val videoOkHttpClient = okHttpClient
-    private val webRequestHeaders = mapOf("Referer" to "https://www.bilibili.com")
+    private val singleFileDashMediaSourceFactory = SingleFileDashMediaSourceFactory(
+        appContext = appContext,
+        okHttpClient = okHttpClient
+    )
 
     private val _player = MutableStateFlow<Player?>(null)
     override val player: StateFlow<Player?> = _player.asStateFlow()
@@ -167,24 +170,33 @@ class Media3PlayerEngine @Inject constructor(
         prev?.release()
     }
 
-    override fun setSource(
+    override suspend fun setSource(
         source: EngineSource,
         startPositionMs: Long?,
         playWhenReady: Boolean,
         metadata: MediaMetadata?
     ) {
-        val player = ensurePlayer()
-        val itemMetadata = metadata ?: player.currentMediaItem?.mediaMetadata ?: MediaMetadata.EMPTY
-        firstFrameSeq = 0L
-        player.setMediaSource(buildMediaSource(source, itemMetadata))
-        if (startPositionMs != null && startPositionMs > 0) {
-            player.seekTo(startPositionMs.coerceAtLeast(0L))
-        }
-        player.playWhenReady = playWhenReady
-        player.prepare()
         _currentSource.value = source
-        updatePlaybackState(errorMessage = null)
-        updatePlaybackProgress()
+        try {
+            val player = ensurePlayer()
+            val itemMetadata = metadata ?: player.currentMediaItem?.mediaMetadata ?: MediaMetadata.EMPTY
+            firstFrameSeq = 0L
+            val mediaSource = buildMediaSource(source, itemMetadata)
+            player.setMediaSource(mediaSource)
+            if (startPositionMs != null && startPositionMs > 0) {
+                player.seekTo(startPositionMs.coerceAtLeast(0L))
+            }
+            player.playWhenReady = playWhenReady
+            player.prepare()
+            updatePlaybackState(errorMessage = null)
+            updatePlaybackProgress()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            Logger.e(TAG, t) { "set source failed type=${source::class.simpleName} msg=${t.message}" }
+            updatePlaybackState(errorMessage = t.message ?: "加载媒体源失败")
+            updatePlaybackProgress()
+            throw t
+        }
     }
 
     override fun play() {
@@ -328,13 +340,13 @@ class Media3PlayerEngine @Inject constructor(
         )
     }
 
-    private fun buildMediaSource(
+    private suspend fun buildMediaSource(
         source: EngineSource,
         metadata: MediaMetadata
     ): MediaSource {
-        val mediaSourceFactory = buildMediaSourceFactory(source)
         return when (source) {
             is EngineSource.LiveFlv -> {
+                val mediaSourceFactory = buildProgressiveMediaSourceFactory(source)
                 val item = mediaItem(source.url, metadata)
                     .buildUpon()
                     .setLiveConfiguration(MediaItem.LiveConfiguration.Builder().build())
@@ -342,7 +354,8 @@ class Media3PlayerEngine @Inject constructor(
                 mediaSourceFactory.createMediaSource(item)
             }
 
-            is EngineSource.Dash -> {
+            is EngineSource.LocalMerged -> {
+                val mediaSourceFactory = buildProgressiveMediaSourceFactory(source)
                 val video = mediaSourceFactory.createMediaSource(mediaItem(source.videoUrl, metadata))
                 if (source.audioUrl.isNullOrBlank()) {
                     video
@@ -352,7 +365,10 @@ class Media3PlayerEngine @Inject constructor(
                 }
             }
 
+            is EngineSource.SingleFileDash -> singleFileDashMediaSourceFactory.create(source, metadata)
+
             is EngineSource.Progressive -> {
+                val mediaSourceFactory = buildProgressiveMediaSourceFactory(source)
                 if (source.segments.size == 1) {
                     mediaSourceFactory.createMediaSource(
                         mediaItem(source.segments.first().url, metadata)
@@ -371,35 +387,17 @@ class Media3PlayerEngine @Inject constructor(
         }
     }
 
-    private fun buildMediaSourceFactory(source: EngineSource): ProgressiveMediaSource.Factory {
-        val useWebPlaybackHeaders = source.usesWebPlaybackHeaders()
+    private fun buildProgressiveMediaSourceFactory(source: EngineSource): ProgressiveMediaSource.Factory {
+        val requestSpec = source.toPlaybackRequestSpec()
         val upstreamFactory = OkHttpDataSource.Factory(videoOkHttpClient)
-            .setUserAgent(
-                if (useWebPlaybackHeaders) {
-                    UserAgentBuilder.buildWebUserAgent()
-                } else {
-                    UserAgentBuilder.buildPlayerUserAgent()
-                }
-            )
-        if (useWebPlaybackHeaders) {
-            upstreamFactory.setDefaultRequestProperties(webRequestHeaders)
+            .setUserAgent(requestSpec.userAgent)
+        if (requestSpec.headers.isNotEmpty()) {
+            upstreamFactory.setDefaultRequestProperties(requestSpec.headers)
         }
         return ProgressiveMediaSource.Factory(
             DefaultDataSource.Factory(appContext, upstreamFactory)
         )
             .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(1))
-    }
-
-    private fun EngineSource.usesWebPlaybackHeaders(): Boolean {
-        return when (this) {
-            is EngineSource.LiveFlv -> false
-            is EngineSource.Dash -> videoUrl.isWebPlaybackUrl() || audioUrl?.isWebPlaybackUrl() == true
-            is EngineSource.Progressive -> segments.any { it.url.isWebPlaybackUrl() }
-        }
-    }
-
-    private fun String.isWebPlaybackUrl(): Boolean {
-        return contains("platform=pc", ignoreCase = true)
     }
 
     private fun mediaItem(uri: String, metadata: MediaMetadata): MediaItem {

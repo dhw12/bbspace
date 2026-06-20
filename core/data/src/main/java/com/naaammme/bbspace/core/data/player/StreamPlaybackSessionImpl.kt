@@ -94,7 +94,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
     private val openId = AtomicLong(0L)
     private var lastDiscontinuitySeq = 0L
     private var nextPlayWhenReady = true
-    private var currentVideoCdnMode = VideoCdnMode.Backup1
+    private var currentVideoCdnMode = VideoCdnMode.Backup2
 
     // live state
     private val _liveState = MutableStateFlow(LivePlaybackViewState())
@@ -373,7 +373,8 @@ class StreamPlaybackSessionImpl @Inject constructor(
                 val engineSource = buildVideoEngineSource(
                     stream = stream,
                     audio = audio,
-                    cdnMode = cdnMode
+                    cdnMode = cdnMode,
+                    durationMs = source.durationMs
                 )
                     ?: throw NoPlayableStreamException("暂无可用播放流")
                 val startMs = resolveStartMs(request, source, localResume)
@@ -565,15 +566,24 @@ class StreamPlaybackSessionImpl @Inject constructor(
         val source = buildVideoEngineSource(
             stream = state.currentStream,
             audio = state.currentAudio,
-            cdnMode = currentVideoCdnMode
+            cdnMode = currentVideoCdnMode,
+            durationMs = state.playbackSource?.durationMs
         ) ?: return
-        playerEngine.setSource(
-            source,
-            currentPlaybackPositionMs(),
-            currentPlayWhenReady()
-        )
-        vodSession.value = state
-        refreshVideoState()
+        runtimeScope.launch {
+            try {
+                playerEngine.setSource(
+                    source,
+                    currentPlaybackPositionMs(),
+                    currentPlayWhenReady()
+                )
+                vodSession.value = state
+                refreshVideoState()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                Logger.e(TAG, t) { "apply video selection failed msg=${t.message}" }
+                refreshVideoState()
+            }
+        }
     }
 
     // vod: stream selection helpers
@@ -592,14 +602,18 @@ class StreamPlaybackSessionImpl @Inject constructor(
     private fun buildVideoEngineSource(
         stream: PlaybackStream?,
         audio: PlaybackAudio?,
-        cdnMode: VideoCdnMode
+        cdnMode: VideoCdnMode,
+        durationMs: Long?
     ): EngineSource? {
         return when (stream) {
             is PlaybackStream.Dash -> {
                 val cdn = selectPlaybackCdn(stream, audio, cdnMode) ?: return null
-                EngineSource.Dash(
+                EngineSource.SingleFileDash(
                     videoUrl = cdn.videoUrl,
-                    audioUrl = cdn.audioUrl
+                    audioUrl = cdn.audioUrl,
+                    videoCodecId = stream.codecId,
+                    audioCodecId = audio?.codecId,
+                    durationMs = durationMs
                 )
             }
 

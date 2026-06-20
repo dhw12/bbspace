@@ -27,7 +27,7 @@ interface PlayerEngine {
     val playbackProgress: StateFlow<PlaybackProgress>
 
     fun updateConfig(config: PlayerConfig)
-    fun setSource(
+    suspend fun setSource(
         source: EngineSource,
         startPositionMs: Long? = null,
         playWhenReady: Boolean = true,

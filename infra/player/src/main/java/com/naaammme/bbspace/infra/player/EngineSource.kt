@@ -4,9 +4,17 @@ sealed interface EngineSource {
 
     data class LiveFlv(val url: String) : EngineSource
 
-    data class Dash(
+    data class LocalMerged(
         val videoUrl: String,
         val audioUrl: String? = null
+    ) : EngineSource
+
+    data class SingleFileDash(
+        val videoUrl: String,
+        val audioUrl: String? = null,
+        val videoCodecId: Int? = null,
+        val audioCodecId: Int? = null,
+        val durationMs: Long? = null
     ) : EngineSource
 
     data class ProgressiveSegment(
