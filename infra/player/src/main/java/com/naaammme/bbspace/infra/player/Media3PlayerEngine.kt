@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import okhttp3.OkHttpClient
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,7 +81,7 @@ class Media3PlayerEngine @Inject constructor(
             reason: Int
         ) {
             if (reason.isSeekDiscontinuity()) {
-                updatePlaybackState(seekEventSeq = _playbackState.value.seekEventSeq + 1L)
+                updatePlaybackState { it.copy(seekEventSeq = it.seekEventSeq + 1L) }
             }
             updatePlaybackProgress()
         }
@@ -90,7 +91,7 @@ class Media3PlayerEngine @Inject constructor(
                 "player error code=${error.errorCodeName} msg=${error.message} " +
                         "videoDec=$videoDecoderName audioDec=$audioDecoderName"
             }
-            updatePlaybackState(errorMessage = error.message)
+            updatePlaybackState { it.copy(errorMessage = error.message) }
         }
 
         override fun onRenderedFirstFrame() {
@@ -157,16 +158,14 @@ class Media3PlayerEngine @Inject constructor(
         if (next == playerConfig && exoPlayer != null) return
 
         val prev = exoPlayer
-        progressJob?.cancel()
-        progressJob = null
+        stopProgressPolling()
         playerConfig = next
         resetRuntimeState()
         _currentSource.value = null
         val nextPlayer = buildPlayer(appContext, next)
         exoPlayer = nextPlayer
         _player.value = nextPlayer
-        _playbackState.value = PlayerPlaybackState()
-        _playbackProgress.value = PlaybackProgress()
+        resetPlaybackFlows()
         prev?.release()
     }
 
@@ -188,12 +187,12 @@ class Media3PlayerEngine @Inject constructor(
             }
             player.playWhenReady = playWhenReady
             player.prepare()
-            updatePlaybackState(errorMessage = null)
+            updatePlaybackState { it.copy(errorMessage = null) }
             updatePlaybackProgress()
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             Logger.e(TAG, t) { "set source failed type=${source::class.simpleName} msg=${t.message}" }
-            updatePlaybackState(errorMessage = t.message ?: "加载媒体源失败")
+            updatePlaybackState { it.copy(errorMessage = t.message ?: "加载媒体源失败") }
             updatePlaybackProgress()
             throw t
         }
@@ -231,13 +230,11 @@ class Media3PlayerEngine @Inject constructor(
     }
 
     override fun stopForReuse(resetPosition: Boolean) {
-        progressJob?.cancel()
-        progressJob = null
+        stopProgressPolling()
         val player = exoPlayer ?: run {
             resetRuntimeState()
             _currentSource.value = null
-            _playbackState.value = PlayerPlaybackState()
-            _playbackProgress.value = PlaybackProgress()
+            resetPlaybackFlows()
             return
         }
         resetRuntimeState()
@@ -248,20 +245,17 @@ class Media3PlayerEngine @Inject constructor(
         if (resetPosition) {
             player.seekTo(0)
         }
-        _playbackState.value = PlayerPlaybackState()
-        _playbackProgress.value = PlaybackProgress()
+        resetPlaybackFlows()
     }
 
     override fun release() {
-        progressJob?.cancel()
-        progressJob = null
+        stopProgressPolling()
         val player = exoPlayer ?: return
         resetRuntimeState()
         exoPlayer = null
         _player.value = null
         _currentSource.value = null
-        _playbackState.value = PlayerPlaybackState()
-        _playbackProgress.value = PlaybackProgress()
+        resetPlaybackFlows()
         player.release()
     }
 
@@ -309,8 +303,7 @@ class Media3PlayerEngine @Inject constructor(
         val player = buildPlayer(appContext, playerConfig)
         exoPlayer = player
         _player.value = player
-        _playbackState.value = PlayerPlaybackState()
-        _playbackProgress.value = PlaybackProgress()
+        resetPlaybackFlows()
         return player
     }
 
@@ -408,26 +401,24 @@ class Media3PlayerEngine @Inject constructor(
     }
 
     private fun updatePlaybackState(
-        playbackState: PlaybackState = (exoPlayer?.playbackState ?: Player.STATE_IDLE).toPlaybackState(),
-        isPlaying: Boolean = exoPlayer?.isPlaying ?: false,
-        playWhenReady: Boolean = exoPlayer?.playWhenReady ?: false,
-        seekEventSeq: Long = _playbackState.value.seekEventSeq,
-        errorMessage: String? = _playbackState.value.errorMessage
+        transform: (PlayerPlaybackState) -> PlayerPlaybackState = { it }
     ) {
         val player = exoPlayer
-        _playbackState.value = PlayerPlaybackState(
-            isPlaying = isPlaying,
-            playWhenReady = playWhenReady,
-            playbackState = playbackState,
-            speed = player?.playbackParameters?.speed ?: 1f,
-            videoWidth = player?.videoSize?.width ?: 0,
-            videoHeight = player?.videoSize?.height ?: 0,
-            firstFrameSeq = firstFrameSeq,
-            videoDecoderName = videoDecoderName,
-            audioDecoderName = audioDecoderName,
-            seekEventSeq = seekEventSeq,
-            errorMessage = errorMessage
-        )
+        _playbackState.update { state ->
+            transform(
+                state.copy(
+                    isPlaying = player?.isPlaying ?: false,
+                    playWhenReady = player?.playWhenReady ?: false,
+                    playbackState = (player?.playbackState ?: Player.STATE_IDLE).toPlaybackState(),
+                    speed = player?.playbackParameters?.speed ?: 1f,
+                    videoWidth = player?.videoSize?.width ?: 0,
+                    videoHeight = player?.videoSize?.height ?: 0,
+                    firstFrameSeq = firstFrameSeq,
+                    videoDecoderName = videoDecoderName,
+                    audioDecoderName = audioDecoderName
+                )
+            )
+        }
     }
 
     private fun updatePlaybackProgress() {
@@ -444,19 +435,28 @@ class Media3PlayerEngine @Inject constructor(
         val shouldPoll = player != null &&
             lastEventsIsPlaying &&
             lastEventsPlaybackState == Player.STATE_READY
-        if (shouldPoll) {
-            if (progressJob?.isActive != true) {
-                progressJob = runtimeScope.launch {
-                    while (isActive) {
-                        delay(1_000)
-                        updatePlaybackProgress()
-                    }
-                }
-            }
-        } else {
-            progressJob?.cancel()
-            progressJob = null
+        if (!shouldPoll) {
+            stopProgressPolling()
+            return
         }
+        if (progressJob?.isActive == true) return
+        progressJob?.cancel()
+        progressJob = runtimeScope.launch {
+            while (isActive) {
+                delay(1_000)
+                updatePlaybackProgress()
+            }
+        }
+    }
+
+    private fun stopProgressPolling() {
+        progressJob?.cancel()
+        progressJob = null
+    }
+
+    private fun resetPlaybackFlows() {
+        _playbackState.value = PlayerPlaybackState()
+        _playbackProgress.value = PlaybackProgress()
     }
 
     private fun resetRuntimeState() {

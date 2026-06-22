@@ -1,5 +1,6 @@
 ﻿package com.naaammme.bbspace.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -402,7 +404,11 @@ private fun MainTabsScaffold(
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
-            Box(modifier = Modifier.navigationBarsPadding()) {
+            Box(
+                modifier = Modifier
+                    .background(NavigationBarDefaults.containerColor)
+                    .navigationBarsPadding()
+            ) {
                 NavigationBar(
                     modifier = Modifier.height(64.dp),
                     windowInsets = WindowInsets(0)

@@ -7,6 +7,7 @@ import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
@@ -26,11 +27,14 @@ import java.net.URI
 import java.util.Collections
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
+@Suppress("UnsafeOptInUsageError")
+@UnstableApi
 internal class SingleFileDashMediaSourceFactory(
     private val appContext: Context,
     private val okHttpClient: OkHttpClient
@@ -62,7 +66,7 @@ internal class SingleFileDashMediaSourceFactory(
                         }
                     )
                 }
-            }.map { it.await() }
+            }.awaitAll()
         }
         val dataSourceFactory = buildDataSourceFactory(
             source = source,
@@ -160,9 +164,10 @@ internal class SingleFileDashMediaSourceFactory(
 
     private suspend fun readIndex(url: String): SingleFileDashIndexResult? {
         val uri = runCatching { URI(url) }.getOrNull() ?: return null
+        val path = uri.path ?: return null
         return when {
             uri.scheme.equals("http", ignoreCase = true) || uri.scheme.equals("https", ignoreCase = true) -> {
-                if (!uri.path.endsWith(".m4s", ignoreCase = true)) return null
+                if (!path.endsWith(".m4s", ignoreCase = true)) return null
                 readHttpIndex(url)
             }
 
@@ -174,7 +179,7 @@ internal class SingleFileDashMediaSourceFactory(
         val requestSpec = EngineSource.SingleFileDash(videoUrl = url).toPlaybackRequestSpec()
         val request = Request.Builder()
             .url(url)
-            .header("Range", "bytes=0-91535") // TODO:91536 是目前普遍最长视频索引大小,(tim还tm发了个100小时的视频以后有需要再兼容)
+            .header("Range", "bytes=0-${DASH_PREFETCH_MAX_BYTES - 1}") // TODO:91536 是目前普遍最长视频索引大小,(tim还tm发了个100小时的视频以后有需要再兼容)
             .header("User-Agent", requestSpec.userAgent)
             .apply {
                 requestSpec.headers.forEach(::header)
@@ -183,7 +188,7 @@ internal class SingleFileDashMediaSourceFactory(
         return withContext(Dispatchers.IO) {
             okHttpClient.newCall(request).execute().use { resp ->
                 if (!resp.isSuccessful) return@use null
-                val data = resp.body?.bytes() ?: return@use null
+                val data = readResponsePrefix(resp) ?: return@use null
                 val index = parseIndex(data) ?: return@use null
                 SingleFileDashIndexResult(
                     index = index,
@@ -205,9 +210,9 @@ internal class SingleFileDashMediaSourceFactory(
         while (pos + 8 <= data.size) {
             val size = readUInt32(data, pos).takeIf { it > 0 } ?: return null
             if (pos + size > data.size) return null
-            when (String(data, pos + 4, 4)) {
-                "moov" -> moovEnd = (pos + size).toLong()
-                "sidx" -> {
+            when {
+                isBoxType(data, pos + 4, 'm', 'o', 'o', 'v') -> moovEnd = (pos + size).toLong()
+                isBoxType(data, pos + 4, 's', 'i', 'd', 'x') -> {
                     sidxStart = pos.toLong()
                     sidxSize = size.toLong()
                     break
@@ -231,6 +236,34 @@ internal class SingleFileDashMediaSourceFactory(
             (data[offset + 3].toInt() and 0xFF)
     }
 
+    private fun isBoxType(
+        data: ByteArray,
+        offset: Int,
+        c0: Char,
+        c1: Char,
+        c2: Char,
+        c3: Char
+    ): Boolean {
+        return data[offset].toInt() == c0.code &&
+            data[offset + 1].toInt() == c1.code &&
+            data[offset + 2].toInt() == c2.code &&
+            data[offset + 3].toInt() == c3.code
+    }
+
+    private fun readResponsePrefix(response: okhttp3.Response): ByteArray? {
+        val body = response.body ?: return null
+        return body.byteStream().use { stream ->
+            val data = ByteArray(DASH_PREFETCH_MAX_BYTES)
+            var total = 0
+            while (total < data.size) {
+                val read = stream.read(data, total, data.size - total)
+                if (read == -1) break
+                total += read
+            }
+            if (total == data.size) data else data.copyOf(total)
+        }
+    }
+
     private fun resolveSampleMimeType(codecId: Int?, isAudio: Boolean): String {
         return when {
             isAudio -> MimeTypes.AUDIO_AAC
@@ -252,7 +285,7 @@ internal class SingleFileDashMediaSourceFactory(
         val prefetchedRange: PrefetchedRange
     )
 
-    private data class PrefetchedRange(
+    private class PrefetchedRange(
         val url: String,
         val data: ByteArray
     ) {
@@ -320,7 +353,7 @@ internal class SingleFileDashMediaSourceFactory(
             if (bytesRemaining == 0) {
                 return C.RESULT_END_OF_INPUT
             }
-            val data = currentData ?: return C.RESULT_END_OF_INPUT
+            val data = currentData ?: error("PrefetchedDataSource 预取状态异常")
             val bytesToRead = minOf(length, bytesRemaining)
             System.arraycopy(data, readPosition, buffer, offset, bytesToRead)
             readPosition += bytesToRead
@@ -329,11 +362,11 @@ internal class SingleFileDashMediaSourceFactory(
         }
 
         override fun getUri(): Uri? {
-            return if (openedFromPrefetch) currentUri else upstream.getUri()
+            return if (openedFromPrefetch) currentUri else upstream.uri
         }
 
         override fun getResponseHeaders(): Map<String, List<String>> {
-            return if (openedFromPrefetch) emptyMap() else upstream.getResponseHeaders()
+            return if (openedFromPrefetch) emptyMap() else upstream.responseHeaders
         }
 
         override fun close() {
@@ -376,6 +409,7 @@ internal class SingleFileDashMediaSourceFactory(
     }
 
     private companion object {
+        const val DASH_PREFETCH_MAX_BYTES = 91_536
         const val DASH_MAX_SEGMENTS_PER_LOAD = 4
     }
 }

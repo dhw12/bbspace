@@ -51,6 +51,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.ui.R as Media3UiR
@@ -105,6 +108,7 @@ internal fun VideoPlayerPane(
     onGoHome: () -> Unit
 ) {
     val context = LocalContext.current
+    val owner = LocalLifecycleOwner.current
     val timeFmt = remember { android.text.format.DateFormat.getTimeFormat(context) }
     val state by viewModel.videoState.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
@@ -160,9 +164,21 @@ internal fun VideoPlayerPane(
         playerView.keepScreenOn = state.playWhenReady
     }
 
-    DisposableEffect(playerView, player) {
-        PlayerViewTargetBinder.bind(playerView, player)
+    DisposableEffect(owner, playerView, player) {
+        val lifecycle = owner.lifecycle
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            PlayerViewTargetBinder.bind(playerView, player)
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> PlayerViewTargetBinder.bind(playerView, player)
+                Lifecycle.Event.ON_STOP -> PlayerViewTargetBinder.unbind(playerView)
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
         onDispose {
+            lifecycle.removeObserver(observer)
             PlayerViewTargetBinder.unbind(playerView)
         }
     }
