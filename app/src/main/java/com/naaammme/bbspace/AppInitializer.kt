@@ -89,7 +89,7 @@ class AppInitializer @Inject constructor(
                 Logger.d(TAG) { "远程 buvid: ${remoteBuvid ?: "获取失败，使用本地 buvid"}" }
 
                 val coldStartData = coldStartClient.getColdStartData()
-                Logger.d(TAG) { "冷启动数据获取完成: IP=${coldStartData.ipInfo?.addr}, 免流规则=${coldStartData.freeFlowRules != null}" }
+                Logger.d(TAG) { "冷启动数据获取完成: IP=${coldStartData.ipInfo?.addr}" }
 
                 val guestId = guestIdGenerator.getOrGenerateGuestId(ticket)
                 Logger.d(TAG) { "GuestId 初始化完成: $guestId" }

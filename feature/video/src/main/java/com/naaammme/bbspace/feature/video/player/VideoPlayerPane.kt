@@ -115,7 +115,7 @@ internal fun VideoPlayerPane(
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     var activeDialog by remember { mutableStateOf<PlayerDialog?>(null) }
     var showPlaybackSheet by remember { mutableStateOf(false) }
-    var showCtrl by remember { mutableStateOf(true) }
+    var showCtrl by remember { mutableStateOf(false) }
     val videoResizeMode = rememberSaveable { mutableStateOf(PlayerVideoResizeMode.Fit) }
     val topMetaText = remember(showCtrl, isFull) {
         if (showCtrl && isFull) {

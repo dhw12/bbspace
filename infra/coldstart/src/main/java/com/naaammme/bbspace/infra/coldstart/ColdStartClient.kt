@@ -1,14 +1,11 @@
 package com.naaammme.bbspace.infra.coldstart
 
 import bilibili.app.coldstart.v1.Coldstart
-import bilibili.app.wall.v1.WallOuterClass
 import com.google.protobuf.Any
 import com.naaammme.bbspace.infra.crypto.RegionCodeCache
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.model.ColdStartData
-import com.naaammme.bbspace.core.model.FreeFlowRules
 import com.naaammme.bbspace.core.model.IpInfo
-import com.naaammme.bbspace.core.model.RuleInfo
 import com.naaammme.bbspace.infra.grpc.BiliGrpcClient
 import org.json.JSONObject
 import javax.inject.Inject
@@ -23,7 +20,7 @@ class ColdStartClient @Inject constructor(
         private const val TAG = "ColdStartClient"
         private const val ENDPOINT = "bilibili.app.coldstart.v1.ColdStart/GetColdStartDeferredData"
         private const val BIZ_KEY_IP = "app.bilibili.com/x/resource/ip"
-        private const val BIZ_KEY_RULE = "grpc.biliapi.net/bilibili.app.wall.v1.Wall/RuleInfo"
+        // private const val BIZ_KEY_RULE = "grpc.biliapi.net/bilibili.app.wall.v1.Wall/RuleInfo"
 
         private val COUNTRY_CODE_MAP = mapOf(
             86 to "CN",
@@ -52,11 +49,12 @@ class ColdStartClient @Inject constructor(
                         .setBizKey(BIZ_KEY_IP)
                         .build()
                 )
-                .addReqList(
-                    Coldstart.ColdStartBizReq.newBuilder()
-                        .setBizKey(BIZ_KEY_RULE)
-                        .build()
-                )
+                // 免流规则暂未接入，先不请求避免额外冷启动开销
+                // .addReqList(
+                //     Coldstart.ColdStartBizReq.newBuilder()
+                //         .setBizKey(BIZ_KEY_RULE)
+                //         .build()
+                // )
                 .build()
 
             val coldStartResp = grpcClient.get().call(
@@ -66,12 +64,12 @@ class ColdStartClient @Inject constructor(
             )
 
             var ipInfo: IpInfo? = null
-            var freeFlowRules: FreeFlowRules? = null
+            // var freeFlowRules: FreeFlowRules? = null
 
             coldStartResp.respListList.forEach { resp ->
                 when (resp.bizKey) {
                     BIZ_KEY_IP -> ipInfo = parseIpInfo(resp.bizResp)
-                    BIZ_KEY_RULE -> freeFlowRules = parseFreeFlowRules(resp.bizResp)
+                    // BIZ_KEY_RULE -> freeFlowRules = parseFreeFlowRules(resp.bizResp)
                 }
             }
 
@@ -80,7 +78,7 @@ class ColdStartClient @Inject constructor(
                 Logger.d(TAG) { "IP 区域已缓存: ${info.regionCode}" }
             }
 
-            return ColdStartData(ipInfo, freeFlowRules)
+            return ColdStartData(ipInfo, null)
         } catch (e: Exception) {
             Logger.e(TAG, e) { "获取冷启动数据失败" }
             return ColdStartData(null, null)
@@ -112,28 +110,28 @@ class ColdStartClient @Inject constructor(
         }
     }
 
-    private fun parseFreeFlowRules(any: Any): FreeFlowRules? {
-        return try {
-            val rulesReply = WallOuterClass.RulesReply.parseFrom(any.value)
-            val rulesMap = rulesReply.rulesInfoMap
-
-            FreeFlowRules(
-                cm = rulesMap["cm"]?.rulesInfoList?.map { it.toRuleInfo() } ?: emptyList(),
-                ct = rulesMap["ct"]?.rulesInfoList?.map { it.toRuleInfo() } ?: emptyList(),
-                cu = rulesMap["cu"]?.rulesInfoList?.map { it.toRuleInfo() } ?: emptyList(),
-                hashValue = rulesReply.hashValue
-            )
-        } catch (e: Exception) {
-            Logger.e(TAG, e) { "解析免流规则失败" }
-            null
-        }
-    }
-
-    private fun WallOuterClass.RuleInfo.toRuleInfo() = RuleInfo(
-        tf = this.tf,
-        mode = this.m,
-        action = this.a,
-        pattern = this.p,
-        actionBackup = this.aBackupList
-    )
+    // private fun parseFreeFlowRules(any: Any): FreeFlowRules? {
+    //     return try {
+    //         val rulesReply = WallOuterClass.RulesReply.parseFrom(any.value)
+    //         val rulesMap = rulesReply.rulesInfoMap
+    //
+    //         FreeFlowRules(
+    //             cm = rulesMap["cm"]?.rulesInfoList?.map { it.toRuleInfo() } ?: emptyList(),
+    //             ct = rulesMap["ct"]?.rulesInfoList?.map { it.toRuleInfo() } ?: emptyList(),
+    //             cu = rulesMap["cu"]?.rulesInfoList?.map { it.toRuleInfo() } ?: emptyList(),
+    //             hashValue = rulesReply.hashValue
+    //         )
+    //     } catch (e: Exception) {
+    //         Logger.e(TAG, e) { "解析免流规则失败" }
+    //         null
+    //     }
+    // }
+    //
+    // private fun WallOuterClass.RuleInfo.toRuleInfo() = RuleInfo(
+    //     tf = this.tf,
+    //     mode = this.m,
+    //     action = this.a,
+    //     pattern = this.p,
+    //     actionBackup = this.aBackupList
+    // )
 }
