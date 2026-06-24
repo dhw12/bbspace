@@ -53,7 +53,7 @@ body:
         2. 点击...
         3. 看到...
     validations:
-      required: false
+      required: true
 
   - type: textarea
     id: expected

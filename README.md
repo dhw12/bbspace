@@ -2,26 +2,26 @@
   <img src="images/banner.jpg" alt="BBSpace banner" width="920" />
 </p>
 
-<h1 align="center">哔哔空间</h1>
+<h2 align="center">哔哔空间</h2>
 
 <p align="center">
   <a href="https://github.com/naaammme/bbspace/stargazers">
-    <img src="https://img.shields.io/github/stars/naaammme/bbspace?style=for-the-badge" alt="stars" />
+    <img src="https://img.shields.io/github/stars/naaammme/bbspace?style=flat" alt="stars" />
   </a>
   <a href="https://github.com/naaammme/bbspace/releases">
-    <img src="https://img.shields.io/github/v/release/naaammme/bbspace?style=for-the-badge" alt="release" />
+    <img src="https://img.shields.io/github/v/release/naaammme/bbspace?style=flat" alt="release" />
   </a>
   <a href="https://github.com/naaammme/bbspace/releases">
-    <img src="https://img.shields.io/github/downloads/naaammme/bbspace/total?style=for-the-badge" alt="downloads" />
+    <img src="https://img.shields.io/github/downloads/naaammme/bbspace/total?style=flat" alt="downloads" />
   </a>
   <a href="https://github.com/naaammme/bbspace/releases/latest">
-    <img src="https://img.shields.io/github/downloads/naaammme/bbspace/latest/total?style=for-the-badge" alt="latest release downloads" />
+    <img src="https://img.shields.io/github/downloads/naaammme/bbspace/latest/total?style=flat" alt="latest release downloads" />
   </a>
   <a href="https://developer.android.com/about/versions/nougat">
-    <img src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="android 7+" />
+    <img src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat&logo=android&logoColor=white" alt="android 7+" />
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/github/license/naaammme/bbspace?style=for-the-badge" alt="license" />
+    <img src="https://img.shields.io/github/license/naaammme/bbspace?style=flat" alt="license" />
   </a>
 </p>
 
@@ -128,5 +128,4 @@ BBSpace 与哔哩哔哩官方无关。项目主要用于学习、研究和 Andro
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=naaammme/bbspace&type=Date)](https://star-history.com/#naaammme/
-bbspace&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=naaammme/bbspace&type=Date)](https://star-history.com/#naaammme/bbspace&Date)
