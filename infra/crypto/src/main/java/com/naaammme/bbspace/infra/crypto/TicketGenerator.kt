@@ -39,7 +39,7 @@ class TicketGenerator(
     companion object {
         private const val TAG = "TicketGenerator"
         private const val REFRESH_THRESHOLD_MS = 1800_000L
-        private const val MAX_RETRY = 4
+        private const val MAX_RETRY = 2
         private const val TICKET_ENDPOINT = "bilibili.api.ticket.v1.Ticket/GetTicket"
     }
 

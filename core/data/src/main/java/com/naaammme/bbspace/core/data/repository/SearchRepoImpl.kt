@@ -1,7 +1,5 @@
 package com.naaammme.bbspace.core.data.repository
 
-import com.bapis.bilibili.app.archive.middleware.v1.PlayerArgs
-import com.bapis.bilibili.app.archive.middleware.v1.QnPolicy
 import com.bapis.bilibili.pagination.Pagination
 import com.bapis.bilibili.polymer.app.search.v1.FilterEntries
 import com.bapis.bilibili.polymer.app.search.v1.FeedbackItem
@@ -52,7 +50,6 @@ class SearchRepoImpl @Inject constructor(
                     .setNext(req.next)
                     .build()
             )
-            .setPlayerArgs(buildPlayerArgs())
             .setUserAct(USER_ACT)
             .setPubTimeBeginS(req.time.beginS)
             .setPubTimeEndS(req.time.endS)
@@ -100,20 +97,6 @@ class SearchRepoImpl @Inject constructor(
             SearchHistoryOrder.HOT -> searchHistoryDao.observeTopKeywordsByHot()
         }
         return source.map { list -> list.filter { it.isNotBlank() } }
-    }
-
-    private fun buildPlayerArgs(): PlayerArgs {
-        return PlayerArgs.newBuilder()
-            .setQn(DEFAULT_QN)
-            .setFnver(DEFAULT_FNVER)
-            .setFnval(DEFAULT_FNVAL)
-            .setForceHost(DEFAULT_FORCE_HOST)
-            .setVoiceBalance(DEFAULT_VOICE_BALANCE)
-            .setQnPolicy(QnPolicy.QN_POLICY_DEFAULT)
-            .setClientAttr(DEFAULT_CLIENT_ATTR)
-            .putExtraContent("short_edge", SHORT_EDGE)
-            .putExtraContent("long_edge", LONG_EDGE)
-            .build()
     }
 
     private fun mapVideo(
@@ -234,13 +217,6 @@ class SearchRepoImpl @Inject constructor(
         const val DEFAULT_SUB = "default"
         const val CATEGORY_KEY = "category"
         const val DURATION_KEY = "duration"
-        const val DEFAULT_QN = 64L
-        const val DEFAULT_FNVER = 0L
-        const val DEFAULT_FNVAL = 272L
-        const val DEFAULT_FORCE_HOST = 0L
-        const val DEFAULT_VOICE_BALANCE = 1L
-        const val DEFAULT_CLIENT_ATTR = 0L
-        const val SHORT_EDGE = "1080"
-        const val LONG_EDGE = "1920"
+
     }
 }

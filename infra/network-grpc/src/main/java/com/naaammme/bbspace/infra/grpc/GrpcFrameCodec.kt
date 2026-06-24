@@ -11,7 +11,7 @@ import java.util.zip.GZIPOutputStream
  *
  * 数据包格式: [1字节压缩标志][4字节数据长度(big-endian)][实际数据]
  *
- * 压缩策略（B站逆向 k21.a / k21.b）:
+ * 压缩策略:
  * - protobuf > 1000 字节 → gzip 压缩（标志=1）
  * - protobuf ≤ 1000 字节 → 不压缩（标志=0）
  */
@@ -38,7 +38,7 @@ object GrpcFrameCodec {
     }
 
     /**
-     * gzip 压缩模式 (k21.a)
+     * gzip 压缩模式
      */
     private fun encodeCompressed(protobufBytes: ByteArray): EncodeResult {
         val compressed = gzipCompress(protobufBytes)
@@ -50,7 +50,7 @@ object GrpcFrameCodec {
     }
 
     /**
-     * 无压缩模式 (k21.b)
+     * 无压缩模式
      */
     private fun encodeRaw(protobufBytes: ByteArray): EncodeResult {
         val frame = ByteArrayOutputStream(5 + protobufBytes.size)
@@ -80,10 +80,10 @@ object GrpcFrameCodec {
     ): ByteArray {
         return if (compressionFlag == 0) {
             payload
-        } else if (grpcEncoding == "gzip" || compressionFlag == 1) {
+        } else if (grpcEncoding == "gzip") {
             GZIPInputStream(ByteArrayInputStream(payload)).use { it.readBytes() }
         } else {
-            payload
+            error("Resp body compressed without known codec in header")
         }
     }
 

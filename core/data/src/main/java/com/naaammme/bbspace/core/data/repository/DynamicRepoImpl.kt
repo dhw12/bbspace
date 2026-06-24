@@ -1,7 +1,5 @@
 package com.naaammme.bbspace.core.data.repository
 
-import com.bapis.bilibili.app.archive.middleware.v1.PlayerArgs
-import com.bapis.bilibili.app.archive.middleware.v1.QnPolicy
 import com.bapis.bilibili.app.dynamic.v2.AdParam
 import com.bapis.bilibili.app.dynamic.v2.Config
 import com.bapis.bilibili.app.dynamic.v2.DynAllReply
@@ -76,7 +74,6 @@ class DynamicRepoImpl @Inject constructor(
             .setShareId("dt.opus-detail.0.0.pv")
             .setShareMode(3)
             .setLocalTime(localTime())
-            .setPlayerArgs(buildPlayerArgs())
             .setConfig(Config.getDefaultInstance())
             .setAdParam(AdParam.getDefaultInstance())
             .setPattern("outer")
@@ -184,7 +181,6 @@ class DynamicRepoImpl @Inject constructor(
             .setAssistBaseline(cursor.assistBaseline)
             .setLocalTime(localTime())
             .setColdStart(if (refresh == DynamicRefresh.NEW && cursor.page == 1) 1 else 0)
-            .setPlayerArgs(buildPlayerArgs())
             .setReqSortOption(
                 FeedSortOptionReq.newBuilder()
                     .setIsColdRefresh(refresh == DynamicRefresh.NEW && cursor.page == 1)
@@ -624,11 +620,11 @@ class DynamicRepoImpl @Inject constructor(
         return when {
             archive.ispgc || archive.episodeid > 0L || archive.pgcseasonid > 0L -> {
                 val epId = archive.episodeid.takeIf { it > 0L }
-                epId?.let {
+                epId?.let { ep ->
                     VideoTarget.Pgc(
-                        epId = it,
+                        epId = ep,
                         seasonId = archive.pgcseasonid.takeIf { id -> id > 0L },
-                        subType = archive.subtype.takeIf { it > 0 }
+                        subType = archive.subtype.takeIf { subType -> subType > 0 }
                     )
                 }
             }
@@ -669,20 +665,6 @@ class DynamicRepoImpl @Inject constructor(
         )
     }
 
-    private fun buildPlayerArgs(): PlayerArgs {
-        return PlayerArgs.newBuilder()
-            .setQn(DEFAULT_QN)
-            .setFnver(DEFAULT_FNVER)
-            .setFnval(DEFAULT_FNVAL)
-            .setForceHost(DEFAULT_FORCE_HOST)
-            .setVoiceBalance(DEFAULT_VOICE_BALANCE)
-            .setQnPolicy(QnPolicy.QN_POLICY_DEFAULT)
-            .setClientAttr(DEFAULT_CLIENT_ATTR)
-            .putExtraContent("short_edge", SHORT_EDGE)
-            .putExtraContent("long_edge", LONG_EDGE)
-            .build()
-    }
-
     private fun localTime(): Int {
         return TimeZone.getDefault().rawOffset / 3_600_000
     }
@@ -714,13 +696,5 @@ class DynamicRepoImpl @Inject constructor(
     private companion object {
         const val ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynAll"
         const val OPUS_DETAIL_ENDPOINT = "bilibili.app.dynamic.v2.Opus/OpusDetail"
-        const val DEFAULT_QN = 80L
-        const val DEFAULT_FNVER = 0L
-        const val DEFAULT_FNVAL = 272L
-        const val DEFAULT_FORCE_HOST = 0L
-        const val DEFAULT_VOICE_BALANCE = 1L
-        const val DEFAULT_CLIENT_ATTR = 0L
-        const val SHORT_EDGE = "1080"
-        const val LONG_EDGE = "1920"
     }
 }
