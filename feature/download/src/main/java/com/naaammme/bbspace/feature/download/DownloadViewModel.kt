@@ -116,7 +116,7 @@ class DownloadViewModel @Inject constructor(
                     it.copy(
                         loading = false,
                         hasTask = true,
-                        pendingTitle = requestTitle(request)
+                        pendingTitle = request.meta.title?.trim()?.takeIf(String::isNotBlank) ?: request.fallbackTitle()
                     )
                 }
             } catch (e: CancellationException) {
@@ -330,11 +330,6 @@ class DownloadViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun requestTitle(request: VideoDownloadRequest): String {
-        val title = request.meta.title?.trim()
-        return if (!title.isNullOrBlank()) title else request.fallbackTitle()
     }
 
     private companion object {

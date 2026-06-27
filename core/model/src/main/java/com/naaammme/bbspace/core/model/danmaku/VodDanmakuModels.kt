@@ -45,6 +45,7 @@ data class VodDanmakuRequest(
     val segmentIndex: Long
         get() = positionMs.toDanmakuWindowId()
 
+    @Suppress("unused")
     val segmentStartMs: Long
         get() = danmakuWindowStartMs(segmentIndex)
 }

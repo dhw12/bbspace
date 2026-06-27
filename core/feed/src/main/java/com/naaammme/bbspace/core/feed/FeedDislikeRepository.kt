@@ -2,7 +2,6 @@ package com.naaammme.bbspace.core.feed
 
 import com.naaammme.bbspace.core.common.BiliConstants
 import com.naaammme.bbspace.core.auth.AuthStore
-import com.naaammme.bbspace.core.settings.PageActionTracker
 import com.naaammme.bbspace.core.model.FeedDislikeContext
 import com.naaammme.bbspace.core.model.ThreePointReason
 import com.naaammme.bbspace.core.model.ThreePointReasonKind

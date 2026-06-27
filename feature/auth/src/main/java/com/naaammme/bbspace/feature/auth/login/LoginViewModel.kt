@@ -93,11 +93,6 @@ class LoginViewModel @Inject constructor(
         pollJob?.cancel()
     }
 
-    fun resetState() {
-        stopPolling()
-        _loginState.value = LoginState.Idle
-    }
-
     override fun onCleared() {
         super.onCleared()
         stopPolling()

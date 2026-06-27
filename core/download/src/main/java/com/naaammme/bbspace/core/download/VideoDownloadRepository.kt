@@ -138,11 +138,7 @@ suspend fun delete(taskId: Long) {
         ensureDrain()
     }
 
-fun task(taskId: Long): Flow<VideoDownloadTask?> {
-        return dao.observe(taskId).map { it?.toModel() }
-    }
-
-suspend fun getTask(taskId: Long): VideoDownloadTask? {
+    suspend fun getTask(taskId: Long): VideoDownloadTask? {
         return dao.find(taskId)?.toModel()
     }
 

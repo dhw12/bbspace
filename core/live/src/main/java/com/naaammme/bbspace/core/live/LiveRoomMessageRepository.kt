@@ -211,16 +211,15 @@ class LiveRoomMessageRepository @Inject constructor(
         content: String,
         sentAtMs: Long
     ): PublishedRecord {
-        val itemId = sentAtMs
         val user = authRepository.getUserInfo()
         return PublishedRecord(
             key = PublishedRecordKeyTool.liveDanmaku(
                 roomId = roomId,
                 senderMid = senderMid,
-                itemId = itemId
+                itemId = sentAtMs
             ),
             kind = PUBLISHED_RECORD_KIND_LIVE_DANMAKU,
-            itemId = itemId,
+            itemId = sentAtMs,
             targetId = roomId,
             targetType = 0L,
             senderMid = senderMid,
@@ -288,7 +287,6 @@ class LiveRoomMessageRepository @Inject constructor(
                             input = input,
                             output = output,
                             writeLock = writeLock,
-                            queueId = queueId,
                             localIdGen = localIdGen,
                             ackDeduper = ackDeduper,
                             emitState = emitState
@@ -314,7 +312,6 @@ class LiveRoomMessageRepository @Inject constructor(
         input: DataInputStream,
         output: OutputStream,
         writeLock: Any,
-        queueId: String,
         localIdGen: AtomicLong,
         ackDeduper: AckDeduper,
         emitState: ((LiveRoomSessionState) -> LiveRoomSessionState) -> Unit

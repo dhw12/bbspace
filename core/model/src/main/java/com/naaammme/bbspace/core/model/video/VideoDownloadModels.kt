@@ -142,6 +142,7 @@ sealed interface VideoDownloadProgress {
     data object Done : VideoDownloadProgress
 }
 
+@Suppress("unused")
 fun VideoDownloadRequest.summaryLabel(): String {
     return summaryLabel(kind = kind, videoQuality = videoQuality, audioQuality = audioQuality)
 }

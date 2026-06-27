@@ -154,15 +154,12 @@ class AuthRepository @Inject constructor(
 
     fun saveHdAccessKey(mid: Long, key: String, expiresIn: Long) =
         authStore.saveHdAccessKey(mid, key, expiresIn)
-    fun getHdAccessKeyForCurrent(): String = authStore.getHdAccessKeyForCurrent()
     fun hasHdAccessKeyForCurrent(): Boolean = authStore.hasHdAccessKeyForCurrent()
-    fun clearHdAccessKey() = authStore.clearHdAccessKey()
     fun saveCredential(credential: LoginCredential) {
         authStore.saveCredential(credential)
         _currentMidFlow.value = credential.mid
     }
     fun getSavedCredential(): LoginCredential? = authStore.getSavedCredential()
-    fun clearCredential() = authStore.clearCredential()
     fun getAllAccounts(): List<LoginCredential> = authStore.getAllAccounts()
     fun switchAccount(mid: Long): LoginCredential? {
         val result = authStore.switchAccount(mid)

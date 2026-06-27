@@ -1,4 +1,4 @@
-package com.naaammme.bbspace.core.settings
+package com.naaammme.bbspace.core.feed
 
 import com.naaammme.bbspace.infra.crypto.BiliSessionId
 import javax.inject.Inject

@@ -64,12 +64,6 @@ class AuthStore @Inject constructor(
 
     fun hasHdAccessKeyForCurrent(): Boolean = getHdAccessKeyForCurrent().isNotEmpty()
 
-    fun clearHdAccessKey() {
-        val currentMid = mid
-        if (currentMid == 0L) return
-        clearHdAccessKeyFor(currentMid)
-    }
-
     private fun clearHdAccessKeyFor(mid: Long) {
         prefs.edit {
             remove(hdKeyKey(mid))

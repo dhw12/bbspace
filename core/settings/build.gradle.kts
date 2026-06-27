@@ -25,7 +25,6 @@ dependencies {
     api(project(":core:designsystem"))
 
     implementation(project(":core:common"))
-    implementation(project(":infra:crypto"))
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

@@ -26,7 +26,7 @@ interface PublishedRecordDao {
     @Query("SELECT COUNT(*) FROM published_record")
     suspend fun getCount(): Int
 
-    @Query("DELETE FROM published_record WHERE key = :key")
+    @Query("DELETE FROM published_record WHERE `key` = :key")
     suspend fun deleteByKey(key: String): Int
 }
 

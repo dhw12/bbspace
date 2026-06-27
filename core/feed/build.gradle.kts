@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":core:auth"))
     implementation(project(":core:settings"))
 
+    implementation(project(":infra:crypto"))
     implementation(project(":infra:network-http"))
 
     implementation(libs.hilt.android)

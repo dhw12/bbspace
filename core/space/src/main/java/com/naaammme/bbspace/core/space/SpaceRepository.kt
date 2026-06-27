@@ -186,7 +186,7 @@ class SpaceRepository @Inject constructor(
                 )
             }
         }
-        return if (orders.isEmpty()) DEFAULT_ORDERS else orders
+        return orders.ifEmpty { DEFAULT_ORDERS }
     }
 
     private fun parseVideos(arr: JSONArray?): List<SpaceVideo> {

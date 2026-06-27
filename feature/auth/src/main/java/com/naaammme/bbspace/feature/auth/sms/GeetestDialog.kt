@@ -3,7 +3,6 @@ package com.naaammme.bbspace.feature.auth.sms
 import android.annotation.SuppressLint
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
@@ -53,6 +52,7 @@ fun GeetestDialog(
                                 post { onResult(result) }
                             }
 
+                            @Suppress("UNUSED_PARAMETER")
                             @JavascriptInterface
                             fun onError(ignored: String) {
                                 post { onDismiss() }

@@ -197,9 +197,9 @@ class LiveRepository @Inject constructor(
         extra: String
     ): String {
         return when {
-            baseUrl.endsWith("?") || baseUrl.endsWith("&") -> host + baseUrl + extra
-            baseUrl.contains('?') -> host + baseUrl + "&" + extra
-            else -> host + baseUrl + "?" + extra
+            baseUrl.endsWith("?") || baseUrl.endsWith("&") -> "$host$baseUrl$extra"
+            baseUrl.contains('?') -> "$host$baseUrl&$extra"
+            else -> "$host$baseUrl?$extra"
         }
     }
 
