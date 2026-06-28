@@ -18,6 +18,7 @@ fun selectPlaybackCdn(
     val dash = stream as? PlaybackStream.Dash ?: return null
     val videoUrls = mergePlaybackUrls(dash.videoUrl, dash.videoBackupUrls)
     if (videoUrls.isEmpty()) return null
+    // TODO: 音视频线路目前各自按 mode 独立选择，后续再评估是否需要统一 host
     return PlaybackCdn(
         videoUrl = selectPlaybackUrl(videoUrls, mode) ?: return null,
         audioUrl = selectPlaybackUrl(

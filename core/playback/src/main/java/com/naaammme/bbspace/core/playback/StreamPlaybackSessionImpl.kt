@@ -2,6 +2,7 @@ package com.naaammme.bbspace.core.playback
 
 import androidx.media3.common.Player
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.settings.AppSettings
@@ -610,8 +611,8 @@ class StreamPlaybackSessionImpl @Inject constructor(
                 EngineSource.SingleFileDash(
                     videoUrl = cdn.videoUrl,
                     audioUrl = cdn.audioUrl,
-                    videoCodecId = stream.codecId,
-                    audioCodecId = audio?.codecId,
+                    videoSampleMimeType = resolveVideoSampleMimeType(stream.codecId),
+                    audioSampleMimeType = audio?.let { resolveAudioSampleMimeType(it.id) },
                     durationMs = durationMs
                 )
             }
@@ -626,6 +627,20 @@ class StreamPlaybackSessionImpl @Inject constructor(
 
             null -> null
         }
+    }
+
+    // B站 codec/audio id 映射为 Media3 sampleMimeType
+    // TODO: 未来需要为 eac3 提供软解 ?
+    private fun resolveVideoSampleMimeType(codecId: Int): String = when (codecId) {
+        12 -> MimeTypes.VIDEO_H265
+        13 -> MimeTypes.VIDEO_AV1
+        else -> MimeTypes.VIDEO_H264
+    }
+
+    private fun resolveAudioSampleMimeType(audioId: Int): String = when (audioId) {
+        30250 -> MimeTypes.AUDIO_E_AC3
+        30251 -> MimeTypes.AUDIO_FLAC
+        else -> MimeTypes.AUDIO_AAC
     }
 
     // vod: config & history

@@ -12,8 +12,8 @@ sealed interface EngineSource {
     data class SingleFileDash(
         val videoUrl: String,
         val audioUrl: String? = null,
-        val videoCodecId: Int? = null,
-        val audioCodecId: Int? = null,
+        val videoSampleMimeType: String? = null,
+        val audioSampleMimeType: String? = null,
         val durationMs: Long? = null
     ) : EngineSource
 

@@ -50,7 +50,7 @@ internal class SingleFileDashMediaSourceFactory(
                     async {
                         buildDashStream(
                             url = source.videoUrl,
-                            codecId = source.videoCodecId,
+                            sampleMimeType = source.videoSampleMimeType,
                             isAudio = false
                         )
                     }
@@ -60,7 +60,7 @@ internal class SingleFileDashMediaSourceFactory(
                         async {
                             buildDashStream(
                                 url = audioUrl,
-                                codecId = source.audioCodecId,
+                                sampleMimeType = source.audioSampleMimeType,
                                 isAudio = true
                             )
                         }
@@ -114,14 +114,14 @@ internal class SingleFileDashMediaSourceFactory(
 
     private suspend fun buildDashStream(
         url: String,
-        codecId: Int?,
+        sampleMimeType: String?,
         isAudio: Boolean
     ): DashStream {
         val indexResult = readIndex(url) ?: error("单文件 dash 索引缺失: $url")
         val index = indexResult.index
         val format = Format.Builder()
             .setContainerMimeType(if (isAudio) MimeTypes.AUDIO_MP4 else MimeTypes.VIDEO_MP4)
-            .setSampleMimeType(resolveSampleMimeType(codecId, isAudio))
+            .setSampleMimeType(sampleMimeType)
             .build()
         return DashStream(
             isAudio = isAudio,
@@ -261,16 +261,6 @@ internal class SingleFileDashMediaSourceFactory(
                 total += read
             }
             if (total == data.size) data else data.copyOf(total)
-        }
-    }
-
-    private fun resolveSampleMimeType(codecId: Int?, isAudio: Boolean): String {
-        return when {
-            isAudio -> MimeTypes.AUDIO_AAC
-            codecId == 7 -> MimeTypes.VIDEO_H264
-            codecId == 12 -> MimeTypes.VIDEO_H265
-            codecId == 13 -> MimeTypes.VIDEO_AV1
-            else -> MimeTypes.VIDEO_H264
         }
     }
 

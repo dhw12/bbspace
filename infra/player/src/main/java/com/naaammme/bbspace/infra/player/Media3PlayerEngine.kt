@@ -91,6 +91,7 @@ class Media3PlayerEngine @Inject constructor(
                 "player error code=${error.errorCodeName} msg=${error.message} " +
                         "videoDec=$videoDecoderName audioDec=$audioDecoderName"
             }
+            // TODO: 出现 decoder reclaimed 等 system-level 错误时重建 player session，当前只记日志不恢复
             updatePlaybackState { it.copy(errorMessage = error.message) }
         }
 
