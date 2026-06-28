@@ -82,9 +82,8 @@ class PlaybackService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (!playerEngine.playbackState.value.isPlaying) {
-            stopSelf()
-        }
+        playbackSession.close()
+        stopSelf()
     }
 
     override fun onDestroy() {
