@@ -1,28 +1,45 @@
 ﻿package com.naaammme.bbspace.navigation
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarDefaults
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -87,10 +104,12 @@ import com.naaammme.bbspace.feature.video.VideoViewModel
 import com.naaammme.bbspace.playback.PlaybackHost
 import com.naaammme.bbspace.playback.PlaybackHostMode
 import com.naaammme.bbspace.playback.PlaybackHostViewModel
-import androidx.compose.ui.unit.dp
 
 private const val MAIN_ROUTE = "main"
-
+private val topLevelNavEdgePadding = 16.dp
+private val topLevelNavGap = 8.dp
+private val topLevelNavScrollThreshold = 72.dp
+private const val topLevelNavAnimationDurationMillis = 220
 @Composable
 fun AppNavHost(
     themeConfig: ThemeConfig = ThemeConfig(),
@@ -414,68 +433,226 @@ private fun MainTabsScaffold(
     val saveableStateHolder = rememberSaveableStateHolder()
     val userViewModel: UserViewModel = hiltViewModel()
     val userState by userViewModel.uiState.collectAsStateWithLifecycle()
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val useVerticalToolbar = windowSizeClass.isWidthAtLeastBreakpoint(600)
+    val navVisibilityController = rememberTopLevelNavVisibilityController()
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .background(NavigationBarDefaults.containerColor)
-                    .navigationBarsPadding()
-            ) {
-                NavigationBar(
-                    modifier = Modifier.height(64.dp),
-                    windowInsets = WindowInsets(0)
-                ) {
-                    TopLevelRoute.entries.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentTab == tab,
-                            onClick = { onTabChange(tab) },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(navVisibilityController.connection)
+    ) {
+        TopLevelRoute.entries.forEach { tab ->
+            if (currentTab == tab) {
+                saveableStateHolder.SaveableStateProvider(tab.route) {
+                    when (tab) {
+                        TopLevelRoute.HOME -> HomeScreen(
+                            onNavigateToSearch = onNavigateToSearch,
+                            onNavigateToProfile = { onTabChange(TopLevelRoute.PROFILE) },
+                            profileAvatar = userState.user?.avatar,
+                            onOpenVideo = onNavigateToVideo,
+                            onOpenSpace = onNavigateToSpace,
+                            onOpenLive = onNavigateToLive,
+                            onOpenArticle = onNavigateToArticle,
+                            onOpenListenItem = onNavigateToListenDetail
+                        )
+                        TopLevelRoute.DYNAMIC -> DynamicScreen(
+                            onOpenVideo = onNavigateToVideo,
+                            onOpenSpace = onNavigateToSpace,
+                            onOpenLive = onNavigateToLive,
+                            onOpenDynamic = onNavigateToDynamicDetail
+                        )
+                        TopLevelRoute.MESSAGE -> ImScreen(
+                            onOpenConversation = onNavigateToImConversation
+                        )
+                        TopLevelRoute.PROFILE -> UserScreen(
+                            onNavigateToAccount = onNavigateToAccount,
+                            onNavigateToSettings = onNavigateToSettings,
+                            onNavigateToBbSpace = onNavigateToBbSpace,
+                            onNavigate = onNavigateFromUser,
+                            onNavigateToDownload = onNavigateToDownload,
+                            onOpenSpace = onNavigateToSpace
                         )
                     }
                 }
             }
         }
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            TopLevelRoute.entries.forEach { tab ->
-                if (currentTab == tab) {
-                    saveableStateHolder.SaveableStateProvider(tab.route) {
-                        when (tab) {
-                            TopLevelRoute.HOME -> HomeScreen(
-                                onNavigateToSearch = onNavigateToSearch,
-                                onNavigateToProfile = { onTabChange(TopLevelRoute.PROFILE) },
-                                profileAvatar = userState.user?.avatar,
-                                onOpenVideo = onNavigateToVideo,
-                                onOpenSpace = onNavigateToSpace,
-                                onOpenLive = onNavigateToLive,
-                                onOpenArticle = onNavigateToArticle,
-                                onOpenListenItem = onNavigateToListenDetail
-                            )
-                            TopLevelRoute.DYNAMIC -> DynamicScreen(
-                                onOpenVideo = onNavigateToVideo,
-                                onOpenSpace = onNavigateToSpace,
-                                onOpenLive = onNavigateToLive,
-                                onOpenDynamic = onNavigateToDynamicDetail
-                            )
-                            TopLevelRoute.MESSAGE -> ImScreen(
-                                onOpenConversation = onNavigateToImConversation
-                            )
-                            TopLevelRoute.PROFILE -> UserScreen(
-                                onNavigateToAccount = onNavigateToAccount,
-                                onNavigateToSettings = onNavigateToSettings,
-                                onNavigateToBbSpace = onNavigateToBbSpace,
-                                onNavigate = onNavigateFromUser,
-                                onNavigateToDownload = onNavigateToDownload,
-                                onOpenSpace = onNavigateToSpace
-                            )
-                        }
-                    }
+
+        TopLevelFloatingNavigation(
+            modifier = Modifier
+                .align(
+                    if (useVerticalToolbar) Alignment.CenterStart else Alignment.BottomCenter
+                )
+                .padding(
+                    start = if (useVerticalToolbar) topLevelNavEdgePadding else 0.dp,
+                    bottom = if (useVerticalToolbar) 0.dp else topLevelNavEdgePadding
+                )
+                .zIndex(1f),
+            currentTab = currentTab,
+            useVerticalToolbar = useVerticalToolbar,
+            visibilityController = navVisibilityController,
+            onTabChange = onTabChange,
+            onNavigateToSearch = onNavigateToSearch
+        )
+    }
+}
+
+@Composable
+private fun TopLevelFloatingNavigation(
+    modifier: Modifier = Modifier,
+    currentTab: TopLevelRoute,
+    useVerticalToolbar: Boolean,
+    visibilityController: TopLevelNavVisibilityController,
+    onTabChange: (TopLevelRoute) -> Unit,
+    onNavigateToSearch: () -> Unit
+) {
+    val toolbarShape = MaterialTheme.shapes.extraLarge
+    val edgePaddingPx = with(LocalDensity.current) { topLevelNavEdgePadding.toPx() }
+    var hiddenDistancePx by remember(useVerticalToolbar) { mutableFloatStateOf(0f) }
+    val animatedOffsetPx by animateFloatAsState(
+        targetValue = if (visibilityController.hidden) hiddenDistancePx + edgePaddingPx else 0f,
+        animationSpec = tween(durationMillis = topLevelNavAnimationDurationMillis),
+        label = "top level nav offset"
+    )
+    val animatedModifier = modifier
+        .onSizeChanged { size ->
+            hiddenDistancePx = if (useVerticalToolbar) size.width.toFloat() else size.height.toFloat()
+        }
+        .graphicsLayer {
+            if (useVerticalToolbar) {
+                translationX = -animatedOffsetPx
+            } else {
+                translationY = animatedOffsetPx
+            }
+        }
+    val tabs: @Composable () -> Unit = {
+        TopLevelRoute.entries.forEach { tab ->
+            TopLevelFloatingNavigationItem(
+                tab = tab,
+                selected = currentTab == tab,
+                onClick = { onTabChange(tab) }
+            )
+        }
+    }
+    val searchFab: @Composable () -> Unit = {
+        FloatingActionButton(
+            onClick = onNavigateToSearch,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "搜索"
+            )
+        }
+    }
+
+    if (useVerticalToolbar) {
+        Column(
+            modifier = animatedModifier,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                shape = toolbarShape,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                Column(modifier = Modifier.padding(8.dp), content = { tabs() })
+            }
+            Spacer(modifier = Modifier.height(topLevelNavGap))
+            searchFab()
+        }
+    } else {
+        Row(
+            modifier = animatedModifier,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = toolbarShape,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), content = { tabs() })
+            }
+            Spacer(modifier = Modifier.width(topLevelNavGap))
+            searchFab()
+        }
+    }
+}
+
+@Composable
+private fun TopLevelFloatingNavigationItem(
+    tab: TopLevelRoute,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    if (selected) {
+        FilledIconButton(onClick = onClick) {
+            Icon(
+                imageVector = tab.icon,
+                contentDescription = tab.label
+            )
+        }
+    } else {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = tab.icon,
+                contentDescription = tab.label,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Stable
+private class TopLevelNavVisibilityController(
+    thresholdPx: Float,
+    initialHidden: Boolean = false
+) {
+    private val triggerThresholdPx = thresholdPx
+    private var accumulatedScroll = 0f
+
+    var hidden by mutableStateOf(initialHidden)
+        private set
+
+    val connection = object : NestedScrollConnection {
+        @Suppress("SameReturnValue")
+        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            if (source != NestedScrollSource.UserInput) return Offset.Zero
+            if (available.y == 0f) return Offset.Zero
+            if (kotlin.math.abs(available.y) < kotlin.math.abs(available.x)) return Offset.Zero
+            updateVisibility(available.y)
+            return Offset.Zero
+        }
+    }
+
+    private fun updateVisibility(deltaY: Float) {
+        if (deltaY == 0f) return
+        if ((deltaY < 0f && accumulatedScroll > 0f) || (deltaY > 0f && accumulatedScroll < 0f)) {
+            accumulatedScroll = 0f
+        }
+        accumulatedScroll += deltaY
+        when {
+            accumulatedScroll <= -triggerThresholdPx -> {
+                if (!hidden) {
+                    hidden = true
                 }
+                accumulatedScroll = 0f
+            }
+            accumulatedScroll >= triggerThresholdPx -> {
+                if (hidden) {
+                    hidden = false
+                }
+                accumulatedScroll = 0f
             }
         }
     }
 }
 
+@Composable
+private fun rememberTopLevelNavVisibilityController(): TopLevelNavVisibilityController {
+    val thresholdPx = with(LocalDensity.current) { topLevelNavScrollThreshold.toPx() }
+    return remember(thresholdPx) {
+        TopLevelNavVisibilityController(thresholdPx = thresholdPx)
+    }
+}
