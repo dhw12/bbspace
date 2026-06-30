@@ -20,12 +20,6 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-}
-
 dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

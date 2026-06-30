@@ -16,6 +16,12 @@ plugins {
 }
 
 subprojects {
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+
     pluginManager.withPlugin("com.android.application") {
         extensions.configure<ApplicationExtension> {
             lint {
@@ -29,12 +35,6 @@ subprojects {
             lint {
                 disable += "NullSafeMutableLiveData"
             }
-        }
-    }
-
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 }

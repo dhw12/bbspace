@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.0"
+val appVersionName: String = (project.findProperty("versionName") as String?) ?: "1.0"
 
 android {
     namespace = "com.naaammme.bbspace.feature.bbspace"
@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     implementation(platform(libs.androidx.compose.bom))
+    api(libs.androidx.compose.material.icons.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.androidx.activity.compose)

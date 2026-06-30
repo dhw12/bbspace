@@ -36,8 +36,10 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(platform(libs.androidx.compose.bom))
+    api(libs.androidx.compose.material.icons.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.hilt.navigation.compose)

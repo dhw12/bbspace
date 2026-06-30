@@ -6,16 +6,16 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-val signingStoreFile = providers.gradleProperty("SIGNING_STORE_FILE").orNull
+val signingStoreFile: String? = providers.gradleProperty("SIGNING_STORE_FILE").orNull
     ?: System.getenv("SIGNING_STORE_FILE")
-val signingStorePassword = providers.gradleProperty("SIGNING_STORE_PASSWORD").orNull
+val signingStorePassword: String? = providers.gradleProperty("SIGNING_STORE_PASSWORD").orNull
     ?: System.getenv("SIGNING_STORE_PASSWORD")
-val signingKeyAlias = providers.gradleProperty("SIGNING_KEY_ALIAS").orNull
+val signingKeyAlias: String? = providers.gradleProperty("SIGNING_KEY_ALIAS").orNull
     ?: System.getenv("SIGNING_KEY_ALIAS")
-val signingKeyPassword = providers.gradleProperty("SIGNING_KEY_PASSWORD").orNull
+val signingKeyPassword: String? = providers.gradleProperty("SIGNING_KEY_PASSWORD").orNull
     ?: System.getenv("SIGNING_KEY_PASSWORD")
     ?: signingStorePassword
-val hasReleaseSigning =
+val hasReleaseSigning: Boolean =
     !signingStoreFile.isNullOrBlank() &&
         !signingStorePassword.isNullOrBlank() &&
         !signingKeyAlias.isNullOrBlank() &&
@@ -89,12 +89,6 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-    }
-}
-
 dependencies {
     implementation(project(":feature:home"))
     implementation(project(":feature:dynamic"))
@@ -139,6 +133,7 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.material.icons.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.androidx.core.ktx)

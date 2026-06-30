@@ -23,7 +23,6 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                     targetCompatibility = JavaVersion.VERSION_17
                 }
 
-
                 buildFeatures {
                     buildConfig = true
                 }
