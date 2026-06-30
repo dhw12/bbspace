@@ -7,6 +7,7 @@ import com.naaammme.bbspace.core.settings.AppSettings
 import com.naaammme.bbspace.core.designsystem.theme.AnimationSpeed
 import com.naaammme.bbspace.core.designsystem.theme.CornerStyle
 import com.naaammme.bbspace.core.designsystem.theme.FrameRateMode
+import com.naaammme.bbspace.core.designsystem.theme.PaletteStyle
 import com.naaammme.bbspace.core.designsystem.theme.ThemeConfig
 import com.naaammme.bbspace.core.designsystem.theme.ThemeMode
 import com.naaammme.bbspace.core.designsystem.theme.TransitionStyle
@@ -125,6 +126,12 @@ class SettingsViewModel @Inject constructor(
     fun updateUseDynamicColor(use: Boolean) {
         viewModelScope.launch {
             appSettings.updateUseDynamicColor(use)
+        }
+    }
+
+    fun updatePaletteStyle(style: PaletteStyle) {
+        viewModelScope.launch {
+            appSettings.updatePaletteStyle(style)
         }
     }
 

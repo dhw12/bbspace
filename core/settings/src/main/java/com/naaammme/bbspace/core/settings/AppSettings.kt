@@ -12,6 +12,7 @@ import com.naaammme.bbspace.core.designsystem.theme.AnimationSpeed
 import com.naaammme.bbspace.core.designsystem.theme.CornerStyle
 import com.naaammme.bbspace.core.designsystem.theme.DEFAULT_PULL_REFRESH_DISTANCE_DP
 import com.naaammme.bbspace.core.designsystem.theme.FrameRateMode
+import com.naaammme.bbspace.core.designsystem.theme.PaletteStyle
 import com.naaammme.bbspace.core.designsystem.theme.ThemeConfig
 import com.naaammme.bbspace.core.designsystem.theme.ThemeMode
 import com.naaammme.bbspace.core.designsystem.theme.TransitionStyle
@@ -41,6 +42,7 @@ class AppSettings @Inject constructor(
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val seedColorKey = intPreferencesKey("seed_color")
     private val useDynamicColorKey = booleanPreferencesKey("use_dynamic_color")
+    private val paletteStyleKey = stringPreferencesKey("palette_style")
     private val swapBaseColorsKey = booleanPreferencesKey("swap_base_colors")
     private val fontScaleKey = floatPreferencesKey("font_scale")
     private val uiScaleKey = floatPreferencesKey("ui_scale")
@@ -65,6 +67,8 @@ class AppSettings @Inject constructor(
                 ?: defaultThemeConfig.themeMode,
             seedColor = Color(prefs[seedColorKey] ?: defaultThemeConfig.seedColor.toArgb()),
             useDynamicColor = prefs[useDynamicColorKey] ?: defaultThemeConfig.useDynamicColor,
+            paletteStyle = prefs[paletteStyleKey]?.let { PaletteStyle.valueOf(it) }
+                ?: defaultThemeConfig.paletteStyle,
             swapBaseColors = prefs[swapBaseColorsKey] ?: defaultThemeConfig.swapBaseColors,
             fontScale = prefs[fontScaleKey] ?: defaultThemeConfig.fontScale,
             uiScale = prefs[uiScaleKey] ?: defaultThemeConfig.uiScale,
@@ -94,6 +98,10 @@ class AppSettings @Inject constructor(
 
     suspend fun updateUseDynamicColor(use: Boolean) {
         context.appSettingsDataStore.edit { it[useDynamicColorKey] = use }
+    }
+
+    suspend fun updatePaletteStyle(style: PaletteStyle) {
+        context.appSettingsDataStore.edit { it[paletteStyleKey] = style.name }
     }
 
     suspend fun updateSwapBaseColors(enabled: Boolean) {

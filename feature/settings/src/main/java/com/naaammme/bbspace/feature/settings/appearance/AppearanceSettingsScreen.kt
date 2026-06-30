@@ -24,6 +24,7 @@ import com.naaammme.bbspace.core.designsystem.theme.AnimationSpeed
 import com.naaammme.bbspace.core.designsystem.theme.CornerStyle
 import com.naaammme.bbspace.core.designsystem.theme.DEFAULT_PULL_REFRESH_DISTANCE_DP
 import com.naaammme.bbspace.core.designsystem.theme.PresetColors
+import com.naaammme.bbspace.core.designsystem.theme.PaletteStyle
 import com.naaammme.bbspace.core.designsystem.theme.ThemeMode
 import com.naaammme.bbspace.core.designsystem.theme.TransitionStyle
 import com.naaammme.bbspace.feature.settings.components.SettingSwitch
@@ -66,9 +67,16 @@ fun AppearanceSettingsScreen(
             item {
                 SettingSwitch(
                     title = "动态取色",
-                    subtitle = "Android 12+ 从壁纸提取颜色",
+                    subtitle = "Android 12+ 使用系统动态配色",
                     checked = config.useDynamicColor,
                     onCheckedChange = viewModel::updateUseDynamicColor
+                )
+            }
+
+            item {
+                PaletteStyleSelector(
+                    selected = config.paletteStyle,
+                    onSelect = viewModel::updatePaletteStyle
                 )
             }
 
@@ -235,6 +243,46 @@ private fun ColorItem(
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun PaletteStyleSelector(
+    selected: PaletteStyle,
+    onSelect: (PaletteStyle) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("调色盘风格", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+            PaletteStyle.entries.forEach { style ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = { onSelect(style) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = paletteStyleLabel(style),
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (style == selected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Spacer(Modifier.size(24.dp))
+                    }
+                }
+            }
         }
     }
 }
@@ -495,6 +543,14 @@ private fun transitionStyleLabel(style: TransitionStyle): String = when (style) 
     TransitionStyle.SHARED_AXIS_Z -> "缩放"
     TransitionStyle.FADE_THROUGH -> "淡入淡出"
     TransitionStyle.SLIDE -> "滑动"
+}
+
+private fun paletteStyleLabel(style: PaletteStyle): String = when (style) {
+    PaletteStyle.TONAL_SPOT -> "特调"
+    PaletteStyle.EXPRESSIVE -> "表现力"
+    PaletteStyle.NEUTRAL -> "中性"
+    PaletteStyle.VIBRANT -> "鲜艳"
+    PaletteStyle.MONOCHROME -> "黑白"
 }
 
 @Composable

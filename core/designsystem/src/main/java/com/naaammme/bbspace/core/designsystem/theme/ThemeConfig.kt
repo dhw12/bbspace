@@ -8,6 +8,7 @@ data class ThemeConfig(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val seedColor: Color = Color(0xFFFB7299),
     val useDynamicColor: Boolean = true,
+    val paletteStyle: PaletteStyle = PaletteStyle.TONAL_SPOT,
     val swapBaseColors: Boolean = false,
     val fontScale: Float = 1.0f,
     val uiScale: Float = 1.0f,
@@ -41,6 +42,14 @@ enum class TransitionStyle {
 
 enum class ThemeMode {
     LIGHT, DARK, SYSTEM
+}
+
+enum class PaletteStyle {
+    TONAL_SPOT,
+    EXPRESSIVE,
+    NEUTRAL,
+    VIBRANT,
+    MONOCHROME
 }
 
 enum class AnimationSpeed(val multiplier: Float) {
