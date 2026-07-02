@@ -409,8 +409,7 @@ fun AppNavHost(
             onOpenDownloadCache = openDownloadFromVideo,
             onStartDownload = downloadViewModel::enqueueDownload,
             videoViewModel = videoViewModel,
-            liveViewModel = liveViewModel,
-            modifier = Modifier.align(Alignment.BottomEnd)
+            liveViewModel = liveViewModel
         )
     }
 }

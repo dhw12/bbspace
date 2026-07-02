@@ -41,7 +41,7 @@ private const val miniPlayerAspectRatio = 16f / 9f
 private val miniPlayerStashPeek = 28.dp
 private const val miniPlayerStashTriggerFraction = 0.5f
 private const val miniPlayerSettleVelocityThreshold = 1800f
-private val miniPlayerBottomGap = 72.dp
+private val miniPlayerBottomGap = 12.dp
 private val miniPlayerEdgePullHandle = 32.dp
 
 private class SettleJobHolder {
@@ -82,6 +82,9 @@ internal fun DraggableMiniPlayerHost(
         val maxYPxFloat = remember(hostHeightPx, safeBottomPx, bottomGapPx, playerHeightPx) {
             (hostHeightPx - safeBottomPx - bottomGapPx - playerHeightPx).coerceAtLeast(0).toFloat()
         }
+        val initialYOffsetPx = remember(maxYPxFloat, minYPx, density) {
+            (maxYPxFloat - with(density) { 60.dp.roundToPx().toFloat() }).coerceAtLeast(minYPx)
+        }
         val stashPeekPx = with(density) { miniPlayerStashPeek.roundToPx() }
         val edgePullHandlePx = with(density) { miniPlayerEdgePullHandle.roundToPx().toFloat() }
         val stashOffsetPx = remember(playerWidthPx, stashPeekPx) {
@@ -108,7 +111,7 @@ internal fun DraggableMiniPlayerHost(
                 offsetX.coerceIn(minXPx, maxStashedXPx)
             }
             offsetY = if (offsetY.isNaN()) {
-                maxYPxFloat
+                initialYOffsetPx
             } else {
                 offsetY.coerceIn(minYPx, maxYPxFloat)
             }
@@ -118,7 +121,7 @@ internal fun DraggableMiniPlayerHost(
             modifier = Modifier
                 .graphicsLayer {
                     translationX = if (offsetX.isNaN()) maxVisibleXPx else offsetX
-                    translationY = if (offsetY.isNaN()) maxYPxFloat else offsetY
+                    translationY = if (offsetY.isNaN()) initialYOffsetPx else offsetY
                 }
                 .systemGestureExclusion { coords ->
                     val width = coords.size.width.toFloat()
