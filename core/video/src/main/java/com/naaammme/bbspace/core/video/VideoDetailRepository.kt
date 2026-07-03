@@ -15,6 +15,7 @@ import com.bapis.bilibili.app.viewunite.v1.TabType
 import com.bapis.bilibili.app.viewunite.v1.ViewReply
 import com.bapis.bilibili.app.viewunite.v1.ViewReq
 import com.bapis.bilibili.pagination.Pagination
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.ResolvedVideoIds
 import com.naaammme.bbspace.core.model.VideoDetail
@@ -165,7 +166,7 @@ class VideoDetailRepository @Inject constructor(
         return VideoDetailResult(
             detail = VideoDetail(
                 title = title.ifBlank { "视频详情" },
-                cover = reply.arc.cover.toHttps().ifBlank { null },
+                cover = reply.arc.cover.httpsImageUrl().ifBlank { null },
                 owner = mapOwner(reply),
                 stat = mapStat(reply.arc.stat),
                 pubTs = pubTs,
@@ -192,7 +193,7 @@ class VideoDetailRepository @Inject constructor(
             name = name,
             fansText = fansText,
             arcCountText = owner.arcCount.ifBlank { null },
-            face = owner.face.toHttps().ifBlank { null }
+            face = owner.face.httpsImageUrl().ifBlank { null }
         )
     }
 
@@ -222,7 +223,7 @@ class VideoDetailRepository @Inject constructor(
                     cid = ids.cid,
                     title = epTitle,
                     subTitle = ep.coverRightText.ifBlank { null },
-                    cover = ep.cover.toHttps().ifBlank { null }
+                    cover = ep.cover.httpsImageUrl().ifBlank { null }
                 )
             }
             if (eps.isEmpty()) {
@@ -264,7 +265,7 @@ class VideoDetailRepository @Inject constructor(
                 cid = ep.cid,
                 title = title,
                 subTitle = ep.subtitle.ifBlank { null },
-                cover = ep.cover.toHttps().ifBlank { null }
+                cover = ep.cover.httpsImageUrl().ifBlank { null }
             )
         }
         if (eps.isEmpty()) return null
@@ -327,7 +328,7 @@ class VideoDetailRepository @Inject constructor(
                     )
                 ),
                 title = title,
-                cover = basic.cover.toHttps(),
+                cover = basic.cover.httpsImageUrl(),
                 author = basic.author.title.ifBlank { null },
                 durationText = card.av.durationText.ifBlank {
                     card.av.duration.takeIf { it > 0L }?.let(::formatDur)
@@ -509,10 +510,6 @@ class VideoDetailRepository @Inject constructor(
         } else {
             String.format(Locale.ROOT, "%d:%02d", minute, second)
         }
-    }
-
-    private fun String.toHttps(): String {
-        return replace("http://", "https://")
     }
 
     private companion object {

@@ -11,6 +11,7 @@ import com.bapis.bilibili.polymer.app.search.v1.Item
 import com.bapis.bilibili.polymer.app.search.v1.SearchAllRequest
 import com.bapis.bilibili.polymer.app.search.v1.SearchAllResponse
 import com.bapis.bilibili.polymer.app.search.v1.Sort
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.model.SearchFeedbackItem as SearchFdItem
 import com.naaammme.bbspace.core.model.SearchFeedbackSec
 import com.naaammme.bbspace.core.model.SearchFilter
@@ -137,7 +138,7 @@ class SearchRepository @Inject constructor(
             cid = cid,
             target = target,
             title = av.title,
-            cover = av.cover.replace("http://", "https://"),
+            cover = av.cover.httpsImageUrl(),
             author = av.author,
             duration = av.duration,
             viewText = av.viewContent.ifBlank { av.play.toLong().formatCount() },
@@ -158,7 +159,7 @@ class SearchRepository @Inject constructor(
         return SearchAuthor(
             mid = mid,
             name = name.replace("<em class=\"keyword\">", "").replace("</em>", ""),
-            avatar = author.cover.replace("http://", "https://").takeIf(String::isNotBlank),
+            avatar = author.cover.httpsImageUrl().takeIf(String::isNotBlank),
             sign = author.sign.takeIf(String::isNotBlank),
             fansText = author.fans.toLong().formatCount(),
             archivesText = author.archives.toLong().formatCount(),

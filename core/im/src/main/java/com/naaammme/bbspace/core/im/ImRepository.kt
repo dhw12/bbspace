@@ -27,6 +27,7 @@ import com.bapis.bilibili.im.type.Msg
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 import com.naaammme.bbspace.core.common.AuthProvider
+import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
 import com.naaammme.bbspace.core.model.ImConversationPage
 import com.naaammme.bbspace.core.model.ImMessage
 import com.naaammme.bbspace.core.model.ImPage
@@ -345,7 +346,7 @@ class ImRepository @Inject constructor(
             while (reader.hasNext()) {
                 when (reader.nextName()) {
                     "title" -> title = reader.nextString()
-                    "cover" -> coverUrl = reader.nextString().takeIf(String::isNotBlank)?.replace("http://", "https://")
+                    "cover" -> coverUrl = reader.nextString().takeIf(String::isNotBlank).httpsImageUrlOrNull()
                     "view" -> viewCount = reader.nextLong()
                     "rid" -> shareAid = reader.nextLong()
                     else -> reader.skipValue()
@@ -396,7 +397,7 @@ class ImRepository @Inject constructor(
             noticeTitle = title,
             noticeText = text,
             noticeActionText = actionText,
-            noticeCoverUrl = coverUrl?.replace("http://", "https://"),
+            noticeCoverUrl = coverUrl.httpsImageUrlOrNull(),
             noticeDetailText = detailText
         )
     }
@@ -571,7 +572,7 @@ class ImRepository @Inject constructor(
             if (imageSrc.srcType != ResourceSource.SourceType.SRC_TYPE_URL) {
                 return@firstNotNullOfOrNull null
             }
-            imageSrc.remote.url.takeIf { it.isNotBlank() }?.replace("http://", "https://")
+            imageSrc.remote.url.takeIf { it.isNotBlank() }.httpsImageUrlOrNull()
         }
     }
 

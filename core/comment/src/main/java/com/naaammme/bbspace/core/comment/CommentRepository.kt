@@ -18,6 +18,7 @@ import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.published.PublishedRecordRepository
 import com.naaammme.bbspace.core.model.COMMENT_FILTER_ALL
@@ -399,7 +400,7 @@ class CommentRepository @Inject constructor(
         val pictures = info.content.picturesList.mapNotNull { picture ->
             picture.imgSrc.takeIf(String::isNotBlank)?.let { url ->
                 CommentPicture(
-                    url = url.toHttps(),
+                    url = url.httpsImageUrl(),
                     width = picture.imgWidth.toFloat(),
                     height = picture.imgHeight.toFloat()
                 )
@@ -427,7 +428,7 @@ class CommentRepository @Inject constructor(
             user = CommentUser(
                 mid = info.mid,
                 name = name,
-                face = user.face.toHttps().ifBlank { null },
+                face = user.face.httpsImageUrl().ifBlank { null },
                 level = user.level.toInt().takeIf { it > 0 },
                 vipLabel = user.vipLabelText.ifBlank { null },
                 medal = medal
@@ -466,7 +467,7 @@ class CommentRepository @Inject constructor(
             user = CommentUser(
                 mid = mid,
                 name = name,
-                face = member?.optString("avatar").orEmpty().toHttps().ifBlank { null },
+                face = member?.optString("avatar").orEmpty().httpsImageUrl().ifBlank { null },
                 level = member?.optJSONObject("level_info")
                     ?.optInt("current_level")
                     ?.takeIf { it > 0 },
@@ -623,7 +624,7 @@ class CommentRepository @Inject constructor(
         emote: JSONObject
     ): CommentEmote? {
         val url = emote.optString("url")
-            .toHttps()
+            .httpsImageUrl()
             .ifBlank { return null }
         return CommentEmote(
             text = emote.optString("text").ifBlank { token },
@@ -633,7 +634,7 @@ class CommentRepository @Inject constructor(
     }
 
     private fun ReplyEmote.toModel(token: String): CommentEmote? {
-        val url = url.toHttps().ifBlank { return null }
+        val url = url.httpsImageUrl().ifBlank { return null }
         return CommentEmote(
             text = text.ifBlank { token },
             url = url,
@@ -655,10 +656,6 @@ class CommentRepository @Inject constructor(
         set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
-    }
-
-    private fun String.toHttps(): String {
-        return replace("http://", "https://")
     }
 
     suspend fun uploadImage(

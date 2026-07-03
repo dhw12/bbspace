@@ -2,6 +2,7 @@ package com.naaammme.bbspace.core.article
 
 import android.text.format.DateFormat
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
 import com.naaammme.bbspace.core.auth.AuthStore
 import com.naaammme.bbspace.core.model.article.ArticleRecommendItem
 import com.naaammme.bbspace.core.model.article.ArticleRecommendPage
@@ -71,11 +72,11 @@ class ArticleRecommendRepository @Inject constructor(
             id = id,
             title = title,
             summary = obj.optString("summary").blankToNull(),
-            cover = obj.optString("banner_url").toHttps()
-                ?: obj.optJSONArray("image_urls")?.firstStringOrNull()?.toHttps(),
+            cover = obj.optString("banner_url").blankToNull().httpsImageUrlOrNull()
+                ?: obj.optJSONArray("image_urls")?.firstStringOrNull().httpsImageUrlOrNull(),
             authorMid = author?.optLongCompat("mid")?.takeIf { it > 0L },
             authorName = author?.optString("name").blankToNull(),
-            authorFace = author?.optString("face").toHttps(),
+            authorFace = author?.optString("face").blankToNull().httpsImageUrlOrNull(),
             categoryName = obj.optJSONObject("category")?.optString("name").blankToNull(),
             publishTimeText = obj.optLong("publish_time")
                 .takeIf { it > 0L }
@@ -103,10 +104,6 @@ class ArticleRecommendRepository @Inject constructor(
 
     private fun String?.blankToNull(): String? {
         return this?.trim()?.takeIf { it.isNotBlank() }
-    }
-
-    private fun String?.toHttps(): String? {
-        return this?.replace("http://", "https://")?.trim()?.takeIf { it.isNotBlank() }
     }
 
     private companion object {

@@ -2,6 +2,7 @@ package com.naaammme.bbspace.core.space
 
 import android.text.format.DateFormat
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.auth.AuthStore
 import com.naaammme.bbspace.core.model.SpaceArchivePage
 import com.naaammme.bbspace.core.model.SpaceHome
@@ -121,7 +122,7 @@ class SpaceRepository @Inject constructor(
             bannerUrl = data.optJSONObject("images")
                 ?.optString("imgUrl")
                 .orEmpty()
-                .toHttps()
+                .httpsImageUrl()
                 .ifBlank { null },
             videos = videos,
             orders = orders,
@@ -158,7 +159,7 @@ class SpaceRepository @Inject constructor(
         return SpaceProfile(
             mid = card.optLongCompat("mid"),
             name = name,
-            face = card?.optString("face").orEmpty().toHttps().ifBlank { null },
+            face = card?.optString("face").orEmpty().httpsImageUrl().ifBlank { null },
             sign = card?.optString("sign").orEmpty(),
             level = level,
             fansCount = card?.optLong("fans") ?: 0L,
@@ -204,7 +205,7 @@ class SpaceRepository @Inject constructor(
                     ?: VideoTargetTool.cid(uri)
                     ?: continue
                 val title = item.optString("title").ifBlank { continue }
-                val cover = item.optString("cover").toHttps().ifBlank { continue }
+                val cover = item.optString("cover").httpsImageUrl().ifBlank { continue }
                 val target = VideoTarget.Ugc(
                     aid = aid,
                     cid = cid,
@@ -274,10 +275,6 @@ class SpaceRepository @Inject constructor(
 
     private fun localTime(): Int {
         return TimeZone.getDefault().rawOffset / 3_600_000
-    }
-
-    private fun String.toHttps(): String {
-        return replace("http://", "https://")
     }
 
     private fun JSONObject?.optLongCompat(key: String): Long {

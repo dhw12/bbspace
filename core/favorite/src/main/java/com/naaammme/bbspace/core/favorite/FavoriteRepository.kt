@@ -1,6 +1,7 @@
 package com.naaammme.bbspace.core.favorite
 
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
 import com.naaammme.bbspace.core.auth.AuthStore
 import com.naaammme.bbspace.core.model.FavoriteContentCursor
 import com.naaammme.bbspace.core.model.FavoriteContentItem
@@ -119,7 +120,7 @@ class FavoriteRepository @Inject constructor(
         return FavoriteFolder(
             fid = fid,
             title = title,
-            cover = item.optString("cover").toHttps(),
+            cover = item.optString("cover").blankToNull().httpsImageUrlOrNull(),
             attrDesc = item.optString("attr_desc").cleanAttrDesc(),
             mediaCount = item.optInt("media_count"),
             createdAtSec = item.optLong("ctime"),
@@ -157,7 +158,7 @@ class FavoriteRepository @Inject constructor(
             oid = oid,
             otype = otype,
             title = title,
-            cover = item.optString("cover").toHttps(),
+            cover = item.optString("cover").blankToNull().httpsImageUrlOrNull(),
             ownerName = upper?.optString("name").blankToNull(),
             viewText = cntInfo?.optString("view_text_1").blankToNull(),
             danmakuText = item.optString("right_text").blankToNull(),
@@ -213,8 +214,6 @@ class FavoriteRepository @Inject constructor(
     }
 
     private fun String?.blankToNull(): String? = this?.takeIf { it.isNotBlank() }
-
-    private fun String?.toHttps(): String? = this?.replace("http://", "https://")?.blankToNull()
 
     private fun String?.cleanAttrDesc(): String? {
         return this?.trim()
