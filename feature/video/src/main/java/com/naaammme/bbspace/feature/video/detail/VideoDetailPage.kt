@@ -285,6 +285,7 @@ private fun LazyListScope.detailItems(
     ids: ResolvedVideoIds,
     detailLoading: Boolean,
     detailError: String?,
+    videoActionState: VideoActionUiState,
     itemMod: Modifier,
     descOn: Boolean,
     tagOn: Boolean,
@@ -295,6 +296,10 @@ private fun LazyListScope.detailItems(
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
+    onLikeClick: () -> Unit,
+    onCoinClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onDismissActionMessage: () -> Unit,
     onOpenComments: () -> Unit
 ) {
     val curCid = ids.cid.takeIf { it > 0L }
@@ -336,12 +341,17 @@ private fun LazyListScope.detailItems(
                 VideoSummarySection(
                     detail = detail,
                     ids = ids,
+                    videoActionState = videoActionState,
                     descOn = descOn,
                     tagOn = tagOn,
                     onToggleDesc = onToggleDesc,
                     onToggleTag = onToggleTag,
                     onOpenSpace = onOpenSpace,
                     onDownloadClick = onDownloadClick,
+                    onLikeClick = onLikeClick,
+                    onCoinClick = onCoinClick,
+                    onFavoriteClick = onFavoriteClick,
+                    onDismissActionMessage = onDismissActionMessage,
                     onOpenComments = onOpenComments,
                     modifier = itemMod
                 )
@@ -409,6 +419,7 @@ private fun LazyListScope.detailItems(
 private fun VideoSummarySection(
     detail: VideoDetail,
     ids: ResolvedVideoIds,
+    videoActionState: VideoActionUiState,
     modifier: Modifier = Modifier,
     descOn: Boolean,
     tagOn: Boolean,
@@ -416,6 +427,10 @@ private fun VideoSummarySection(
     onToggleTag: () -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
+    onLikeClick: () -> Unit,
+    onCoinClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onDismissActionMessage: () -> Unit,
     onOpenComments: () -> Unit
 ) {
     val spaceRoute = detail.toSpaceRouteOrNull(ids.aid.takeIf { it > 0L })
@@ -442,7 +457,12 @@ private fun VideoSummarySection(
         )
         ActionCapsule(
             stat = detail.stat,
-            onDownloadClick = onDownloadClick
+            videoActionState = videoActionState,
+            onLikeClick = onLikeClick,
+            onCoinClick = onCoinClick,
+            onFavoriteClick = onFavoriteClick,
+            onDownloadClick = onDownloadClick,
+            onDismissActionMessage = onDismissActionMessage
         )
     }
 }
