@@ -3,9 +3,11 @@ package com.naaammme.bbspace.infra.network
 import com.naaammme.bbspace.infra.crypto.AppSigner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONException
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -58,6 +60,25 @@ class BiliRestClient @Inject constructor(
     }
 
     /**
+     * 发送普通表单 POST 请求并要求 code == 0
+     *
+     * 用于 Cookie + csrf 鉴权的 Web API。
+     */
+    suspend fun postForm(
+        url: String,
+        params: Map<String, String>,
+        headers: Map<String, String> = emptyMap(),
+        profile: BiliRestProfile = BiliRestProfile.APP
+    ): JSONObject {
+        val requestBody = FormBody.Builder().apply {
+            params.forEach { (key, value) -> add(key, value) }
+        }.build()
+        val requestBuilder = Request.Builder().url(url).post(requestBody).withHeaders(profile)
+        headers.forEach { (key, value) -> requestBuilder.header(key, value) }
+        return requireSuccess(executeJson(requestBuilder.build()))
+    }
+
+    /**
      * 发送签名后的 GET 请求并要求 code == 0
      *
      * GET 参数会被签名后直接拼进 URL query。
@@ -104,7 +125,12 @@ class BiliRestClient @Inject constructor(
     private suspend fun executeJson(request: Request): JSONObject {
         return withContext(Dispatchers.IO) {
             val resp = okHttpClient.newCall(request).execute()
-            JSONObject(resp.body?.string() ?: throw BiliApiException(-1, "Empty response"))
+            val body = resp.body?.string() ?: throw BiliApiException(-1, "Empty response")
+            try {
+                JSONObject(body)
+            } catch (e: JSONException) {
+                throw BiliApiException(-1, "服务器返回非 JSON 响应，请检查登录状态或接口权限")
+            }
         }
     }
 
