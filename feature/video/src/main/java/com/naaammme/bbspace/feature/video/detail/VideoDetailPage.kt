@@ -635,19 +635,19 @@ private fun ActionCapsule(
                 ActionChip(
                     label = if (videoActionState.liked) "已点赞" else "点赞",
                     value = it.like,
-                    enabled = videoActionState.pending != VideoUserAction.Like,
+                    enabled = videoActionState.pending != VideoUserAction.LIKE,
                     onClick = onLikeClick
                 )
                 ActionChip(
                     label = if (videoActionState.coined) "已投币" else "投币",
                     value = it.coin,
-                    enabled = videoActionState.pending != VideoUserAction.Coin,
+                    enabled = videoActionState.pending != VideoUserAction.COIN,
                     onClick = onCoinClick
                 )
                 ActionChip(
                     label = if (videoActionState.favorited) "已收藏" else "收藏",
                     value = it.fav,
-                    enabled = videoActionState.pending != VideoUserAction.Favorite,
+                    enabled = videoActionState.pending != VideoUserAction.FAVORITE,
                     onClick = onFavoriteClick
                 )
                 ActionChip("分享", it.share)
