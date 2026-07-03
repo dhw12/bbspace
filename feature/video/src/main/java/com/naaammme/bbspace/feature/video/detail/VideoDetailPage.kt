@@ -94,6 +94,7 @@ internal fun VideoDetailPage(
     onLikeClick: () -> Unit,
     onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onFavoriteLongClick: () -> Unit,
     onDismissActionMessage: () -> Unit,
     onOpenEpisode: (VideoTarget) -> Unit,
     onSwitchPage: (Long) -> Unit
@@ -160,6 +161,7 @@ internal fun VideoDetailPage(
                 onLikeClick = onLikeClick,
                 onCoinClick = onCoinClick,
                 onFavoriteClick = onFavoriteClick,
+                onFavoriteLongClick = onFavoriteLongClick,
                 onDismissActionMessage = onDismissActionMessage
             )
 
