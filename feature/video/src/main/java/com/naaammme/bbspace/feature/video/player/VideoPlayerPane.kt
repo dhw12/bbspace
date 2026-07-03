@@ -609,6 +609,7 @@ private fun PlayerCtrlBarHost(
         audioText = state.currentAudio?.let { getAudioName(it.id, short = true) } ?: "音频",
         qualityText = getQualityName(state.playbackSource, state.currentStream),
         speedText = formatSpeed(state.speed),
+        loopText = if (state.isLooping) "循环" else "单次",
         fullText = if (isFull) "还原" else "全屏",
         sliderVal = sliderVal,
         sliderOn = durationMs > 0L,
@@ -618,6 +619,7 @@ private fun PlayerCtrlBarHost(
         onAudioClick = onShowA,
         onQualityClick = onShowQ,
         onSpeedClick = onShowSp,
+        onLoopClick = viewModel::toggleLooping,
         onFullClick = onToggleFull,
         onSeekChange = { frac ->
             onShowCtrlChange(true)
@@ -639,6 +641,7 @@ private fun PlayerCtrlBar(
     audioText: String,
     qualityText: String,
     speedText: String,
+    loopText: String,
     fullText: String,
     sliderVal: Float,
     sliderOn: Boolean,
@@ -648,6 +651,7 @@ private fun PlayerCtrlBar(
     onAudioClick: () -> Unit,
     onQualityClick: () -> Unit,
     onSpeedClick: () -> Unit,
+    onLoopClick: () -> Unit,
     onFullClick: () -> Unit,
     onSeekChange: (Float) -> Unit,
     onSeekDone: () -> Unit,
@@ -724,6 +728,12 @@ private fun PlayerCtrlBar(
                     text = speedText,
                     on = true,
                     onClick = onSpeedClick,
+                    modifier = Modifier.weight(1f)
+                )
+                CtrlBtn(
+                    text = loopText,
+                    on = true,
+                    onClick = onLoopClick,
                     modifier = Modifier.weight(1f)
                 )
                 CtrlBtn(

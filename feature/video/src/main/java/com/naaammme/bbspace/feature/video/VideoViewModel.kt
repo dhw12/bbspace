@@ -102,6 +102,10 @@ class VideoViewModel @Inject constructor(
         playbackController.setSpeed(speed)
     }
 
+    fun toggleLooping() {
+        playbackController.setLooping(!videoState.value.isLooping)
+    }
+
     fun updateBackgroundPlayback(enabled: Boolean) {
         viewModelScope.launch {
             playerSettings.setBackgroundPlayback(enabled)

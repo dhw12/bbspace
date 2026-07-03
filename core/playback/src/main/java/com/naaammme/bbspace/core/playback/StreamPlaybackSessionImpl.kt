@@ -267,6 +267,11 @@ class StreamPlaybackSessionImpl @Inject constructor(
         playerEngine.setSpeed(speed)
     }
 
+    override fun setLooping(looping: Boolean) {
+        if (_currentTarget.value !is StreamPlaybackTarget.Video) return
+        playerEngine.setLooping(looping)
+    }
+
     // StreamPlaybackSession
     override fun switchVideoQuality(quality: Int) {
         if (_currentTarget.value !is StreamPlaybackTarget.Video) return
@@ -778,6 +783,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
             playWhenReady = state.playWhenReady,
             playbackState = state.playbackState,
             speed = state.speed,
+            isLooping = state.isLooping,
             videoWidth = state.videoWidth,
             videoHeight = state.videoHeight,
             videoDecoderName = state.videoDecoderName,

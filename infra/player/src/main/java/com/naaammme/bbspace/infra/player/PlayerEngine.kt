@@ -36,6 +36,7 @@ interface PlayerEngine {
     fun play()
     fun pause()
     fun setSpeed(speed: Float)
+    fun setLooping(looping: Boolean)
     fun seekTo(positionMs: Long)
     fun setMediaMetadata(metadata: MediaMetadata)
     fun stopForReuse(resetPosition: Boolean = true)
