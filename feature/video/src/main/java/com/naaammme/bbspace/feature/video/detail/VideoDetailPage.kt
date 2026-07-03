@@ -624,6 +624,7 @@ private fun ActionCapsule(
     onLikeClick: () -> Unit,
     onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onFavoriteLongClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onDismissActionMessage: () -> Unit
 ) {
@@ -658,7 +659,8 @@ private fun ActionCapsule(
                     label = if (videoActionState.favorited) "已收藏" else "收藏",
                     value = it.fav,
                     enabled = videoActionState.pending != VideoUserAction.FAVORITE,
-                    onClick = onFavoriteClick
+                    onClick = onFavoriteClick,
+                    onLongClick = onFavoriteLongClick
                 )
                 ActionChip("分享", it.share)
             }
