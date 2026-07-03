@@ -609,9 +609,22 @@ private fun InfoCapsule(
 @Composable
 private fun ActionCapsule(
     stat: VideoStat?,
+    videoActionState: VideoActionUiState,
     modifier: Modifier = Modifier,
-    onDownloadClick: () -> Unit
+    onLikeClick: () -> Unit,
+    onCoinClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onDownloadClick: () -> Unit,
+    onDismissActionMessage: () -> Unit
 ) {
+    val actionMessage = videoActionState.message
+    LaunchedEffect(actionMessage) {
+        if (!actionMessage.isNullOrBlank()) {
+            delay(1800L)
+            onDismissActionMessage()
+        }
+    }
+
     CapsuleCard(modifier = modifier) {
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -619,14 +632,38 @@ private fun ActionCapsule(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             stat?.let {
-                ActionChip("点赞", it.like)
-                ActionChip("投币", it.coin)
-                ActionChip("收藏", it.fav)
+                ActionChip(
+                    label = if (videoActionState.liked) "已点赞" else "点赞",
+                    value = it.like,
+                    enabled = videoActionState.pending != VideoUserAction.Like,
+                    onClick = onLikeClick
+                )
+                ActionChip(
+                    label = if (videoActionState.coined) "已投币" else "投币",
+                    value = it.coin,
+                    enabled = videoActionState.pending != VideoUserAction.Coin,
+                    onClick = onCoinClick
+                )
+                ActionChip(
+                    label = if (videoActionState.favorited) "已收藏" else "收藏",
+                    value = it.fav,
+                    enabled = videoActionState.pending != VideoUserAction.Favorite,
+                    onClick = onFavoriteClick
+                )
                 ActionChip("分享", it.share)
             }
             ActionChip(
                 label = "下载",
                 onClick = onDownloadClick
+            )
+        }
+
+        if (!actionMessage.isNullOrBlank()) {
+            Text(
+                text = actionMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
     }
@@ -717,15 +754,26 @@ private fun ToggleChip(
 private fun ActionChip(
     label: String,
     value: String? = null,
+    enabled: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
+    val clickModifier = if (onClick != null && enabled) {
+        Modifier.clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+    val contentColor = if (enabled) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Surface(
-        modifier = if (onClick != null) {
-            Modifier.clickable(onClick = onClick)
+        modifier = clickModifier,
+        color = if (enabled) {
+            MaterialTheme.colorScheme.secondaryContainer
         } else {
-            Modifier
+            MaterialTheme.colorScheme.surfaceContainerHighest
         },
-        color = MaterialTheme.colorScheme.secondaryContainer,
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Row(
@@ -742,13 +790,13 @@ private fun ActionChip(
                 } else {
                     MaterialTheme.typography.labelMedium
                 },
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+                color = contentColor
             )
             value?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = contentColor
                 )
             }
         }
