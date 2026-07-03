@@ -38,7 +38,7 @@ class VideoViewModel @Inject constructor(
     val player: StateFlow<Player?> = playbackController.player
     val videoState: StateFlow<VideoPlaybackState> = playbackController.videoState
     val playbackProgress: StateFlow<PlaybackProgress> = playbackController.playbackProgress
-    val videoActionState: StateFlow<VideoActionUiState> = _videoActionState
+    internal val videoActionState: StateFlow<VideoActionUiState> = _videoActionState
     val settingsState = playerSettings.state
 
     val commentSubject: CommentSubject?
