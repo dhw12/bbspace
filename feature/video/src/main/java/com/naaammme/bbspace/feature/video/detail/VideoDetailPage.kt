@@ -70,7 +70,10 @@ import com.naaammme.bbspace.core.model.VideoSeason
 import com.naaammme.bbspace.core.model.VideoSeasonEpisode
 import com.naaammme.bbspace.core.model.VideoStat
 import com.naaammme.bbspace.feature.comment.CommentPanel
+import com.naaammme.bbspace.feature.video.VideoActionUiState
+import com.naaammme.bbspace.feature.video.VideoUserAction
 import com.naaammme.bbspace.feature.video.formatDuration
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 @OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -81,10 +84,15 @@ internal fun VideoDetailPage(
     detailLoading: Boolean,
     detailError: String?,
     commentSubject: CommentSubject?,
+    videoActionState: VideoActionUiState,
     contentHorizontalPad: Dp,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
+    onLikeClick: () -> Unit,
+    onCoinClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onDismissActionMessage: () -> Unit,
     onOpenEpisode: (VideoTarget) -> Unit,
     onSwitchPage: (Long) -> Unit
 ) {
@@ -126,6 +134,7 @@ internal fun VideoDetailPage(
                 ids = ids,
                 detailLoading = detailLoading,
                 detailError = detailError,
+                videoActionState = videoActionState,
                 horizontalPad = contentHorizontalPad,
                 infoListState = detailListState,
                 descOn = descOn,
@@ -145,7 +154,11 @@ internal fun VideoDetailPage(
                 },
                 onOpenVideo = onOpenVideo,
                 onOpenSpace = onOpenSpace,
-                onDownloadClick = onDownloadClick
+                onDownloadClick = onDownloadClick,
+                onLikeClick = onLikeClick,
+                onCoinClick = onCoinClick,
+                onFavoriteClick = onFavoriteClick,
+                onDismissActionMessage = onDismissActionMessage
             )
 
             else -> {
@@ -211,6 +224,7 @@ private fun DetailPageContent(
     ids: ResolvedVideoIds,
     detailLoading: Boolean,
     detailError: String?,
+    videoActionState: VideoActionUiState,
     horizontalPad: Dp,
     infoListState: LazyListState,
     descOn: Boolean,
@@ -222,7 +236,11 @@ private fun DetailPageContent(
     onOpenComments: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit
+    onDownloadClick: () -> Unit,
+    onLikeClick: () -> Unit,
+    onCoinClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onDismissActionMessage: () -> Unit
 ) {
     val itemMod = remember(horizontalPad) {
         if (horizontalPad > 0.dp) Modifier.padding(horizontal = horizontalPad) else Modifier
@@ -242,6 +260,7 @@ private fun DetailPageContent(
             ids = ids,
             detailLoading = detailLoading,
             detailError = detailError,
+            videoActionState = videoActionState,
             itemMod = itemMod,
             descOn = descOn,
             tagOn = tagOn,
@@ -252,6 +271,10 @@ private fun DetailPageContent(
             onOpenVideo = onOpenVideo,
             onOpenSpace = onOpenSpace,
             onDownloadClick = onDownloadClick,
+            onLikeClick = onLikeClick,
+            onCoinClick = onCoinClick,
+            onFavoriteClick = onFavoriteClick,
+            onDismissActionMessage = onDismissActionMessage,
             onOpenComments = onOpenComments
         )
     }
