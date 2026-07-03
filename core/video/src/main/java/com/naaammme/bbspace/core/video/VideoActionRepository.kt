@@ -2,16 +2,15 @@ package com.naaammme.bbspace.core.video
 
 import com.naaammme.bbspace.core.auth.AuthStore
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.model.FavoriteFolder
 import com.naaammme.bbspace.infra.network.BiliRestClient
-import com.naaammme.bbspace.infra.network.BiliRestParamBuilder
-import com.naaammme.bbspace.infra.network.BiliRestProfile
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class VideoActionRepository @Inject constructor(
     private val restClient: BiliRestClient,
-    private val restParamBuilder: BiliRestParamBuilder,
     private val authStore: AuthStore
 ) {
     suspend fun likeVideo(aid: Long) {
@@ -43,43 +42,89 @@ class VideoActionRepository @Inject constructor(
         )
     }
 
-    suspend fun favoriteVideo(aid: Long) {
+    suspend fun toggleFavoriteVideo(aid: Long): Boolean {
         check(aid > 0L) { "视频参数无效" }
-        val accessToken = requireAccessToken()
-        val fid = fetchDefaultFavoriteFolderId(accessToken)
-        val ts = System.currentTimeMillis() / 1000
+        val folders = fetchFavoriteFolderStates(aid)
+        val favoritedFolderIds = folders.filter { it.favorited }.map { it.folder.fid }
+        return if (favoritedFolderIds.isNotEmpty()) {
+            updateFavoriteFolders(aid = aid, addIds = emptyList(), delIds = favoritedFolderIds)
+            false
+        } else {
+            val defaultFolderId = folders.firstOrNull()?.folder?.fid ?: error("暂无可用收藏夹")
+            updateFavoriteFolders(aid = aid, addIds = listOf(defaultFolderId), delIds = emptyList())
+            true
+        }
+    }
+
+    suspend fun favoriteVideoToFolder(aid: Long, fid: Long) {
+        check(aid > 0L) { "视频参数无效" }
+        check(fid > 0L) { "收藏夹参数无效" }
+        updateFavoriteFolders(aid = aid, addIds = listOf(fid), delIds = emptyList())
+    }
+
+    suspend fun fetchFavoriteFolders(aid: Long): List<FavoriteFolder> {
+        check(aid > 0L) { "视频参数无效" }
+        return fetchFavoriteFolderStates(aid).map { it.folder }
+    }
+
+    private suspend fun fetchFavoriteFolderStates(aid: Long): List<FavoriteFolderState> {
+        val credential = requireWebCredential()
+        val json = restClient.get(
+            url = "${BiliConstants.BASE_URL_API}$FAVORITE_FOLDER_LIST_ENDPOINT",
+            params = mapOf(
+                "up_mid" to credential.mid.toString(),
+                "rid" to aid.toString(),
+                "type" to VIDEO_RESOURCE_TYPE.toString()
+            ),
+            headers = webHeaders(credential.cookieHeader)
+        )
+        val list = json.getJSONObject("data").optJSONArray("list")
+            ?: error("暂无可用收藏夹")
+        return buildList {
+            for (index in 0 until list.length()) {
+                mapFavoriteFolderState(list.optJSONObject(index))?.let(::add)
+            }
+        }.ifEmpty { error("暂无可用收藏夹") }
+    }
+
+    private suspend fun updateFavoriteFolders(
+        aid: Long,
+        addIds: List<Long>,
+        delIds: List<Long>
+    ) {
+        check(addIds.isNotEmpty() || delIds.isNotEmpty()) { "收藏夹参数无效" }
         val credential = requireWebCredential()
         restClient.postForm(
             url = "${BiliConstants.BASE_URL_API}$FAVORITE_DEAL_ENDPOINT",
             params = mapOf(
                 "rid" to aid.toString(),
                 "type" to VIDEO_RESOURCE_TYPE.toString(),
-                "add_media_ids" to fid.toString(),
-                "del_media_ids" to "",
+                "add_media_ids" to addIds.joinToString(","),
+                "del_media_ids" to delIds.joinToString(","),
                 "csrf" to credential.csrf
             ),
             headers = webHeaders(credential.cookieHeader)
         )
     }
 
-    private suspend fun fetchDefaultFavoriteFolderId(accessToken: String): Long {
-        val ts = System.currentTimeMillis() / 1000
-        val json = restClient.getSigned(
-            url = "${BiliConstants.BASE_URL_API}$MY_FAVORITE_ENDPOINT",
-            params = restParamBuilder.app(BiliRestProfile.APP, ts, accessToken),
-            profile = BiliRestProfile.APP
+    private fun mapFavoriteFolderState(item: JSONObject?): FavoriteFolderState? {
+        item ?: return null
+        val fid = item.optLong("id").takeIf { it > 0L }
+            ?: item.optLong("fid").takeIf { it > 0L }
+            ?: return null
+        val title = item.optString("title").takeIf(String::isNotBlank) ?: return null
+        return FavoriteFolderState(
+            folder = FavoriteFolder(
+                fid = fid,
+                title = title,
+                cover = item.optString("cover").takeIf(String::isNotBlank),
+                attrDesc = item.optString("attr_desc").takeIf(String::isNotBlank),
+                mediaCount = item.optInt("media_count"),
+                createdAtSec = item.optLong("ctime"),
+                isTop = item.optBoolean("is_top")
+            ),
+            favorited = item.optInt("fav_state") > 0
         )
-        val list = json.getJSONObject("data").optJSONArray("list")
-            ?: error("暂无可用收藏夹")
-        for (index in 0 until list.length()) {
-            val fid = list.optJSONObject(index)?.optLong("fid") ?: 0L
-            if (fid > 0L) return fid
-        }
-        error("暂无可用收藏夹")
-    }
-
-    private fun requireAccessToken(): String {
-        return authStore.accessToken.takeIf(String::isNotBlank) ?: error("请先登录")
     }
 
     private fun requireWebCredential(): WebCredential {
@@ -87,7 +132,7 @@ class VideoActionRepository @Inject constructor(
         val csrf = credential.cookies.firstOrNull { it.name == "bili_jct" }?.value
             ?: error("登录凭证缺少 csrf，请重新登录")
         val cookieHeader = credential.cookies.joinToString("; ") { "${it.name}=${it.value}" }
-        return WebCredential(cookieHeader, csrf)
+        return WebCredential(credential.mid, cookieHeader, csrf)
     }
 
     private fun webHeaders(cookieHeader: String): Map<String, String> {
@@ -98,7 +143,13 @@ class VideoActionRepository @Inject constructor(
         )
     }
 
+    private data class FavoriteFolderState(
+        val folder: FavoriteFolder,
+        val favorited: Boolean
+    )
+
     private data class WebCredential(
+        val mid: Long,
         val cookieHeader: String,
         val csrf: String
     )
@@ -107,7 +158,7 @@ class VideoActionRepository @Inject constructor(
         const val LIKE_ENDPOINT = "/x/web-interface/archive/like"
         const val COIN_ENDPOINT = "/x/web-interface/coin/add"
         const val FAVORITE_DEAL_ENDPOINT = "/x/v3/fav/resource/deal"
-        const val MY_FAVORITE_ENDPOINT = "/x/v3/fav/tab/my_fav"
+        const val FAVORITE_FOLDER_LIST_ENDPOINT = "/x/v3/fav/folder/created/list-all"
         const val VIDEO_RESOURCE_TYPE = 2
     }
 }

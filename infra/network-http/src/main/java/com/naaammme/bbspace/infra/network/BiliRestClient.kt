@@ -4,6 +4,7 @@ import com.naaammme.bbspace.infra.crypto.AppSigner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -74,6 +75,24 @@ class BiliRestClient @Inject constructor(
             params.forEach { (key, value) -> add(key, value) }
         }.build()
         val requestBuilder = Request.Builder().url(url).post(requestBody).withHeaders(profile)
+        headers.forEach { (key, value) -> requestBuilder.header(key, value) }
+        return requireSuccess(executeJson(requestBuilder.build()))
+    }
+
+    /**
+     * 发送普通 GET 请求并要求 code == 0
+     *
+     * 用于 Cookie 鉴权的 Web API。
+     */
+    suspend fun get(
+        url: String,
+        params: Map<String, String> = emptyMap(),
+        headers: Map<String, String> = emptyMap(),
+        profile: BiliRestProfile = BiliRestProfile.APP
+    ): JSONObject {
+        val urlBuilder = url.toHttpUrl().newBuilder()
+        params.forEach { (key, value) -> urlBuilder.addQueryParameter(key, value) }
+        val requestBuilder = Request.Builder().url(urlBuilder.build()).get().withHeaders(profile)
         headers.forEach { (key, value) -> requestBuilder.header(key, value) }
         return requireSuccess(executeJson(requestBuilder.build()))
     }
