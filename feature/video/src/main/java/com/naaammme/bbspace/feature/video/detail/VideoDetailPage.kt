@@ -244,6 +244,7 @@ private fun DetailPageContent(
     onLikeClick: () -> Unit,
     onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onFavoriteLongClick: () -> Unit,
     onDismissActionMessage: () -> Unit
 ) {
     val itemMod = remember(horizontalPad) {
@@ -278,6 +279,7 @@ private fun DetailPageContent(
             onLikeClick = onLikeClick,
             onCoinClick = onCoinClick,
             onFavoriteClick = onFavoriteClick,
+            onFavoriteLongClick = onFavoriteLongClick,
             onDismissActionMessage = onDismissActionMessage,
             onOpenComments = onOpenComments
         )
@@ -303,6 +305,7 @@ private fun LazyListScope.detailItems(
     onLikeClick: () -> Unit,
     onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onFavoriteLongClick: () -> Unit,
     onDismissActionMessage: () -> Unit,
     onOpenComments: () -> Unit
 ) {
@@ -355,6 +358,7 @@ private fun LazyListScope.detailItems(
                     onLikeClick = onLikeClick,
                     onCoinClick = onCoinClick,
                     onFavoriteClick = onFavoriteClick,
+                    onFavoriteLongClick = onFavoriteLongClick,
                     onDismissActionMessage = onDismissActionMessage,
                     onOpenComments = onOpenComments,
                     modifier = itemMod
@@ -434,6 +438,7 @@ private fun VideoSummarySection(
     onLikeClick: () -> Unit,
     onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    onFavoriteLongClick: () -> Unit,
     onDismissActionMessage: () -> Unit,
     onOpenComments: () -> Unit
 ) {
@@ -465,6 +470,7 @@ private fun VideoSummarySection(
             onLikeClick = onLikeClick,
             onCoinClick = onCoinClick,
             onFavoriteClick = onFavoriteClick,
+            onFavoriteLongClick = onFavoriteLongClick,
             onDownloadClick = onDownloadClick,
             onDismissActionMessage = onDismissActionMessage
         )
