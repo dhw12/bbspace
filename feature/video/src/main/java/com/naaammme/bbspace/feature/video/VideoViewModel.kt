@@ -9,6 +9,7 @@ import com.naaammme.bbspace.core.video.VideoActionRepository
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.CommentSubjectTool
 import com.naaammme.bbspace.core.model.DanmakuConfig
+import com.naaammme.bbspace.core.model.FavoriteFolder
 import com.naaammme.bbspace.core.model.PlayBiz
 import com.naaammme.bbspace.core.model.PlaybackProgress
 import com.naaammme.bbspace.core.model.PlayerBufferProfile
@@ -137,13 +138,54 @@ class VideoViewModel @Inject constructor(
 
     fun favoriteVideo() {
         runVideoAction(VideoUserAction.FAVORITE) { aid ->
-            videoActionRepository.favoriteVideo(aid)
+            val favorited = videoActionRepository.toggleFavoriteVideo(aid)
+            _videoActionState.value = _videoActionState.value.copy(
+                favorited = favorited,
+                pending = null,
+                message = if (favorited) "已收藏" else "已取消收藏"
+            )
+        }
+    }
+
+    fun openFavoriteFolderPicker() {
+        if (_videoActionState.value.pending != null) return
+        val aid = videoState.value.ids.aid
+        viewModelScope.launch {
+            _videoActionState.value = _videoActionState.value.copy(
+                pending = VideoUserAction.FAVORITE,
+                message = null
+            )
+            runCatching { videoActionRepository.fetchFavoriteFolders(aid) }
+                .onSuccess { folders ->
+                    _videoActionState.value = _videoActionState.value.copy(
+                        pending = null,
+                        favoriteFolders = folders,
+                        message = if (folders.isEmpty()) "暂无可用收藏夹" else null
+                    )
+                }
+                .onFailure { error ->
+                    _videoActionState.value = _videoActionState.value.copy(
+                        pending = null,
+                        message = error.message ?: "加载收藏夹失败"
+                    )
+                }
+        }
+    }
+
+    fun favoriteVideoToFolder(folder: FavoriteFolder) {
+        runVideoAction(VideoUserAction.FAVORITE) { aid ->
+            videoActionRepository.favoriteVideoToFolder(aid, folder.fid)
             _videoActionState.value = _videoActionState.value.copy(
                 favorited = true,
                 pending = null,
-                message = "已收藏"
+                favoriteFolders = null,
+                message = "已收藏到 ${folder.title}"
             )
         }
+    }
+
+    fun dismissFavoriteFolderPicker() {
+        _videoActionState.value = _videoActionState.value.copy(favoriteFolders = null)
     }
 
     fun clearVideoActionMessage() {
@@ -280,6 +322,7 @@ class VideoViewModel @Inject constructor(
         viewModelScope.launch {
             _videoActionState.value = _videoActionState.value.copy(
                 pending = action,
+                favoriteFolders = null,
                 message = null
             )
             runCatching { block(aid) }
@@ -306,6 +349,7 @@ internal data class VideoActionUiState(
     val coined: Boolean = false,
     val favorited: Boolean = false,
     val pending: VideoUserAction? = null,
+    val favoriteFolders: List<FavoriteFolder>? = null,
     val message: String? = null
 )
 
