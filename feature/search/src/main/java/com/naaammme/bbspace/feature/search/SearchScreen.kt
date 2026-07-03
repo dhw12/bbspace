@@ -29,7 +29,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +43,7 @@ import com.naaammme.bbspace.core.model.SearchFilter
 import com.naaammme.bbspace.core.model.SearchTime
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.feature.search.result.SearchAuthorCard
 import com.naaammme.bbspace.feature.search.filter.SearchFiltersSheet
 import com.naaammme.bbspace.feature.search.history.SearchHistoryPanel
 import com.naaammme.bbspace.feature.search.result.SearchCard
@@ -56,11 +56,14 @@ fun SearchScreen(
     onOpenVideo: (VideoTarget) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
+    val authors by viewModel.authors.collectAsStateWithLifecycle()
     val videos by viewModel.videos.collectAsStateWithLifecycle()
     val histories by viewModel.histories.collectAsStateWithLifecycle()
     val historyOrder by viewModel.currentHistoryOrder.collectAsStateWithLifecycle()
     val keyboard = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
+    val hasItems = authors.isNotEmpty() || videos.isNotEmpty()
+    val itemCount = authors.size + videos.size
     val sortFilter = viewModel.filters.firstOrNull { it.key == SORT_KEY }
     val filters = viewModel.filters.filterNot { it.key == SORT_KEY }
     val hasActiveExtraFilter = filters.any { viewModel.selectedOf(it.key).isNotEmpty() } || viewModel.time.isActive
@@ -70,24 +73,18 @@ fun SearchScreen(
         }
     }
 
-    fun hideKeyboard() {
-        keyboard?.hide()
-    }
-
-    val currentVideos by rememberUpdatedState(videos)
     val shouldLoadMore by remember(
         listState,
-        viewModel.canLoadMore,
-        viewModel.isLoading,
-        viewModel.isLoadingMore
+        itemCount,
+        viewModel.canLoadMore
     ) {
         derivedStateOf {
             val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
             viewModel.canLoadMore &&
                     !viewModel.isLoading &&
                     !viewModel.isLoadingMore &&
-                    currentVideos.isNotEmpty() &&
-                    last >= currentVideos.lastIndex - 2
+                    itemCount > 0 &&
+                    last >= itemCount - 3
         }
     }
 
@@ -108,11 +105,11 @@ fun SearchScreen(
                 onTextChange = viewModel::updateInput,
                 onBack = handleBack,
                 onSearch = {
-                    hideKeyboard()
+                    keyboard?.hide()
                     viewModel.submitSearch()
                 },
                 onOpenSpace = { uid ->
-                    hideKeyboard()
+                    keyboard?.hide()
                     onOpenSpace(SpaceRoute(mid = uid))
                 },
                 scrollBehavior = scrollBehavior
@@ -134,7 +131,7 @@ fun SearchScreen(
                                 selectedMap = buildSelectedMap(filters, viewModel),
                                 time = viewModel.time,
                                 active = hasActiveExtraFilter,
-                                onDismissKeyboard = ::hideKeyboard,
+                                onDismissKeyboard = { keyboard?.hide() },
                                 onApply = viewModel::applyFilters
                             )
                         }
@@ -146,16 +143,14 @@ fun SearchScreen(
                     selected = viewModel.selectedOf(filter.key),
                     trailing = trailing,
                     onSelect = { params ->
-                        hideKeyboard()
+                        keyboard?.hide()
                         viewModel.applyFilter(filter.key, params)
                     }
                 )
             }
             if (sortFilter == null && filters.isNotEmpty()) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
                     SearchFilterAction(
@@ -164,26 +159,26 @@ fun SearchScreen(
                         selectedMap = buildSelectedMap(filters, viewModel),
                         time = viewModel.time,
                         active = hasActiveExtraFilter,
-                        onDismissKeyboard = ::hideKeyboard,
+                        onDismissKeyboard = { keyboard?.hide() },
                         onApply = viewModel::applyFilters
                     )
                 }
             }
 
             when {
-                viewModel.isLoading && videos.isEmpty() -> SearchLoadingList()
+                viewModel.isLoading && !hasItems -> SearchLoadingList()
 
-                viewModel.errorMessage != null && videos.isEmpty() -> {
+                viewModel.errorMessage != null && !hasItems -> {
                     SearchError(
                         message = viewModel.errorMessage.orEmpty(),
                         onRetry = {
-                            hideKeyboard()
+                            keyboard?.hide()
                             viewModel.submitSearch(recordHistory = false)
                         }
                     )
                 }
 
-                viewModel.keyword.isBlank() && videos.isEmpty() -> {
+                viewModel.keyword.isBlank() -> {
                     if (histories.isEmpty()) {
                         SearchHint(text = "输入关键词开始搜索")
                     } else {
@@ -192,7 +187,7 @@ fun SearchScreen(
                             order = historyOrder,
                             onToggleOrder = viewModel::toggleHistoryOrder,
                             onSearch = { keyword ->
-                                hideKeyboard()
+                                keyboard?.hide()
                                 viewModel.submitSearch(keyword)
                             },
                             onDelete = viewModel::deleteHistory
@@ -200,7 +195,7 @@ fun SearchScreen(
                     }
                 }
 
-                videos.isEmpty() -> SearchHint(text = "没有找到视频结果")
+                !hasItems -> SearchHint(text = "没有找到结果")
 
                 else -> {
                     LazyColumn(
@@ -209,6 +204,17 @@ fun SearchScreen(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        items(
+                            items = authors,
+                            key = { it.mid },
+                            contentType = { "author" }
+                        ) { author ->
+                            SearchAuthorCard(
+                                author = author,
+                                onClick = { onOpenSpace(SpaceRoute(mid = author.mid, name = author.name)) }
+                            )
+                        }
+
                         items(
                             items = videos,
                             key = { "${it.aid}_${it.cid}" },
@@ -230,7 +236,7 @@ fun SearchScreen(
                             }
                         }
 
-                        if (viewModel.errorMessage != null && videos.isNotEmpty()) {
+                        if (viewModel.errorMessage != null && itemCount > 0) {
                             item {
                                 SearchError(
                                     message = viewModel.errorMessage.orEmpty(),
@@ -265,7 +271,7 @@ private fun SearchSortRow(
             val op = filter.ops[index]
             onSelect(if (op.isDefault) emptySet() else setOf(op.param))
         },
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 1.dp),
         trailing = trailing
     )
 }
