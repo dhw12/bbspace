@@ -77,6 +77,7 @@ fun VideoScreen(
     hostExpanded: Boolean = true
 ) {
     val videoState by viewModel.videoState.collectAsStateWithLifecycle()
+    val videoActionState by viewModel.videoActionState.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val act = LocalActivity.current
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -219,10 +220,15 @@ fun VideoScreen(
                         detailLoading = videoState.detailLoading,
                         detailError = videoState.detailError,
                         commentSubject = viewModel.commentSubject,
+                        videoActionState = videoActionState,
                         contentHorizontalPad = 0.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
                         onDownloadClick = downloadClick,
+                        onLikeClick = viewModel::likeVideo,
+                        onCoinClick = viewModel::coinVideo,
+                        onFavoriteClick = viewModel::favoriteVideo,
+                        onDismissActionMessage = viewModel::clearVideoActionMessage,
                         onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
                     )
@@ -259,10 +265,15 @@ fun VideoScreen(
                         detailLoading = videoState.detailLoading,
                         detailError = videoState.detailError,
                         commentSubject = viewModel.commentSubject,
+                        videoActionState = videoActionState,
                         contentHorizontalPad = 16.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
                         onDownloadClick = downloadClick,
+                        onLikeClick = viewModel::likeVideo,
+                        onCoinClick = viewModel::coinVideo,
+                        onFavoriteClick = viewModel::favoriteVideo,
+                        onDismissActionMessage = viewModel::clearVideoActionMessage,
                         onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
                     )
