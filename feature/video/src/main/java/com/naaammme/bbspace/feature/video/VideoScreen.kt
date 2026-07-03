@@ -285,6 +285,14 @@ fun VideoScreen(
         }
     }
 
+    if (hostExpanded && videoActionState.favoriteFolders != null) {
+        FavoriteFolderSheet(
+            folders = videoActionState.favoriteFolders.orEmpty(),
+            onDismiss = viewModel::dismissFavoriteFolderPicker,
+            onSelect = viewModel::favoriteVideoToFolder
+        )
+    }
+
     if (hostExpanded && downloadSheetOn) {
         val sheetVideoQuality = videoState.currentStream?.quality ?: 80
         val sheetAudioQuality = videoState.currentAudio?.id ?: 0
@@ -310,6 +318,57 @@ fun VideoScreen(
                 onStartDownload(request)
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FavoriteFolderSheet(
+    folders: List<FavoriteFolder>,
+    onDismiss: () -> Unit,
+    onSelect: (FavoriteFolder) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("选择收藏夹", style = MaterialTheme.typography.titleLarge)
+            if (folders.isEmpty()) {
+                Text(
+                    text = "暂无可用收藏夹",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                folders.forEach { folder ->
+                    OutlinedButton(
+                        onClick = { onSelect(folder) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(folder.title, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                text = "${folder.mediaCount} 个内容",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
