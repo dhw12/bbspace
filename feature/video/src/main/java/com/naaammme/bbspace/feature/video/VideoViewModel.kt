@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import com.naaammme.bbspace.core.settings.AppSettings
 import com.naaammme.bbspace.core.playback.VideoPlaybackController
+import com.naaammme.bbspace.core.video.VideoActionRepository
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.CommentSubjectTool
 import com.naaammme.bbspace.core.model.DanmakuConfig
@@ -27,14 +28,17 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class VideoViewModel @Inject constructor(
     private val playbackController: VideoPlaybackController,
-    private val playerSettings: AppSettings
+    private val playerSettings: AppSettings,
+    private val videoActionRepository: VideoActionRepository
 ) : ViewModel() {
 
     private val _targetStack = MutableStateFlow<List<VideoTarget>>(emptyList())
+    private val _videoActionState = MutableStateFlow(VideoActionUiState())
 
     val player: StateFlow<Player?> = playbackController.player
     val videoState: StateFlow<VideoPlaybackState> = playbackController.videoState
     val playbackProgress: StateFlow<PlaybackProgress> = playbackController.playbackProgress
+    val videoActionState: StateFlow<VideoActionUiState> = _videoActionState
     val settingsState = playerSettings.state
 
     val commentSubject: CommentSubject?
@@ -48,6 +52,7 @@ class VideoViewModel @Inject constructor(
 
     fun openRoot(target: VideoTarget) {
         _targetStack.value = listOf(target)
+        resetVideoActions()
         playbackController.openVideo(target)
     }
 
@@ -59,6 +64,7 @@ class VideoViewModel @Inject constructor(
             current.isSameEntry(target) -> _targetStack.value.dropLast(1) + target
             else -> _targetStack.value + target
         }
+        resetVideoActions()
         playbackController.openVideo(target)
     }
 
@@ -68,6 +74,7 @@ class VideoViewModel @Inject constructor(
         val nextStack = stack.dropLast(1)
         val nextTarget = nextStack.last()
         _targetStack.value = nextStack
+        resetVideoActions()
         playbackController.openVideo(nextTarget)
         return true
     }
@@ -104,6 +111,43 @@ class VideoViewModel @Inject constructor(
 
     fun toggleLooping() {
         playbackController.setLooping(!videoState.value.isLooping)
+    }
+
+    fun likeVideo() {
+        runVideoAction(VideoUserAction.LIKE) { aid ->
+            videoActionRepository.likeVideo(aid)
+            _videoActionState.value = _videoActionState.value.copy(
+                liked = true,
+                pending = null,
+                message = "已点赞"
+            )
+        }
+    }
+
+    fun coinVideo() {
+        runVideoAction(VideoUserAction.COIN) { aid ->
+            videoActionRepository.coinVideo(aid)
+            _videoActionState.value = _videoActionState.value.copy(
+                coined = true,
+                pending = null,
+                message = "已投币"
+            )
+        }
+    }
+
+    fun favoriteVideo() {
+        runVideoAction(VideoUserAction.FAVORITE) { aid ->
+            videoActionRepository.favoriteVideo(aid)
+            _videoActionState.value = _videoActionState.value.copy(
+                favorited = true,
+                pending = null,
+                message = "已收藏"
+            )
+        }
+    }
+
+    fun clearVideoActionMessage() {
+        _videoActionState.value = _videoActionState.value.copy(message = null)
     }
 
     fun updateBackgroundPlayback(enabled: Boolean) {
@@ -172,6 +216,7 @@ class VideoViewModel @Inject constructor(
             src = pageTarget.src
         )
         _targetStack.value = _targetStack.value.dropLast(1) + nextTarget
+        resetVideoActions()
         playbackController.openVideo(nextTarget)
     }
 
@@ -179,6 +224,7 @@ class VideoViewModel @Inject constructor(
         val cur = currentTarget() ?: return
         if (cur == target) return
         _targetStack.value = _targetStack.value.dropLast(1) + target
+        resetVideoActions()
         playbackController.openVideo(target)
     }
 
@@ -225,7 +271,46 @@ class VideoViewModel @Inject constructor(
         )
     }
 
+    private fun runVideoAction(
+        action: VideoUserAction,
+        block: suspend (Long) -> Unit
+    ) {
+        if (_videoActionState.value.pending != null) return
+        val aid = videoState.value.ids.aid
+        viewModelScope.launch {
+            _videoActionState.value = _videoActionState.value.copy(
+                pending = action,
+                message = null
+            )
+            runCatching { block(aid) }
+                .onFailure { error ->
+                    _videoActionState.value = _videoActionState.value.copy(
+                        pending = null,
+                        message = error.message ?: "操作失败"
+                    )
+                }
+        }
+    }
+
+    private fun resetVideoActions() {
+        _videoActionState.value = VideoActionUiState()
+    }
+
     private fun currentTarget(): VideoTarget? {
         return _targetStack.value.lastOrNull()
     }
+}
+
+internal data class VideoActionUiState(
+    val liked: Boolean = false,
+    val coined: Boolean = false,
+    val favorited: Boolean = false,
+    val pending: VideoUserAction? = null,
+    val message: String? = null
+)
+
+internal enum class VideoUserAction {
+    LIKE,
+    COIN,
+    FAVORITE
 }
