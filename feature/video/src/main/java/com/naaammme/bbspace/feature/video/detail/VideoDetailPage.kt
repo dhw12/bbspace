@@ -1,8 +1,10 @@
 ﻿package com.naaammme.bbspace.feature.video.detail
 
 import android.text.format.DateFormat
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -750,17 +752,22 @@ private fun ToggleChip(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ActionChip(
     label: String,
     value: String? = null,
     enabled: Boolean = true,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null
 ) {
-    val clickModifier = if (onClick != null && enabled) {
-        Modifier.clickable(onClick = onClick)
-    } else {
-        Modifier
+    val clickModifier = when {
+        onLongClick != null && enabled -> Modifier.combinedClickable(
+            onClick = onClick ?: {},
+            onLongClick = onLongClick
+        )
+        onClick != null && enabled -> Modifier.clickable(onClick = onClick)
+        else -> Modifier
     }
     val contentColor = if (enabled) {
         MaterialTheme.colorScheme.onSecondaryContainer
