@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.media3.common.util.UnstableApi
+import com.naaammme.bbspace.core.model.FavoriteFolder
 import com.naaammme.bbspace.core.model.PlaybackSource
 import com.naaammme.bbspace.core.model.PlaybackStream
 import com.naaammme.bbspace.core.model.PlayerSettingsState
@@ -228,6 +229,7 @@ fun VideoScreen(
                         onLikeClick = viewModel::likeVideo,
                         onCoinClick = viewModel::coinVideo,
                         onFavoriteClick = viewModel::favoriteVideo,
+                        onFavoriteLongClick = viewModel::openFavoriteFolderPicker,
                         onDismissActionMessage = viewModel::clearVideoActionMessage,
                         onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
@@ -273,6 +275,7 @@ fun VideoScreen(
                         onLikeClick = viewModel::likeVideo,
                         onCoinClick = viewModel::coinVideo,
                         onFavoriteClick = viewModel::favoriteVideo,
+                        onFavoriteLongClick = viewModel::openFavoriteFolderPicker,
                         onDismissActionMessage = viewModel::clearVideoActionMessage,
                         onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
