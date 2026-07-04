@@ -220,6 +220,7 @@ class AppSettings @Inject constructor(
     private val bgPlayKey = booleanPreferencesKey("bg_play")
     private val inAppMiniPlayerKey = booleanPreferencesKey("in_app_mini_player")
     private val autoRotateFullscreenKey = booleanPreferencesKey("auto_rotate_fullscreen")
+    private val loopingKey = booleanPreferencesKey("playback_looping")
     private val gestureSpeedKey = floatPreferencesKey("gesture_speed")
     private val videoCdnModeKey = stringPreferencesKey("video_cdn_mode")
     private val reportPlaybackKey = booleanPreferencesKey("report_playback")
@@ -258,6 +259,7 @@ class AppSettings @Inject constructor(
                 decoderFallback = prefs[decFallbackKey] ?: defaultPlaybackPrefs.decoderFallback,
                 autoRotateFullscreen = prefs[autoRotateFullscreenKey]
                     ?: defaultPlaybackPrefs.autoRotateFullscreen,
+                looping = prefs[loopingKey] ?: defaultPlaybackPrefs.looping,
                 gestureSpeed = (
                     prefs[gestureSpeedKey] ?: defaultPlaybackPrefs.gestureSpeed
                 ).coerceIn(0.25f, 3f),
@@ -338,6 +340,10 @@ class AppSettings @Inject constructor(
 
     suspend fun setAutoRotateFullscreen(enabled: Boolean) {
         context.appSettingsDataStore.edit { it[autoRotateFullscreenKey] = enabled }
+    }
+
+    suspend fun setLooping(enabled: Boolean) {
+        context.appSettingsDataStore.edit { it[loopingKey] = enabled }
     }
 
     suspend fun setGestureSpeed(speed: Float) {

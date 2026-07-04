@@ -111,7 +111,11 @@ class VideoViewModel @Inject constructor(
     }
 
     fun toggleLooping() {
-        playbackController.setLooping(!videoState.value.isLooping)
+        val looping = !videoState.value.isLooping
+        playbackController.setLooping(looping)
+        viewModelScope.launch {
+            playerSettings.setLooping(looping)
+        }
     }
 
     fun likeVideo() {

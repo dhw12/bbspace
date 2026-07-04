@@ -150,13 +150,24 @@ class StreamPlaybackSessionImpl @Inject constructor(
                 applyVideoSelection(state)
             }
         }
+        runtimeScope.launch {
+            playerSettings.state.map { it.playback.looping }.collect { looping ->
+                if (_currentTarget.value !is StreamPlaybackTarget.Video) return@collect
+                if (playerEngine.playbackState.value.isLooping == looping) return@collect
+                playerEngine.setLooping(looping)
+            }
+        }
     }
 
     // StreamPlaybackSession: lifecycle
     override suspend fun prepare() {
         prepMu.withLock {
-            val config = withContext(Dispatchers.IO) { buildPlayerConfig() }
-            withContext(Dispatchers.Main.immediate) { playerEngine.updateConfig(config) }
+            val settings = withContext(Dispatchers.IO) { playerSettings.state.first() }
+            val config = buildPlayerConfig(settings)
+            withContext(Dispatchers.Main.immediate) {
+                playerEngine.updateConfig(config)
+                playerEngine.setLooping(settings.playback.looping)
+            }
         }
     }
 
@@ -649,8 +660,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
     }
 
     // vod: config & history
-    private suspend fun buildPlayerConfig(): PlayerConfig {
-        val settings = playerSettings.state.first()
+    private fun buildPlayerConfig(settings: com.naaammme.bbspace.core.model.PlayerSettingsState): PlayerConfig {
         val buffer = settings.buffer.profile
         val playback = settings.playback
         return PlayerConfig(
