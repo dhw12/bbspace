@@ -93,7 +93,6 @@ internal fun VideoDetailPage(
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
     onLikeClick: () -> Unit,
-    onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
     onDismissActionMessage: () -> Unit,
@@ -160,7 +159,6 @@ internal fun VideoDetailPage(
                 onOpenSpace = onOpenSpace,
                 onDownloadClick = onDownloadClick,
                 onLikeClick = onLikeClick,
-                onCoinClick = onCoinClick,
                 onFavoriteClick = onFavoriteClick,
                 onFavoriteLongClick = onFavoriteLongClick,
                 onDismissActionMessage = onDismissActionMessage
@@ -243,7 +241,6 @@ private fun DetailPageContent(
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
     onLikeClick: () -> Unit,
-    onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
     onDismissActionMessage: () -> Unit
@@ -278,7 +275,6 @@ private fun DetailPageContent(
             onOpenSpace = onOpenSpace,
             onDownloadClick = onDownloadClick,
             onLikeClick = onLikeClick,
-            onCoinClick = onCoinClick,
             onFavoriteClick = onFavoriteClick,
             onFavoriteLongClick = onFavoriteLongClick,
             onDismissActionMessage = onDismissActionMessage,
@@ -304,7 +300,6 @@ private fun LazyListScope.detailItems(
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
     onLikeClick: () -> Unit,
-    onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
     onDismissActionMessage: () -> Unit,
@@ -357,7 +352,6 @@ private fun LazyListScope.detailItems(
                     onOpenSpace = onOpenSpace,
                     onDownloadClick = onDownloadClick,
                     onLikeClick = onLikeClick,
-                    onCoinClick = onCoinClick,
                     onFavoriteClick = onFavoriteClick,
                     onFavoriteLongClick = onFavoriteLongClick,
                     onDismissActionMessage = onDismissActionMessage,
@@ -437,7 +431,6 @@ private fun VideoSummarySection(
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
     onLikeClick: () -> Unit,
-    onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
     onDismissActionMessage: () -> Unit,
@@ -469,7 +462,6 @@ private fun VideoSummarySection(
             stat = detail.stat,
             videoActionState = videoActionState,
             onLikeClick = onLikeClick,
-            onCoinClick = onCoinClick,
             onFavoriteClick = onFavoriteClick,
             onFavoriteLongClick = onFavoriteLongClick,
             onDownloadClick = onDownloadClick,
@@ -623,7 +615,6 @@ private fun ActionCapsule(
     videoActionState: VideoActionUiState,
     modifier: Modifier = Modifier,
     onLikeClick: () -> Unit,
-    onCoinClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
     onDownloadClick: () -> Unit,
@@ -650,12 +641,6 @@ private fun ActionCapsule(
                     value = adjustedActionValue(it.like, videoActionState.likeDelta),
                     enabled = videoActionState.pending != VideoUserAction.LIKE,
                     onClick = onLikeClick
-                )
-                ActionChip(
-                    label = if (videoActionState.coined) "已投币" else "投币",
-                    value = adjustedActionValue(it.coin, videoActionState.coinDelta),
-                    enabled = videoActionState.pending != VideoUserAction.COIN,
-                    onClick = onCoinClick
                 )
                 ActionChip(
                     label = if (videoActionState.favorited) "已收藏" else "收藏",
