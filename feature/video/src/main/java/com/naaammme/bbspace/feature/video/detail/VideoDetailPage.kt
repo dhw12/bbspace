@@ -77,7 +77,6 @@ import com.naaammme.bbspace.feature.comment.CommentPanel
 import com.naaammme.bbspace.feature.video.VideoActionUiState
 import com.naaammme.bbspace.feature.video.VideoUserAction
 import com.naaammme.bbspace.feature.video.formatDuration
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 @OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -672,7 +671,6 @@ private fun ActionCapsule(
                 onClick = onDownloadClick
             )
         }
-
     }
 }
 
