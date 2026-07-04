@@ -24,6 +24,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -41,6 +44,19 @@ class VideoViewModel @Inject constructor(
     val playbackProgress: StateFlow<PlaybackProgress> = playbackController.playbackProgress
     internal val videoActionState: StateFlow<VideoActionUiState> = _videoActionState
     val settingsState = playerSettings.state
+
+    init {
+        viewModelScope.launch {
+            videoState
+                .map { it.ids.aid }
+                .distinctUntilChanged()
+                .collectLatest { aid ->
+                    if (aid > 0L) {
+                        refreshLikeState(aid)
+                    }
+                }
+        }
+    }
 
     val commentSubject: CommentSubject?
         get() {
@@ -124,32 +140,17 @@ class VideoViewModel @Inject constructor(
             return
         }
         runVideoAction(VideoUserAction.LIKE) { aid ->
+            val previousLiked = _videoActionState.value.liked
             videoActionRepository.likeVideo(aid)
             _videoActionState.value = _videoActionState.value.copy(
                 liked = true,
-                likeDelta = if (_videoActionState.value.liked) {
+                likeDelta = if (previousLiked) {
                     _videoActionState.value.likeDelta
                 } else {
                     _videoActionState.value.likeDelta + 1
                 },
                 pending = null,
-                message = "已点赞"
-            )
-        }
-    }
-
-    fun coinVideo() {
-        runVideoAction(VideoUserAction.COIN) { aid ->
-            videoActionRepository.coinVideo(aid, videoState.value.ids.bvid)
-            _videoActionState.value = _videoActionState.value.copy(
-                coined = true,
-                coinDelta = if (_videoActionState.value.coined) {
-                    _videoActionState.value.coinDelta
-                } else {
-                    _videoActionState.value.coinDelta + 1
-                },
-                pending = null,
-                message = "已投币"
+                message = null
             )
         }
     }
@@ -343,6 +344,18 @@ class VideoViewModel @Inject constructor(
         )
     }
 
+    private suspend fun refreshLikeState(aid: Long) {
+        runCatching { videoActionRepository.isVideoLiked(aid) }
+            .onSuccess { liked ->
+                if (videoState.value.ids.aid != aid) return@onSuccess
+                val current = _videoActionState.value
+                if (current.pending == VideoUserAction.LIKE || current.likeDelta != 0) {
+                    return@onSuccess
+                }
+                _videoActionState.value = current.copy(liked = liked)
+            }
+    }
+
     private fun runVideoAction(
         action: VideoUserAction,
         block: suspend (Long) -> Unit
@@ -376,10 +389,8 @@ class VideoViewModel @Inject constructor(
 
 internal data class VideoActionUiState(
     val liked: Boolean = false,
-    val coined: Boolean = false,
     val favorited: Boolean = false,
     val likeDelta: Int = 0,
-    val coinDelta: Int = 0,
     val favoriteDelta: Int = 0,
     val pending: VideoUserAction? = null,
     val favoriteFolders: List<FavoriteFolder>? = null,
@@ -388,6 +399,5 @@ internal data class VideoActionUiState(
 
 internal enum class VideoUserAction {
     LIKE,
-    COIN,
     FAVORITE
 }
