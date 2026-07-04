@@ -644,8 +644,7 @@ private fun ActionCapsule(
                 )
                 ActionChip(
                     label = "投币",
-                    value = it.coin,
-                    enabled = false
+                    value = it.coin
                 )
                 ActionChip(
                     label = if (videoActionState.favorited) "已收藏" else "收藏",
