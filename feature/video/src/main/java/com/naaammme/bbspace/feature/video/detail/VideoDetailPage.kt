@@ -1,6 +1,7 @@
 ﻿package com.naaammme.bbspace.feature.video.detail
 
 import android.text.format.DateFormat
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,6 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -628,10 +630,11 @@ private fun ActionCapsule(
     onDownloadClick: () -> Unit,
     onDismissActionMessage: () -> Unit
 ) {
+    val context = LocalContext.current
     val actionMessage = videoActionState.message
     LaunchedEffect(actionMessage) {
         if (!actionMessage.isNullOrBlank()) {
-            delay(1800L)
+            Toast.makeText(context, actionMessage, Toast.LENGTH_SHORT).show()
             onDismissActionMessage()
         }
     }
@@ -670,14 +673,6 @@ private fun ActionCapsule(
             )
         }
 
-        if (!actionMessage.isNullOrBlank()) {
-            Text(
-                text = actionMessage,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        }
     }
 }
 

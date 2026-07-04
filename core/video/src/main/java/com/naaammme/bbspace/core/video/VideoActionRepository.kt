@@ -27,18 +27,28 @@ class VideoActionRepository @Inject constructor(
         )
     }
 
-    suspend fun coinVideo(aid: Long) {
-        check(aid > 0L) { "视频参数无效" }
+    suspend fun coinVideo(aid: Long, bvid: String?) {
+        check(aid > 0L || !bvid.isNullOrBlank()) { "视频参数无效" }
         val credential = requireWebCredential()
         restClient.postForm(
             url = "${BiliConstants.BASE_URL_API}$COIN_ENDPOINT",
-            params = mapOf(
-                "aid" to aid.toString(),
-                "multiply" to "1",
-                "select_like" to "0",
-                "csrf" to credential.csrf
-            ),
-            headers = webHeaders(credential.cookieHeader)
+            params = buildMap {
+                if (aid > 0L) {
+                    put("aid", aid.toString())
+                }
+                if (!bvid.isNullOrBlank()) {
+                    put("bvid", bvid)
+                }
+                put("multiply", "1")
+                put("select_like", "0")
+                put("cross_domain", "true")
+                put("csrf", credential.csrf)
+                put("csrf_token", credential.csrf)
+            },
+            headers = webHeaders(
+                cookieHeader = credential.cookieHeader,
+                referer = videoReferer(aid, bvid)
+            )
         )
     }
 
@@ -107,6 +117,15 @@ class VideoActionRepository @Inject constructor(
         )
     }
 
+    private fun videoReferer(aid: Long, bvid: String?): String {
+        val id = bvid?.takeIf(String::isNotBlank) ?: aid.takeIf { it > 0L }?.let { "av$it" }
+        return if (id != null) {
+            "https://www.bilibili.com/video/$id"
+        } else {
+            "https://www.bilibili.com/"
+        }
+    }
+
     private fun mapFavoriteFolderState(item: JSONObject?): FavoriteFolderState? {
         item ?: return null
         val fid = item.optLong("id").takeIf { it > 0L }
@@ -135,11 +154,14 @@ class VideoActionRepository @Inject constructor(
         return WebCredential(credential.mid, cookieHeader, csrf)
     }
 
-    private fun webHeaders(cookieHeader: String): Map<String, String> {
+    private fun webHeaders(
+        cookieHeader: String,
+        referer: String = "https://www.bilibili.com/"
+    ): Map<String, String> {
         return mapOf(
             "cookie" to cookieHeader,
             "origin" to "https://www.bilibili.com",
-            "referer" to "https://www.bilibili.com/"
+            "referer" to referer
         )
     }
 

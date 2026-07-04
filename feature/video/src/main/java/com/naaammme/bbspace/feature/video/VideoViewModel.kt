@@ -119,6 +119,10 @@ class VideoViewModel @Inject constructor(
     }
 
     fun likeVideo() {
+        if (_videoActionState.value.liked) {
+            _videoActionState.value = _videoActionState.value.copy(message = "已点赞")
+            return
+        }
         runVideoAction(VideoUserAction.LIKE) { aid ->
             videoActionRepository.likeVideo(aid)
             _videoActionState.value = _videoActionState.value.copy(
@@ -136,7 +140,7 @@ class VideoViewModel @Inject constructor(
 
     fun coinVideo() {
         runVideoAction(VideoUserAction.COIN) { aid ->
-            videoActionRepository.coinVideo(aid)
+            videoActionRepository.coinVideo(aid, videoState.value.ids.bvid)
             _videoActionState.value = _videoActionState.value.copy(
                 coined = true,
                 coinDelta = if (_videoActionState.value.coined) {
