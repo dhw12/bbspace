@@ -48,10 +48,10 @@ class VideoViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             videoState
-                .map { it.ids.aid }
+                .map { it.ids.aid to it.detailLoading }
                 .distinctUntilChanged()
-                .collectLatest { aid ->
-                    if (aid > 0L) {
+                .collectLatest { (aid, detailLoading) ->
+                    if (aid > 0L && !detailLoading) {
                         refreshLikeState(aid)
                     }
                 }
