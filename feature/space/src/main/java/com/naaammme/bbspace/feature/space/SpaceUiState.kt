@@ -15,9 +15,7 @@ private val DEFAULT_ORDERS = listOf(
 @Immutable
 data class SpaceUiState(
     val header: SpaceHeaderUiState? = null,
-    val archive: SpaceArchiveUiState = SpaceArchiveUiState(),
-    val isPageLoading: Boolean = false,
-    val pageErrorMessage: String? = null
+    val archive: SpaceArchiveUiState = SpaceArchiveUiState()
 ) {
     val title: String
         get() = header?.profile?.name ?: "个人空间"

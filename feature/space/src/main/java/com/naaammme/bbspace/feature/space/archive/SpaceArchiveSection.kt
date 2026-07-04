@@ -32,7 +32,6 @@ import java.util.Locale
 internal fun LazyListScope.spaceArchiveSection(
     state: SpaceArchiveUiState,
     onOpenVideo: (VideoTarget) -> Unit,
-    onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onSelectOrder: (String) -> Unit
 ) {
@@ -64,11 +63,7 @@ internal fun LazyListScope.spaceArchiveSection(
             key = "archive_error",
             contentType = "state"
         ) {
-            RetryCard(
-                text = message,
-                button = "重试",
-                onRetry = onRetry
-            )
+            StateCard(text = message)
         }
     }
 

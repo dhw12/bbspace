@@ -442,7 +442,7 @@ private fun MainTabsScaffold(
     val userViewModel: UserViewModel = hiltViewModel()
     val userState by userViewModel.uiState.collectAsStateWithLifecycle()
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-    val useVerticalToolbar = windowSizeClass.isWidthAtLeastBreakpoint(600)
+    val useStartAlignedBottomToolbar = windowSizeClass.isWidthAtLeastBreakpoint(600)
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val fixBottomBar by settingsViewModel.fixBottomBar.collectAsStateWithLifecycle()
     val navVisibilityController = rememberTopLevelNavVisibilityController(fixBottomBar)
@@ -492,15 +492,14 @@ private fun MainTabsScaffold(
         TopLevelFloatingNavigation(
             modifier = Modifier
                 .align(
-                    if (useVerticalToolbar) Alignment.CenterStart else Alignment.BottomCenter
+                    if (useStartAlignedBottomToolbar) Alignment.BottomStart else Alignment.BottomCenter
                 )
                 .padding(
-                    start = if (useVerticalToolbar) topLevelNavEdgePadding else 0.dp,
-                    bottom = if (useVerticalToolbar) 0.dp else topLevelNavEdgePadding
+                    start = if (useStartAlignedBottomToolbar) topLevelNavEdgePadding else 0.dp,
+                    bottom = topLevelNavEdgePadding
                 )
                 .zIndex(1f),
             currentTab = currentTab,
-            useVerticalToolbar = useVerticalToolbar,
             visibilityController = navVisibilityController,
             onTabChange = onTabChange,
             onNavigateToSearch = onNavigateToSearch
@@ -512,14 +511,13 @@ private fun MainTabsScaffold(
 private fun TopLevelFloatingNavigation(
     modifier: Modifier = Modifier,
     currentTab: TopLevelRoute,
-    useVerticalToolbar: Boolean,
     visibilityController: TopLevelNavVisibilityController,
     onTabChange: (TopLevelRoute) -> Unit,
     onNavigateToSearch: () -> Unit
 ) {
     val toolbarShape = MaterialTheme.shapes.extraLarge
     val edgePaddingPx = with(LocalDensity.current) { topLevelNavEdgePadding.toPx() }
-    var hiddenDistancePx by remember(useVerticalToolbar) { mutableFloatStateOf(0f) }
+    var hiddenDistancePx by remember { mutableFloatStateOf(0f) }
     val animatedOffsetPx by animateFloatAsState(
         targetValue = if (visibilityController.hidden) hiddenDistancePx + edgePaddingPx else 0f,
         animationSpec = tween(durationMillis = topLevelNavAnimationDurationMillis),
@@ -527,14 +525,10 @@ private fun TopLevelFloatingNavigation(
     )
     val animatedModifier = modifier
         .onSizeChanged { size ->
-            hiddenDistancePx = if (useVerticalToolbar) size.width.toFloat() else size.height.toFloat()
+            hiddenDistancePx = size.height.toFloat()
         }
         .graphicsLayer {
-            if (useVerticalToolbar) {
-                translationX = -animatedOffsetPx
-            } else {
-                translationY = animatedOffsetPx
-            }
+            translationY = animatedOffsetPx
         }
     val tabs: @Composable () -> Unit = {
         TopLevelRoute.entries.forEach { tab ->
@@ -559,36 +553,19 @@ private fun TopLevelFloatingNavigation(
         }
     }
 
-    if (useVerticalToolbar) {
-        Column(
-            modifier = animatedModifier,
-            horizontalAlignment = Alignment.CenterHorizontally
+    Row(
+        modifier = animatedModifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = toolbarShape,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ) {
-            Surface(
-                shape = toolbarShape,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ) {
-                Column(modifier = Modifier.padding(8.dp), content = { tabs() })
-            }
-            Spacer(modifier = Modifier.height(topLevelNavGap))
-            searchFab()
+            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), content = { tabs() })
         }
-    } else {
-        Row(
-            modifier = animatedModifier,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                shape = toolbarShape,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ) {
-                Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), content = { tabs() })
-            }
-            Spacer(modifier = Modifier.width(topLevelNavGap))
-            searchFab()
-        }
+        Spacer(modifier = Modifier.width(topLevelNavGap))
+        searchFab()
     }
 }
 

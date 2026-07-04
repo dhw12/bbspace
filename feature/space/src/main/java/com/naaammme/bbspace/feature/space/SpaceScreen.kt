@@ -26,7 +26,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.space.archive.spaceArchiveSection
-import com.naaammme.bbspace.feature.space.component.SpaceError
 import com.naaammme.bbspace.feature.space.header.spaceHeaderSection
 import com.naaammme.bbspace.feature.space.note.spaceNoteSection
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -85,7 +84,7 @@ fun SpaceScreen(
                 },
                 actions = {
                     val header = state.header
-                    if (header != null && onOpenIm != null) {
+                    if (header != null && header.profile.mid > 0L && onOpenIm != null) {
                         IconButton(
                             onClick = {
                                 onOpenIm.invoke(
@@ -106,45 +105,30 @@ fun SpaceScreen(
             )
         }
     ) { padding ->
-        when {
-            state.isPageLoading && state.header == null -> {
-                Unit
-            }
-
-            state.header == null -> {
-                SpaceError(
-                    message = state.pageErrorMessage ?: "加载个人空间失败",
-                    onRetry = viewModel::retry,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                )
-            }
-
-            else -> {
-                val header = state.header ?: return@CollapsingTopBarScaffold
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    spaceHeaderSection(header)
+        val header = state.header
+        if (header != null) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                spaceHeaderSection(header)
+                if (header.profile.mid > 0L) {
                     spaceNoteSection(
                         uid = header.profile.mid,
                         name = header.profile.name,
                         face = header.profile.face
                     )
-                    spaceArchiveSection(
-                        state = state.archive,
-                        onOpenVideo = onOpenVideo,
-                        onRetry = viewModel::retry,
-                        onLoadMore = viewModel::loadMore,
-                        onSelectOrder = viewModel::selectOrder
-                    )
                 }
+                spaceArchiveSection(
+                    state = state.archive,
+                    onOpenVideo = onOpenVideo,
+                    onLoadMore = viewModel::loadMore,
+                    onSelectOrder = viewModel::selectOrder
+                )
             }
         }
     }
