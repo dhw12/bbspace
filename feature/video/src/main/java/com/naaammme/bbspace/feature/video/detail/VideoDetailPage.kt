@@ -662,11 +662,8 @@ private fun ActionCapsule(
 private fun adjustedActionValue(value: String, delta: Int): String {
     if (delta == 0) return value
     val normalized = value.replace(",", "")
-    val numericValue = normalized.toLongOrNull()
-    if (numericValue != null) {
-        return (numericValue + delta).coerceAtLeast(0L).toString()
-    }
-    return if (delta > 0) "$value +$delta" else "$value $delta"
+    val numericValue = normalized.toLongOrNull() ?: return value
+    return (numericValue + delta).coerceAtLeast(0L).toString()
 }
 
 @Composable
