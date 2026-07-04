@@ -27,29 +27,19 @@ class VideoActionRepository @Inject constructor(
         )
     }
 
-    suspend fun coinVideo(aid: Long, bvid: String?) {
-        check(aid > 0L || !bvid.isNullOrBlank()) { "视频参数无效" }
+    suspend fun isVideoLiked(aid: Long): Boolean {
+        check(aid > 0L) { "视频参数无效" }
         val credential = requireWebCredential()
-        restClient.postForm(
-            url = "${BiliConstants.BASE_URL_API}$COIN_ENDPOINT",
-            params = buildMap {
-                if (aid > 0L) {
-                    put("aid", aid.toString())
-                }
-                if (!bvid.isNullOrBlank()) {
-                    put("bvid", bvid)
-                }
-                put("multiply", "1")
-                put("select_like", "0")
-                put("cross_domain", "true")
-                put("csrf", credential.csrf)
-                put("csrf_token", credential.csrf)
-            },
+        val json = restClient.get(
+            url = "${BiliConstants.BASE_URL_API}$RELATION_ENDPOINT",
+            params = mapOf("aid" to aid.toString()),
             headers = webHeaders(
                 cookieHeader = credential.cookieHeader,
-                referer = videoReferer(aid, bvid)
+                referer = videoReferer(aid, bvid = null)
             )
         )
+        val data = json.optJSONObject("data") ?: return false
+        return data.optPositiveFlag("like")
     }
 
     suspend fun toggleFavoriteVideo(aid: Long): Boolean {
@@ -126,6 +116,16 @@ class VideoActionRepository @Inject constructor(
         }
     }
 
+    private fun JSONObject.optPositiveFlag(name: String): Boolean {
+        return when (val value = opt(name)) {
+            is Boolean -> value
+            is Number -> value.toInt() > 0
+            is String -> value.equals("true", ignoreCase = true) ||
+                value.toIntOrNull()?.let { it > 0 } == true
+            else -> false
+        }
+    }
+
     private fun mapFavoriteFolderState(item: JSONObject?): FavoriteFolderState? {
         item ?: return null
         val fid = item.optLong("id").takeIf { it > 0L }
@@ -178,7 +178,7 @@ class VideoActionRepository @Inject constructor(
 
     private companion object {
         const val LIKE_ENDPOINT = "/x/web-interface/archive/like"
-        const val COIN_ENDPOINT = "/x/web-interface/coin/add"
+        const val RELATION_ENDPOINT = "/x/web-interface/archive/relation"
         const val FAVORITE_DEAL_ENDPOINT = "/x/v3/fav/resource/deal"
         const val FAVORITE_FOLDER_LIST_ENDPOINT = "/x/v3/fav/folder/created/list-all"
         const val VIDEO_RESOURCE_TYPE = 2
