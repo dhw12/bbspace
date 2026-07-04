@@ -1,6 +1,7 @@
 package com.naaammme.bbspace.core.history
 
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
 import com.naaammme.bbspace.core.auth.AuthStore
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoTargetTool
@@ -82,7 +83,7 @@ class WatchLaterRepository @Inject constructor(
                 cardType = cardType,
                 title = title,
                 intro = item.optString("desc").blankToNull(),
-                cover = item.optString("pic").toHttps(),
+                cover = item.optString("pic").blankToNull().httpsImageUrlOrNull(),
                 ownerName = null,
                 viewText = null,
                 danmakuText = null,
@@ -100,7 +101,7 @@ class WatchLaterRepository @Inject constructor(
             cardType = cardType,
             title = title,
             intro = item.optString("desc").blankToNull(),
-            cover = item.optString("pic").toHttps(),
+            cover = item.optString("pic").blankToNull().httpsImageUrlOrNull(),
             ownerName = owner?.optString("name").blankToNull(),
             viewText = item.optString("left_text").blankToNull(),
             danmakuText = item.optString("right_text").blankToNull(),
@@ -131,10 +132,6 @@ class WatchLaterRepository @Inject constructor(
 
     private fun String?.blankToNull(): String? {
         return this?.takeIf { it.isNotBlank() }
-    }
-
-    private fun String?.toHttps(): String? {
-        return this?.replace("http://", "https://")?.blankToNull()
     }
 
     private companion object {

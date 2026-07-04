@@ -39,6 +39,17 @@ data class SearchVideo(
     val publishTimeText: String?,
     val reason: String?,
     val feedbacks: List<SearchFeedbackSec>
+) 
+
+@Immutable
+data class SearchAuthor(
+    val mid: Long,
+    val name: String,
+    val avatar: String?,
+    val sign: String?,
+    val fansText: String,
+    val archivesText: String,
+    val level: Int
 )
 
 @Immutable
@@ -89,6 +100,7 @@ data class SearchReq(
 @Immutable
 data class SearchPage(
     val keyword: String,
+    val authors: List<SearchAuthor>,
     val videos: List<SearchVideo>,
     val next: String,
     val filters: List<SearchFilter>

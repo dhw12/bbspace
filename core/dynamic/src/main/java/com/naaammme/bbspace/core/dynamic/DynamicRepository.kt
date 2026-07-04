@@ -20,6 +20,7 @@ import com.bapis.bilibili.app.dynamic.v2.MdlDynUGCSeason
 import com.bapis.bilibili.app.dynamic.v2.OpusDetailReq
 import com.bapis.bilibili.app.dynamic.v2.OpusDetailResp
 import com.bapis.bilibili.app.dynamic.v2.Refresh
+import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
 import com.naaammme.bbspace.core.model.DynamicAuthor
 import com.naaammme.bbspace.core.model.DynamicBody
 import com.naaammme.bbspace.core.model.DynamicCursor
@@ -97,7 +98,7 @@ class DynamicRepository @Inject constructor(
                     DynamicDetailAuthor(
                         mid = m.mid,
                         name = user.name.ifBlank { return@firstNotNullOfOrNull null },
-                        face = user.face.toHttps(),
+                        face = user.face.blankToNull().httpsImageUrlOrNull(),
                         pubTime = m.ptimeLabelText.blankToNull()
                     )
                 }
@@ -107,7 +108,7 @@ class DynamicRepository @Inject constructor(
                     DynamicDetailAuthor(
                         mid = m.author.mid,
                         name = user.name.ifBlank { return@firstNotNullOfOrNull null },
-                        face = user.face.toHttps(),
+                        face = user.face.blankToNull().httpsImageUrlOrNull(),
                         pubTime = m.author.ptimeLabelText.blankToNull()
                     )
                 }
@@ -129,7 +130,7 @@ class DynamicRepository @Inject constructor(
                 }
                 2 -> { // PICTURES
                     val images = p.pic.pics.itemsList.mapNotNull { img ->
-                        img.src.toHttps()?.let { url ->
+                        img.src.blankToNull().httpsImageUrlOrNull()?.let { url ->
                             DynamicImage(
                                 url = url,
                                 width = img.width.toInt(),
@@ -216,7 +217,7 @@ class DynamicRepository @Inject constructor(
             DynamicUpItem(
                 uid = uid,
                 name = name,
-                face = item.face.toHttps(),
+                face = item.face.blankToNull().httpsImageUrlOrNull(),
                 hasUpdate = item.hasUpdate,
                 trackId = item.trackId.blankToNull()
             )
@@ -240,7 +241,7 @@ class DynamicRepository @Inject constructor(
                     DynamicAuthor(
                         mid = info.uid,
                         name = name,
-                        avatar = info.faceUrl.toHttps(),
+                        avatar = info.faceUrl.blankToNull().httpsImageUrlOrNull(),
                         pubAction = info.ptimeLabelText.blankToNull(),
                         pubLocation = null
                     )
@@ -287,7 +288,7 @@ class DynamicRepository @Inject constructor(
         return DynamicAuthor(
             mid = author.mid,
             name = name,
-            avatar = user.face.toHttps(),
+            avatar = user.face.blankToNull().httpsImageUrlOrNull(),
             pubAction = author.ptimeLabelText.blankToNull(),
             pubLocation = author.ptimeLocationText.blankToNull()
         )
@@ -370,7 +371,7 @@ class DynamicRepository @Inject constructor(
         archive: MdlDynArchive,
         item: DynamicItem
     ): DynamicSummary {
-        val cover = archive.cover.toHttps()
+        val cover = archive.cover.blankToNull().httpsImageUrlOrNull()
         val badge = archive.badgeCategoryList.firstNotNullOfOrNull { it.text.blankToNull() }
             ?: archive.badgeList.firstNotNullOfOrNull { it.text.blankToNull() }
         return DynamicSummary(
@@ -396,7 +397,7 @@ class DynamicRepository @Inject constructor(
         item: DynamicItem
     ): DynamicSummary {
         val images = draw.itemsList.mapNotNull { image ->
-            image.src.toHttps()?.let { url ->
+            image.src.blankToNull().httpsImageUrlOrNull()?.let { url ->
                 DynamicImage(
                     url = url,
                     width = image.width.toInt(),
@@ -422,7 +423,7 @@ class DynamicRepository @Inject constructor(
         article: MdlDynArticle,
         item: DynamicItem
     ): DynamicSummary {
-        val cover = article.coversList.firstOrNull().toHttps()
+        val cover = article.coversList.firstOrNull().blankToNull().httpsImageUrlOrNull()
         return DynamicSummary(
             body = DynamicBody.Article(
                 text = mapExtendDesc(item),
@@ -440,7 +441,7 @@ class DynamicRepository @Inject constructor(
         season: MdlDynUGCSeason,
         item: DynamicItem
     ): DynamicSummary {
-        val cover = season.cover.toHttps()
+        val cover = season.cover.blankToNull().httpsImageUrlOrNull()
         val badge = season.badgeList.firstNotNullOfOrNull { it.text.blankToNull() }
         return DynamicSummary(
             body = DynamicBody.Archive(
@@ -468,7 +469,7 @@ class DynamicRepository @Inject constructor(
             LiveRoute(
                 roomId = it,
                 title = live.title.blankToNull(),
-                cover = live.cover.toHttps(),
+                cover = live.cover.blankToNull().httpsImageUrlOrNull(),
                 ownerName = item.extend.upName.blankToNull(),
                 onlineText = live.coverLabel.blankToNull(),
                 jumpFrom = LiveRouteTool.JUMP_FROM_HOME_RECOMMEND
@@ -478,12 +479,12 @@ class DynamicRepository @Inject constructor(
             body = DynamicBody.Live(
                 text = mapExtendDesc(item),
                 title = live.title.ifBlank { "直播动态" },
-                cover = live.cover.toHttps(),
+                cover = live.cover.blankToNull().httpsImageUrlOrNull(),
                 subTitle = live.coverLabel.blankToNull() ?: live.coverLabel2.blankToNull(),
                 badge = live.badge.text.blankToNull()
             ),
             title = live.title.blankToNull(),
-            cover = live.cover.toHttps(),
+            cover = live.cover.blankToNull().httpsImageUrlOrNull(),
             badge = live.badge.text.blankToNull(),
             liveRoute = route
         )
@@ -503,7 +504,7 @@ class DynamicRepository @Inject constructor(
         )
         val roomId = info.optLong("room_id").takeIf { it > 0L }
         val title = info.optString("title").blankToNull()
-        val cover = info.optString("cover").toHttps()
+        val cover = info.optString("cover").blankToNull().httpsImageUrlOrNull()
         val onlineText = info.optLong("online")
             .takeIf { it > 0L }
             ?.toString()
@@ -562,10 +563,10 @@ class DynamicRepository @Inject constructor(
             else -> null
         }
         val originCover = when {
-            originDynamic?.hasDynArchive() == true -> originDynamic.dynArchive.cover.toHttps()
-            originDynamic?.hasDynArticle() == true -> originDynamic.dynArticle.coversList.firstOrNull().toHttps()
-            originDynamic?.hasDynDraw() == true -> originDynamic.dynDraw.itemsList.firstOrNull()?.src.toHttps()
-            originDynamic?.hasDynCommonLive() == true -> originDynamic.dynCommonLive.cover.toHttps()
+            originDynamic?.hasDynArchive() == true -> originDynamic.dynArchive.cover.blankToNull().httpsImageUrlOrNull()
+            originDynamic?.hasDynArticle() == true -> originDynamic.dynArticle.coversList.firstOrNull().blankToNull().httpsImageUrlOrNull()
+            originDynamic?.hasDynDraw() == true -> originDynamic.dynDraw.itemsList.firstOrNull()?.src.blankToNull().httpsImageUrlOrNull()
+            originDynamic?.hasDynCommonLive() == true -> originDynamic.dynCommonLive.cover.blankToNull().httpsImageUrlOrNull()
             else -> null
         }
         val originBadge = when {
@@ -600,7 +601,7 @@ class DynamicRepository @Inject constructor(
                     LiveRoute(
                         roomId = roomId,
                         title = live.title.blankToNull(),
-                        cover = live.cover.toHttps(),
+                        cover = live.cover.blankToNull().httpsImageUrlOrNull(),
                         ownerName = origin.extend.upName.blankToNull(),
                         onlineText = live.coverLabel.blankToNull(),
                         jumpFrom = LiveRouteTool.JUMP_FROM_HOME_RECOMMEND
@@ -677,10 +678,6 @@ class DynamicRepository @Inject constructor(
 
     private fun String?.blankToNull(): String? {
         return this?.takeIf { it.isNotBlank() }
-    }
-
-    private fun String?.toHttps(): String? {
-        return this?.replace("http://", "https://")?.blankToNull()
     }
 
     private data class DynamicSummary(

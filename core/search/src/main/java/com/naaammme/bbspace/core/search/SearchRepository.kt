@@ -11,6 +11,7 @@ import com.bapis.bilibili.polymer.app.search.v1.Item
 import com.bapis.bilibili.polymer.app.search.v1.SearchAllRequest
 import com.bapis.bilibili.polymer.app.search.v1.SearchAllResponse
 import com.bapis.bilibili.polymer.app.search.v1.Sort
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.model.SearchFeedbackItem as SearchFdItem
 import com.naaammme.bbspace.core.model.SearchFeedbackSec
 import com.naaammme.bbspace.core.model.SearchFilter
@@ -19,6 +20,7 @@ import com.naaammme.bbspace.core.model.SearchOp
 import com.naaammme.bbspace.core.model.SearchOrder
 import com.naaammme.bbspace.core.model.SearchPage
 import com.naaammme.bbspace.core.model.SearchReq
+import com.naaammme.bbspace.core.model.SearchAuthor
 import com.naaammme.bbspace.core.model.SearchVideo
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoTargetTool
@@ -71,9 +73,17 @@ class SearchRepository @Inject constructor(
             parser = SearchAllResponse.parser()
         )
 
+        val authors = mutableListOf<SearchAuthor>()
+        val videos = mutableListOf<SearchVideo>()
+        for (item in resp.itemList) {
+            mapAuthor(item)?.let(authors::add)
+            mapVideo(item, resp.trackid)?.let(videos::add)
+        }
+
         return SearchPage(
             keyword = resp.keyword.ifBlank { req.keyword },
-            videos = resp.itemList.mapNotNull { mapVideo(it, resp.trackid) },
+            authors = authors,
+            videos = videos,
             next = resp.pagination.next,
             filters = resp.searchFilter.filterEntriesList.mapNotNull(::mapFilter)
         )
@@ -128,7 +138,7 @@ class SearchRepository @Inject constructor(
             cid = cid,
             target = target,
             title = av.title,
-            cover = av.cover.replace("http://", "https://"),
+            cover = av.cover.httpsImageUrl(),
             author = av.author,
             duration = av.duration,
             viewText = av.viewContent.ifBlank { av.play.toLong().formatCount() },
@@ -136,6 +146,24 @@ class SearchRepository @Inject constructor(
             publishTimeText = av.showCardDesc2.removePrefix("· ").takeIf(String::isNotBlank),
             reason = av.takeIf { it.hasRcmdReason() }?.rcmdReason?.content?.takeIf(String::isNotBlank),
             feedbacks = av.feedback.sectionsList.mapNotNull(::mapFeedbackSec)
+        )
+    }
+
+    private fun mapAuthor(item: Item): SearchAuthor? {
+        if (item.cardItemCase != Item.CardItemCase.AUTHOR_NEW) return null
+        val author = item.authorNew
+        val mid = author.mid.takeIf { it > 0L }
+            ?: item.param.toLongOrNull()
+            ?: return null
+        val name = author.title.ifBlank { return null }
+        return SearchAuthor(
+            mid = mid,
+            name = name.replace("<em class=\"keyword\">", "").replace("</em>", ""),
+            avatar = author.cover.httpsImageUrl().takeIf(String::isNotBlank),
+            sign = author.sign.takeIf(String::isNotBlank),
+            fansText = author.fans.toLong().formatCount(),
+            archivesText = author.archives.toLong().formatCount(),
+            level = author.level
         )
     }
 

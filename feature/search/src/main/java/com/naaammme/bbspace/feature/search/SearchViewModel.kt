@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.search.SearchRepository
 import com.naaammme.bbspace.core.model.SearchFilter
+import com.naaammme.bbspace.core.model.SearchAuthor
 import com.naaammme.bbspace.core.model.SearchHistoryOrder
 import com.naaammme.bbspace.core.model.SearchOrder
 import com.naaammme.bbspace.core.model.SearchReq
@@ -58,6 +59,9 @@ class SearchViewModel @Inject constructor(
 
     val hasActiveFilter: Boolean
         get() = sel.isNotEmpty() || time.isActive
+
+    private val _authors = MutableStateFlow<List<SearchAuthor>>(emptyList())
+    val authors = _authors.asStateFlow()
 
     private val _videos = MutableStateFlow<List<SearchVideo>>(emptyList())
     val videos = _videos.asStateFlow()
@@ -151,11 +155,6 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun clearFilters() {
-        if (!hasActiveFilter) return
-        applyFilters(emptyMap(), SearchTime())
-    }
-
     fun consumeBack(): Boolean {
         if (!hasSearchResultState()) return false
         clearSearchState()
@@ -170,7 +169,8 @@ class SearchViewModel @Inject constructor(
                 errorMessage = null
                 val page = repo.search(buildReq(keyword, next))
                 next = page.next
-                _videos.value = _videos.value + page.videos
+                _authors.value += page.authors
+                _videos.value += page.videos
                 if (page.filters.isNotEmpty()) {
                     syncFilters(page.filters)
                 }
@@ -188,6 +188,7 @@ class SearchViewModel @Inject constructor(
             if (reset) {
                 isLoading = true
                 next = ""
+                _authors.value = emptyList()
                 _videos.value = emptyList()
             } else {
                 isLoadingMore = true
@@ -198,6 +199,7 @@ class SearchViewModel @Inject constructor(
             input = page.keyword
             next = page.next
             syncFilters(page.filters)
+            _authors.value = if (reset) page.authors else _authors.value + page.authors
             _videos.value = if (reset) page.videos else _videos.value + page.videos
         } catch (e: Exception) {
             Logger.e(TAG, e) { "搜索失败" }
@@ -282,6 +284,7 @@ class SearchViewModel @Inject constructor(
 
     private fun hasSearchResultState(): Boolean {
         return keyword.isNotBlank() ||
+                _authors.value.isNotEmpty() ||
                 _videos.value.isNotEmpty() ||
                 isLoading ||
                 isLoadingMore ||
@@ -299,6 +302,7 @@ class SearchViewModel @Inject constructor(
         time = SearchTime()
         sel = emptyMap()
         errorMessage = null
+        _authors.value = emptyList()
         _videos.value = emptyList()
     }
 

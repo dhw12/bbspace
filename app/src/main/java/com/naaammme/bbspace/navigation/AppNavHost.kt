@@ -299,7 +299,13 @@ fun AppNavHost(
                 onSwitched = { rootNavController.popBackStack() }
             )
 
-            bbSpaceScreen(rootNavController)
+            bbSpaceScreen(
+                navController = rootNavController,
+                onOpenSpace = rootNavController::navigateToSpace,
+                onOpenVideoDetail = openVideo,
+                onOpenDynamicDetail = rootNavController::navigateToDynamicDetail,
+                onOpenLiveDetail = openLive
+            )
             settingsScreen(rootNavController)
             searchScreen(
                 onBack = { rootNavController.popBackStack() },
@@ -409,8 +415,7 @@ fun AppNavHost(
             onOpenDownloadCache = openDownloadFromVideo,
             onStartDownload = downloadViewModel::enqueueDownload,
             videoViewModel = videoViewModel,
-            liveViewModel = liveViewModel,
-            modifier = Modifier.align(Alignment.BottomEnd)
+            liveViewModel = liveViewModel
         )
     }
 }

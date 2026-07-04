@@ -2,6 +2,7 @@ package com.naaammme.bbspace.core.feed
 
 import com.naaammme.bbspace.core.auth.AuthStore
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.model.DescButton
 import com.naaammme.bbspace.core.model.FeedArgs
 import com.naaammme.bbspace.core.model.FeedDislikeContext
@@ -203,7 +204,7 @@ class FeedRepository @Inject constructor(
         val cover = card.optString("cover")
             .ifBlank { item?.optString("large_cover").orEmpty() }
             .ifBlank { obj.optString("cover") }
-            .replace("http://", "https://")
+            .httpsImageUrl()
         val ownerName = descBtn?.optString("text")
             ?.takeIf(String::isNotEmpty)
             ?: args?.optString("up_name")?.takeIf(String::isNotEmpty)
