@@ -643,6 +643,11 @@ private fun ActionCapsule(
                     onClick = onLikeClick
                 )
                 ActionChip(
+                    label = "投币",
+                    value = it.coin,
+                    enabled = false
+                )
+                ActionChip(
                     label = if (videoActionState.favorited) "已收藏" else "收藏",
                     value = adjustedActionValue(it.fav, videoActionState.favoriteDelta),
                     enabled = videoActionState.pending != VideoUserAction.FAVORITE,
@@ -780,7 +785,7 @@ private fun ActionChip(
     ) {
         Row(
             modifier = Modifier
-                .defaultMinSize(minWidth = 76.dp, minHeight = 36.dp)
+                .defaultMinSize(minHeight = 36.dp)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
