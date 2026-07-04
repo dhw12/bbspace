@@ -30,6 +30,7 @@ import com.naaammme.bbspace.core.model.PlaybackRequest
 import com.naaammme.bbspace.core.model.PlaybackSource
 import com.naaammme.bbspace.core.model.PlaybackStream
 import com.naaammme.bbspace.core.model.PlayerSessionState
+import com.naaammme.bbspace.core.model.PlayerSettingsState
 import com.naaammme.bbspace.core.model.ResolvedVideoIds
 import com.naaammme.bbspace.core.model.StreamPlaybackSessionState
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
@@ -660,7 +661,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
     }
 
     // vod: config & history
-    private fun buildPlayerConfig(settings: com.naaammme.bbspace.core.model.PlayerSettingsState): PlayerConfig {
+    private fun buildPlayerConfig(settings: PlayerSettingsState): PlayerConfig {
         val buffer = settings.buffer.profile
         val playback = settings.playback
         return PlayerConfig(
