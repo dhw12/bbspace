@@ -119,6 +119,11 @@ class VideoViewModel @Inject constructor(
             videoActionRepository.likeVideo(aid)
             _videoActionState.value = _videoActionState.value.copy(
                 liked = true,
+                likeDelta = if (_videoActionState.value.liked) {
+                    _videoActionState.value.likeDelta
+                } else {
+                    _videoActionState.value.likeDelta + 1
+                },
                 pending = null,
                 message = "已点赞"
             )
@@ -130,6 +135,11 @@ class VideoViewModel @Inject constructor(
             videoActionRepository.coinVideo(aid)
             _videoActionState.value = _videoActionState.value.copy(
                 coined = true,
+                coinDelta = if (_videoActionState.value.coined) {
+                    _videoActionState.value.coinDelta
+                } else {
+                    _videoActionState.value.coinDelta + 1
+                },
                 pending = null,
                 message = "已投币"
             )
@@ -138,9 +148,16 @@ class VideoViewModel @Inject constructor(
 
     fun favoriteVideo() {
         runVideoAction(VideoUserAction.FAVORITE) { aid ->
+            val previousFavorited = _videoActionState.value.favorited
             val favorited = videoActionRepository.toggleFavoriteVideo(aid)
+            val favoriteDelta = when {
+                favorited && !previousFavorited -> 1
+                !favorited && previousFavorited -> -1
+                else -> 0
+            }
             _videoActionState.value = _videoActionState.value.copy(
                 favorited = favorited,
+                favoriteDelta = _videoActionState.value.favoriteDelta + favoriteDelta,
                 pending = null,
                 message = if (favorited) "已收藏" else "已取消收藏"
             )
@@ -177,6 +194,11 @@ class VideoViewModel @Inject constructor(
             videoActionRepository.favoriteVideoToFolder(aid, folder.fid)
             _videoActionState.value = _videoActionState.value.copy(
                 favorited = true,
+                favoriteDelta = if (_videoActionState.value.favorited) {
+                    _videoActionState.value.favoriteDelta
+                } else {
+                    _videoActionState.value.favoriteDelta + 1
+                },
                 pending = null,
                 favoriteFolders = null,
                 message = "已收藏到 ${folder.title}"
@@ -348,6 +370,9 @@ internal data class VideoActionUiState(
     val liked: Boolean = false,
     val coined: Boolean = false,
     val favorited: Boolean = false,
+    val likeDelta: Int = 0,
+    val coinDelta: Int = 0,
+    val favoriteDelta: Int = 0,
     val pending: VideoUserAction? = null,
     val favoriteFolders: List<FavoriteFolder>? = null,
     val message: String? = null

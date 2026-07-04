@@ -645,19 +645,19 @@ private fun ActionCapsule(
             stat?.let {
                 ActionChip(
                     label = if (videoActionState.liked) "已点赞" else "点赞",
-                    value = it.like,
+                    value = adjustedActionValue(it.like, videoActionState.likeDelta),
                     enabled = videoActionState.pending != VideoUserAction.LIKE,
                     onClick = onLikeClick
                 )
                 ActionChip(
                     label = if (videoActionState.coined) "已投币" else "投币",
-                    value = it.coin,
+                    value = adjustedActionValue(it.coin, videoActionState.coinDelta),
                     enabled = videoActionState.pending != VideoUserAction.COIN,
                     onClick = onCoinClick
                 )
                 ActionChip(
                     label = if (videoActionState.favorited) "已收藏" else "收藏",
-                    value = it.fav,
+                    value = adjustedActionValue(it.fav, videoActionState.favoriteDelta),
                     enabled = videoActionState.pending != VideoUserAction.FAVORITE,
                     onClick = onFavoriteClick,
                     onLongClick = onFavoriteLongClick
@@ -679,6 +679,16 @@ private fun ActionCapsule(
             )
         }
     }
+}
+
+private fun adjustedActionValue(value: String, delta: Int): String {
+    if (delta == 0) return value
+    val normalized = value.replace(",", "")
+    val numericValue = normalized.toLongOrNull()
+    if (numericValue != null) {
+        return (numericValue + delta).coerceAtLeast(0L).toString()
+    }
+    return if (delta > 0) "$value +$delta" else "$value $delta"
 }
 
 @Composable
