@@ -18,6 +18,7 @@ import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.published.PublishedRecordRepository
 import com.naaammme.bbspace.core.model.COMMENT_FILTER_ALL
@@ -164,6 +165,7 @@ class CommentRepository @Inject constructor(
     suspend fun fetchReplyDetail(
         subject: CommentSubject,
         rootRpid: Long,
+        rpid: Long,
         sort: CommentSort = CommentSort.HOT,
         offset: String = ""
     ): CommentReplyDetailPage {
@@ -172,6 +174,7 @@ class CommentRepository @Inject constructor(
             requestBytes = buildDetailReq(
                 subject = subject,
                 rootRpid = rootRpid,
+                rpid = rpid,
                 sort = sort,
                 offset = offset
             ).toByteArray(),
@@ -183,7 +186,7 @@ class CommentRepository @Inject constructor(
             CommentReplyDetailPage(
                 root = root,
                 count = root.replyCount,
-                sort = reply.mode.toModelSort(sort),
+                sort = sort,
                 canSwitchSort = reply.subjectControl.switcherType > 0L,
                 items = mapChildReplies(reply.root.repliesList),
                 nextOffset = nextOffset
@@ -294,6 +297,7 @@ class CommentRepository @Inject constructor(
     private fun buildDetailReq(
         subject: CommentSubject,
         rootRpid: Long,
+        rpid: Long,
         sort: CommentSort,
         offset: String
     ): DetailListReq {
@@ -301,8 +305,8 @@ class CommentRepository @Inject constructor(
             .setOid(subject.oid)
             .setType(subject.type)
             .setRoot(rootRpid)
-            .setRpid(0L)
-            .setMode(sort.toProto())
+            .setRpid(rpid)
+            .setMode(sort.toDetailProto())
             .setPagination(
                 FeedPagination.newBuilder()
                     .setOffset(offset)
@@ -342,7 +346,7 @@ class CommentRepository @Inject constructor(
             subject = subject,
             title = reply.subjectControl.title.ifBlank { "评论" },
             count = reply.subjectControl.count,
-            sort = reply.mode.toModelSort(reqSort),
+            sort = reqSort,
             canSwitchSort = reply.subjectControl.switcherType > 0L,
             filterTags = tags,
             selectedFilter = filterTag.ifBlank { COMMENT_FILTER_ALL },
@@ -396,7 +400,7 @@ class CommentRepository @Inject constructor(
         val pictures = info.content.picturesList.mapNotNull { picture ->
             picture.imgSrc.takeIf(String::isNotBlank)?.let { url ->
                 CommentPicture(
-                    url = url.toHttps(),
+                    url = url.httpsImageUrl(),
                     width = picture.imgWidth.toFloat(),
                     height = picture.imgHeight.toFloat()
                 )
@@ -424,7 +428,7 @@ class CommentRepository @Inject constructor(
             user = CommentUser(
                 mid = info.mid,
                 name = name,
-                face = user.face.toHttps().ifBlank { null },
+                face = user.face.httpsImageUrl().ifBlank { null },
                 level = user.level.toInt().takeIf { it > 0 },
                 vipLabel = user.vipLabelText.ifBlank { null },
                 medal = medal
@@ -463,7 +467,7 @@ class CommentRepository @Inject constructor(
             user = CommentUser(
                 mid = mid,
                 name = name,
-                face = member?.optString("avatar").orEmpty().toHttps().ifBlank { null },
+                face = member?.optString("avatar").orEmpty().httpsImageUrl().ifBlank { null },
                 level = member?.optJSONObject("level_info")
                     ?.optInt("current_level")
                     ?.takeIf { it > 0 },
@@ -520,8 +524,16 @@ class CommentRepository @Inject constructor(
 
     private fun CommentSort.toProto(): Mode {
         return when (this) {
-            CommentSort.HOT -> Mode.MAIN_LIST_HOT
+            CommentSort.HOT -> Mode.DEFAULT
             CommentSort.TIME -> Mode.MAIN_LIST_TIME
+        }
+    }
+
+    private fun CommentSort.toDetailProto(): Mode {
+        return when (this) {
+            CommentSort.HOT -> Mode.DEFAULT
+            // 评论详情接口的时间排序枚举和主评论相反,不知道是不是b站程序员搞出来的bug?这里客户端需要兼容
+            CommentSort.TIME -> Mode.MAIN_LIST_HOT
         }
     }
 
@@ -529,19 +541,6 @@ class CommentRepository @Inject constructor(
         return when (this) {
             CommentSort.HOT -> "heat"
             CommentSort.TIME -> "time"
-        }
-    }
-
-    private fun Mode.toModelSort(fallback: CommentSort): CommentSort {
-        return when (this) {
-            Mode.MAIN_LIST_TIME -> CommentSort.TIME
-            Mode.MAIN_LIST_HOT, Mode.DEFAULT, Mode.UNSPECIFIED, Mode.UNRECOGNIZED -> {
-                if (fallback == CommentSort.TIME) {
-                    CommentSort.TIME
-                } else {
-                    CommentSort.HOT
-                }
-            }
         }
     }
 
@@ -625,7 +624,7 @@ class CommentRepository @Inject constructor(
         emote: JSONObject
     ): CommentEmote? {
         val url = emote.optString("url")
-            .toHttps()
+            .httpsImageUrl()
             .ifBlank { return null }
         return CommentEmote(
             text = emote.optString("text").ifBlank { token },
@@ -635,7 +634,7 @@ class CommentRepository @Inject constructor(
     }
 
     private fun ReplyEmote.toModel(token: String): CommentEmote? {
-        val url = url.toHttps().ifBlank { return null }
+        val url = url.httpsImageUrl().ifBlank { return null }
         return CommentEmote(
             text = text.ifBlank { token },
             url = url,
@@ -657,10 +656,6 @@ class CommentRepository @Inject constructor(
         set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
-    }
-
-    private fun String.toHttps(): String {
-        return replace("http://", "https://")
     }
 
     suspend fun uploadImage(

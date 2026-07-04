@@ -2,6 +2,7 @@ package com.naaammme.bbspace.core.live
 
 import android.os.Build
 import com.naaammme.bbspace.core.common.BiliConstants
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.auth.AuthStore
 import com.naaammme.bbspace.core.model.LiveRecommendItem
 import com.naaammme.bbspace.core.model.LiveRecommendPage
@@ -108,7 +109,7 @@ class LiveRecommendRepository @Inject constructor(
         val roomId = card.optLong("id").takeIf { it > 0L } ?: return null
         val cover = card.optString("cover")
             .ifBlank { card.optString("system_cover") }
-            .replace("http://", "https://")
+            .httpsImageUrl()
         val ownerMid = card.optLong("uid")
             .takeIf { it > 0L }
             ?: card.optLong("mid").takeIf { it > 0L }
@@ -162,13 +163,13 @@ class LiveRecommendRepository @Inject constructor(
                         uid = uid,
                         name = name,
                         face = item.optString("face")
-                            .replace("http://", "https://")
+                            .httpsImageUrl()
                             .takeIf { it.isNotBlank() },
                         route = LiveRoute(
                             roomId = roomId,
                             title = item.optString("title").takeIf { it.isNotBlank() },
                             cover = item.optString("cover")
-                                .replace("http://", "https://")
+                                .httpsImageUrl()
                                 .takeIf { it.isNotBlank() },
                             ownerName = name,
                             onlineText = item.optJSONObject("watched_show")

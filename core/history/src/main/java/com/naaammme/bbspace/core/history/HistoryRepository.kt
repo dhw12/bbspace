@@ -14,6 +14,7 @@ import com.bapis.bilibili.app.interfaces.v1.CursorV2Req
 import com.bapis.bilibili.app.interfaces.v1.PlayerPreloadParams
 import com.bapis.bilibili.app.interfaces.v1.SearchReply
 import com.bapis.bilibili.app.interfaces.v1.SearchReq
+import com.naaammme.bbspace.core.common.media.httpsImageUrl
 import com.naaammme.bbspace.core.model.HistoryCursor
 import com.naaammme.bbspace.core.model.HistoryItem
 import com.naaammme.bbspace.core.model.HistoryPage
@@ -139,7 +140,7 @@ class HistoryRepository @Inject constructor(
                     type = type,
                     typeLabel = typeLabel(type),
                     title = item.title,
-                    cover = card.cover.toHttps(),
+                    cover = card.cover.blankToNull()?.httpsImageUrl(),
                     ownerName = card.name.blankToNull(),
                     badge = card.badge.blankToNull(),
                     subtitle = card.shareSubtitle.blankToNull(),
@@ -158,7 +159,7 @@ class HistoryRepository @Inject constructor(
                     type = type,
                     typeLabel = typeLabel(type),
                     title = item.title,
-                    cover = card.cover.toHttps(),
+                    cover = card.cover.blankToNull()?.httpsImageUrl(),
                     ownerName = null,
                     badge = card.badge.blankToNull(),
                     subtitle = card.subtitle.blankToNull(),
@@ -177,7 +178,7 @@ class HistoryRepository @Inject constructor(
                     type = type,
                     typeLabel = typeLabel(type),
                     title = item.title,
-                    cover = card.coversList.firstOrNull().toHttps(),
+                    cover = card.coversList.firstOrNull()?.blankToNull()?.httpsImageUrl(),
                     ownerName = card.name.blankToNull(),
                     badge = card.badge.blankToNull(),
                     subtitle = null,
@@ -196,7 +197,7 @@ class HistoryRepository @Inject constructor(
                     type = type,
                     typeLabel = typeLabel(type),
                     title = item.title,
-                    cover = card.cover.toHttps(),
+                    cover = card.cover.blankToNull()?.httpsImageUrl(),
                     ownerName = card.name.blankToNull(),
                     badge = liveStatusLabel(card),
                     subtitle = card.tag.blankToNull(),
@@ -215,7 +216,7 @@ class HistoryRepository @Inject constructor(
                     type = type,
                     typeLabel = typeLabel(type),
                     title = item.title,
-                    cover = card.cover.toHttps(),
+                    cover = card.cover.blankToNull()?.httpsImageUrl(),
                     ownerName = null,
                     badge = typeLabel(type),
                     subtitle = card.subtitle.blankToNull(),
@@ -285,7 +286,7 @@ class HistoryRepository @Inject constructor(
             LiveRoute(
                 roomId = roomId,
                 title = item.title.blankToNull(),
-                cover = card.cover.toHttps(),
+                cover = card.cover.blankToNull()?.httpsImageUrl(),
                 ownerName = card.name.blankToNull(),
                 jumpFrom = LiveRouteTool.JUMP_FROM_HISTORY
             )
@@ -320,10 +321,6 @@ class HistoryRepository @Inject constructor(
 
     private fun String.blankToNull(): String? {
         return takeIf { it.isNotBlank() }
-    }
-
-    private fun String?.toHttps(): String? {
-        return this?.replace("http://", "https://")?.blankToNull()
     }
 
     private fun com.bapis.bilibili.app.interfaces.v1.DT.toDeviceLabel(): String? {
