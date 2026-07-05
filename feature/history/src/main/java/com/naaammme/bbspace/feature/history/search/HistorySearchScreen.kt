@@ -36,10 +36,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.core.designsystem.component.SearchCapsuleField
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.designsystem.component.VideoListCardSkeleton
 import com.naaammme.bbspace.core.model.HistoryTarget
-import com.naaammme.bbspace.feature.history.component.HistoryEmptyState
-import com.naaammme.bbspace.feature.history.component.HistoryErrorState
 import com.naaammme.bbspace.feature.history.component.HistoryItemCard
 import com.naaammme.bbspace.feature.history.component.HistoryListLoading
 import com.naaammme.bbspace.feature.history.component.LOAD_MORE_SKELETON_COUNT
@@ -147,23 +146,24 @@ fun HistorySearchScreen(
                 }
 
                 state.errorMessage != null && state.items.isEmpty() -> {
-                    HistoryErrorState(
-                        message = state.errorMessage.orEmpty(),
-                        fallbackMessage = "搜索历史记录失败",
-                        onRetry = viewModel::submitSearch,
-                        modifier = Modifier.fillMaxSize()
+                    StateMessageCard(
+                        text = state.errorMessage.orEmpty().ifBlank { "搜索历史记录失败" },
+                        modifier = Modifier.fillMaxSize(),
+                        isError = true,
+                        actionText = "重试",
+                        onAction = viewModel::submitSearch
                     )
                 }
 
                 state.query.isBlank() -> {
-                    HistoryEmptyState(
+                    StateMessageCard(
                         text = "输入关键词搜索历史记录",
                         modifier = Modifier.fillMaxSize()
                     )
                 }
 
                 state.items.isEmpty() -> {
-                    HistoryEmptyState(
+                    StateMessageCard(
                         text = "没有找到相关历史记录",
                         modifier = Modifier.fillMaxSize()
                     )
@@ -199,10 +199,11 @@ fun HistorySearchScreen(
 
                         if (state.errorMessage != null && state.items.isNotEmpty()) {
                             item(key = "history_search_error", contentType = "error") {
-                                HistoryErrorState(
-                                    message = state.errorMessage.orEmpty(),
-                                    fallbackMessage = "搜索历史记录失败",
-                                    onRetry = viewModel::loadMore
+                                StateMessageCard(
+                                    text = state.errorMessage.orEmpty().ifBlank { "搜索历史记录失败" },
+                                    isError = true,
+                                    actionText = "重试",
+                                    onAction = viewModel::loadMore
                                 )
                             }
                         }

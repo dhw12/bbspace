@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.SearchCapsuleField
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.LivePlaybackViewState
 import com.naaammme.bbspace.core.model.LiveRoomMessage
 import com.naaammme.bbspace.core.model.LiveRoomSessionState
@@ -159,22 +160,6 @@ private fun LiveMetaSection(
                 color = MaterialTheme.colorScheme.error
             )
         }
-    }
-}
-
-@Composable
-private fun EmptyMessageCard() {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = "暂时还没有收到弹幕",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
-        )
     }
 }
 
@@ -328,7 +313,7 @@ private fun LiveDetailMessageList(
 
         if (messages.isEmpty() && playbackState.playbackSource != null && playbackState.error == null) {
             item("empty_msg") {
-                EmptyMessageCard()
+                StateMessageCard(text = "暂时还没有收到弹幕")
             }
         } else if (messages.isNotEmpty()) {
             liveMessageItems(

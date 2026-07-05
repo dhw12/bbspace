@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.BiliPullToRefreshBox
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.DistributionAreaItem
 import com.naaammme.bbspace.core.model.InterestAreaLabels
 import com.naaammme.bbspace.core.model.InterestDistributionMaterial
@@ -95,18 +95,14 @@ fun InterestScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = state.errorMessage.orEmpty()
-                                    .ifBlank { "加载兴趣标签失败" },
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = viewModel::refresh) {
-                                Text("重试")
-                            }
-                        }
+                        StateMessageCard(
+                            text = state.errorMessage.orEmpty()
+                                .ifBlank { "加载兴趣标签失败" },
+                            modifier = Modifier.padding(16.dp),
+                            isError = true,
+                            actionText = "重试",
+                            onAction = viewModel::refresh
+                        )
                     }
                 }
 

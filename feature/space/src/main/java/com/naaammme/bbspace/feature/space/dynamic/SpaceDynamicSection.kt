@@ -21,13 +21,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.CoverImage
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.DynamicBody
 import com.naaammme.bbspace.core.model.DynamicItem
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.space.SpaceDynamicUiState
-import com.naaammme.bbspace.feature.space.component.RetryCard
-import com.naaammme.bbspace.feature.space.component.StateCard
 
 internal fun LazyListScope.spaceDynamicSection(
     state: SpaceDynamicUiState,
@@ -39,10 +38,11 @@ internal fun LazyListScope.spaceDynamicSection(
 ) {
     state.message?.let { message ->
         item(key = "dynamic_error", contentType = "state") {
-            RetryCard(
+            StateMessageCard(
                 text = message,
-                button = "重试",
-                onRetry = onRetry
+                isError = true,
+                actionText = "重试",
+                onAction = onRetry
             )
         }
     }
@@ -50,7 +50,7 @@ internal fun LazyListScope.spaceDynamicSection(
     when {
         state.showEmpty && !state.isRefreshing -> {
             item(key = "dynamic_empty", contentType = "state") {
-                StateCard(text = "这个空间还没有动态")
+                StateMessageCard(text = "这个空间还没有动态")
             }
         }
         else -> {
@@ -72,16 +72,17 @@ internal fun LazyListScope.spaceDynamicSection(
     when {
         state.loadMoreError != null -> {
             item(key = "dynamic_load_more_error", contentType = "state") {
-                RetryCard(
+                StateMessageCard(
                     text = state.loadMoreError,
-                    button = "重试",
-                    onRetry = onLoadMore
+                    isError = true,
+                    actionText = "重试",
+                    onAction = onLoadMore
                 )
             }
         }
         !state.hasMore && state.items.isNotEmpty() -> {
             item(key = "dynamic_end", contentType = "state") {
-                StateCard(text = "没有更多动态了")
+                StateMessageCard(text = "没有更多动态了")
             }
         }
     }

@@ -2,7 +2,6 @@ package com.naaammme.bbspace.feature.search
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,8 +20,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -30,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
@@ -38,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.designsystem.component.VideoListCardSkeleton
 import com.naaammme.bbspace.core.model.SearchFilter
 import com.naaammme.bbspace.core.model.SearchTime
@@ -168,9 +165,12 @@ fun SearchScreen(
                 viewModel.isLoading && !hasItems -> SearchLoadingList()
 
                 viewModel.errorMessage != null && !hasItems -> {
-                    SearchError(
-                        message = viewModel.errorMessage.orEmpty(),
-                        onRetry = {
+                    StateMessageCard(
+                        text = viewModel.errorMessage.orEmpty().ifBlank { "搜索失败" },
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        isError = true,
+                        actionText = "重试",
+                        onAction = {
                             keyboard?.hide()
                             viewModel.submitSearch(recordHistory = false)
                         }
@@ -178,9 +178,7 @@ fun SearchScreen(
                 }
 
                 viewModel.keyword.isBlank() -> {
-                    if (histories.isEmpty()) {
-                        SearchHint(text = "输入关键词开始搜索")
-                    } else {
+                    if (histories.isNotEmpty()) {
                         SearchHistoryPanel(
                             histories = histories,
                             order = historyOrder,
@@ -194,7 +192,10 @@ fun SearchScreen(
                     }
                 }
 
-                !hasItems -> SearchHint(text = "没有找到结果")
+                !hasItems -> StateMessageCard(
+                    text = "没有找到结果",
+                    modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
 
                 else -> {
                     LazyColumn(
@@ -237,9 +238,11 @@ fun SearchScreen(
 
                         if (viewModel.errorMessage != null && itemCount > 0) {
                             item {
-                                SearchError(
-                                    message = viewModel.errorMessage.orEmpty(),
-                                    onRetry = viewModel::loadMore
+                                StateMessageCard(
+                                    text = viewModel.errorMessage.orEmpty().ifBlank { "搜索失败" },
+                                    isError = true,
+                                    actionText = "重试",
+                                    onAction = viewModel::loadMore
                                 )
                             }
                         }
@@ -360,44 +363,6 @@ private fun SearchLoadingList(modifier: Modifier = Modifier) {
             contentType = { "skeleton" }
         ) {
             VideoListCardSkeleton()
-        }
-    }
-}
-
-@Composable
-private fun SearchHint(text: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun SearchError(message: String, onRetry: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = message.ifBlank { "搜索失败" },
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error
-            )
-            TextButton(onClick = onRetry) {
-                Text("重试")
-            }
         }
     }
 }

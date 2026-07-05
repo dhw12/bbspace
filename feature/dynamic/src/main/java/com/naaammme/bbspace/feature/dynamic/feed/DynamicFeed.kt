@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.AvatarImage
 import com.naaammme.bbspace.core.designsystem.component.CoverImage
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.designsystem.component.UpListRow
 import com.naaammme.bbspace.core.model.DynamicBody
 import com.naaammme.bbspace.core.model.DynamicImage
@@ -113,10 +114,11 @@ fun DynamicFeed(
                 key = "dynamic_error",
                 contentType = "error"
             ) {
-                DynamicError(
-                    message = errorMessage,
-                    retryText = "点击重试",
-                    onRetry = onRetryRefresh
+                StateMessageCard(
+                    text = errorMessage.ifBlank { "加载动态失败" },
+                    isError = true,
+                    actionText = "点击重试",
+                    onAction = onRetryRefresh
                 )
             }
         }
@@ -126,10 +128,11 @@ fun DynamicFeed(
                 key = "dynamic_load_more_error",
                 contentType = "error"
             ) {
-                DynamicError(
-                    message = loadMoreError,
-                    retryText = "点击重试加载更多",
-                    onRetry = onRetryLoadMore
+                StateMessageCard(
+                    text = loadMoreError.ifBlank { "加载动态失败" },
+                    isError = true,
+                    actionText = "点击重试加载更多",
+                    onAction = onRetryLoadMore
                 )
             }
         }
@@ -409,37 +412,6 @@ private fun DynamicText(text: String) {
         maxLines = 8,
         overflow = TextOverflow.Ellipsis
     )
-}
-
-@Composable
-private fun DynamicError(
-    message: String,
-    retryText: String,
-    onRetry: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = message.ifBlank { "加载动态失败" },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error
-            )
-            Text(
-                text = retryText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable(onClick = onRetry)
-            )
-        }
-    }
 }
 
 private fun DynamicImage.displayAspectRatio(): Float {

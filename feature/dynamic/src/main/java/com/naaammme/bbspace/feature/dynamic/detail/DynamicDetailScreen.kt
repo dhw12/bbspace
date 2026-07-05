@@ -1,7 +1,6 @@
 package com.naaammme.bbspace.feature.dynamic.detail
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +44,7 @@ import com.naaammme.bbspace.core.designsystem.component.AvatarImage
 import com.naaammme.bbspace.core.designsystem.component.PreviewImage
 import com.naaammme.bbspace.core.designsystem.component.PreviewImageGrid
 import com.naaammme.bbspace.core.designsystem.component.SelectableText
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.DynamicDetail
 import com.naaammme.bbspace.core.model.DynamicDetailAuthor
@@ -99,22 +99,12 @@ fun DynamicDetailScreen(
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = state.errorMessage.orEmpty().ifBlank { "加载失败" },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = "点击重试",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable(onClick = viewModel::retry)
-                        )
-                    }
+                    StateMessageCard(
+                        text = state.errorMessage.orEmpty().ifBlank { "加载失败" },
+                        isError = true,
+                        actionText = "点击重试",
+                        onAction = viewModel::retry
+                    )
                 }
             }
 

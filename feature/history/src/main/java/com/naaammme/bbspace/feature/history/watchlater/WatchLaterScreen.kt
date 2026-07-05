@@ -39,12 +39,11 @@ import com.naaammme.bbspace.core.designsystem.component.BiliPullToRefreshBox
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.designsystem.component.VideoListCardSkeleton
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.WatchLaterItem
 import com.naaammme.bbspace.core.model.WatchLaterTab
-import com.naaammme.bbspace.feature.history.component.HistoryEmptyState
-import com.naaammme.bbspace.feature.history.component.HistoryErrorState
 import com.naaammme.bbspace.feature.history.component.HistoryListLoading
 import com.naaammme.bbspace.feature.history.component.LOAD_MORE_SKELETON_COUNT
 import com.naaammme.bbspace.feature.history.component.LoadMoreTrigger
@@ -130,16 +129,17 @@ fun WatchLaterScreen(
                     }
 
                     state.errorMessage != null && state.items.isEmpty() -> {
-                        HistoryErrorState(
-                            message = state.errorMessage.orEmpty(),
-                            fallbackMessage = "加载稍后再看失败",
-                            onRetry = viewModel::refresh,
-                            modifier = Modifier.fillMaxSize()
+                        StateMessageCard(
+                            text = state.errorMessage.orEmpty().ifBlank { "加载稍后再看失败" },
+                            modifier = Modifier.fillMaxSize(),
+                            isError = true,
+                            actionText = "重试",
+                            onAction = viewModel::refresh
                         )
                     }
 
                     state.items.isEmpty() -> {
-                        HistoryEmptyState(
+                        StateMessageCard(
                             text = "暂无${state.tab.title}内容",
                             modifier = Modifier.fillMaxSize()
                         )
@@ -180,10 +180,11 @@ fun WatchLaterScreen(
                                     key = "watch_later_error",
                                     contentType = "error"
                                 ) {
-                                    HistoryErrorState(
-                                        message = state.errorMessage.orEmpty(),
-                                        fallbackMessage = "加载稍后再看失败",
-                                        onRetry = if (state.errorOnLoadMore) {
+                                    StateMessageCard(
+                                        text = state.errorMessage.orEmpty().ifBlank { "加载稍后再看失败" },
+                                        isError = true,
+                                        actionText = "重试",
+                                        onAction = if (state.errorOnLoadMore) {
                                             viewModel::loadMore
                                         } else {
                                             viewModel::refresh

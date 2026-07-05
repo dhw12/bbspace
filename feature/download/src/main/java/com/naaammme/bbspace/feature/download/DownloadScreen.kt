@@ -1,6 +1,5 @@
 package com.naaammme.bbspace.feature.download
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -43,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.VideoDownloadKind
 import com.naaammme.bbspace.core.model.VideoDownloadOption
 import com.naaammme.bbspace.core.model.VideoDownloadOptions
@@ -180,7 +180,7 @@ private fun ConfigTab(
         }
         state.pendingTitle?.let { title ->
             item("pending") {
-                StateCard("已解析目标：$title")
+                StateMessageCard("已解析目标：$title")
             }
         }
         item("kind") {
@@ -206,12 +206,12 @@ private fun ConfigTab(
         }
         if (state.loading) {
             item("loading") {
-                StateCard("正在解析缓存目标")
+                StateMessageCard("正在解析缓存目标")
             }
         }
         state.error?.takeIf(String::isNotBlank)?.let { message ->
             item("error") {
-                StateCard(message, isError = true)
+                StateMessageCard(message, isError = true)
             }
         }
     }
@@ -239,12 +239,12 @@ private fun QueueTab(
     ) {
         state.export.message?.takeIf(String::isNotBlank)?.let { message ->
             item("export_message") {
-                StateCard(message, isError = state.export.isError)
+                StateMessageCard(message, isError = state.export.isError)
             }
         }
         if (tasks.isEmpty()) {
             item("queue_empty") {
-                StateCard("暂无缓存任务")
+                StateMessageCard("暂无缓存任务")
             }
         } else {
             items(
@@ -568,25 +568,6 @@ private fun TaskCard(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun StateCard(
-    text: String,
-    isError: Boolean = false
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isError) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.padding(16.dp)
-        )
     }
 }
 

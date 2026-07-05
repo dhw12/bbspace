@@ -1,6 +1,5 @@
 package com.naaammme.bbspace.feature.im
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -24,13 +22,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.BiliPullToRefreshBox
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.ImSessionItem
 import com.naaammme.bbspace.feature.im.component.ImSessionCard
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -57,7 +54,10 @@ fun ImScreen(
                 .padding(padding)
         ) {
             if (!state.isLoggedIn) {
-                ImCenterState(text = "请先登录后查看消息")
+                StateMessageCard(
+                    text = "请先登录后查看消息",
+                    modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
                 return@BiliPullToRefreshBox
             }
 
@@ -82,11 +82,18 @@ fun ImScreen(
                         }
 
                         !state.errorMessage.isNullOrBlank() -> {
-                            ImCenterState(text = state.errorMessage.orEmpty())
+                            StateMessageCard(
+                                text = state.errorMessage.orEmpty(),
+                                modifier = Modifier.fillMaxSize().padding(16.dp),
+                                isError = true
+                            )
                         }
 
                         else -> {
-                            ImCenterState(text = "暂无消息")
+                            StateMessageCard(
+                                text = "暂无消息",
+                                modifier = Modifier.fillMaxSize().padding(16.dp)
+                            )
                         }
                     }
                 }
@@ -146,7 +153,11 @@ fun ImScreen(
 
                 if (!state.errorMessage.isNullOrBlank()) {
                     item(key = "im_error_footer") {
-                        ImInlineError(text = state.errorMessage.orEmpty())
+                        StateMessageCard(
+                            text = state.errorMessage.orEmpty(),
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            isError = true
+                        )
                     }
                 }
 
@@ -156,50 +167,18 @@ fun ImScreen(
                     }
                 } else if (!state.loadMoreError.isNullOrBlank()) {
                     item(key = "im_load_more_error") {
-                        ImLoadMoreError(
+                        StateMessageCard(
                             text = state.loadMoreError.orEmpty(),
-                            onRetry = vm::loadMore
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            isError = true,
+                            actionText = "重试",
+                            onAction = vm::loadMore
                         )
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-private fun ImCenterState(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun ImInlineError(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = text,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.error,
-        textAlign = TextAlign.Center,
-        fontWeight = FontWeight.Medium
-    )
 }
 
 @Composable
@@ -213,35 +192,6 @@ private fun ImLoadingMore(
         contentAlignment = Alignment.Center
     ) {
         CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun ImLoadMoreError(
-    text: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable(onClick = onRetry),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            text = "重试",
-            modifier = Modifier.padding(top = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
     }
 }
 

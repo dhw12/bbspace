@@ -23,14 +23,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceVideo
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.space.SpaceArchiveUiState
 import com.naaammme.bbspace.feature.space.SpaceDynamicUiState
 import com.naaammme.bbspace.feature.space.SpaceSection
-import com.naaammme.bbspace.feature.space.component.RetryCard
-import com.naaammme.bbspace.feature.space.component.StateCard
 import com.naaammme.bbspace.feature.space.dynamic.spaceDynamicSection
 import java.util.Locale
 
@@ -121,14 +120,14 @@ private fun LazyListScope.videoSection(
 
     state.message?.let { message ->
         item(key = "archive_error", contentType = "state") {
-            StateCard(text = message)
+            StateMessageCard(text = message, isError = true)
         }
     }
 
     when {
         state.showEmpty && !state.isRefreshing -> {
             item(key = "archive_empty", contentType = "state") {
-                StateCard(text = "这个空间还没有公开视频")
+                StateMessageCard(text = "这个空间还没有公开视频")
             }
         }
         else -> {
@@ -148,16 +147,17 @@ private fun LazyListScope.videoSection(
     when {
         state.loadMoreError != null -> {
             item(key = "archive_load_more_error", contentType = "state") {
-                RetryCard(
+                StateMessageCard(
                     text = state.loadMoreError,
-                    button = "重试",
-                    onRetry = onRetryLoadMore
+                    isError = true,
+                    actionText = "重试",
+                    onAction = onRetryLoadMore
                 )
             }
         }
         !state.hasMore && state.videos.isNotEmpty() -> {
             item(key = "archive_end", contentType = "state") {
-                StateCard(text = "没有更多视频了")
+                StateMessageCard(text = "没有更多视频了")
             }
         }
     }

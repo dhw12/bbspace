@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.PlaybackHistory
 import com.naaammme.bbspace.feature.bbspace.rememberExportJson
 
@@ -77,7 +78,10 @@ fun PlaybackHistoryPane(
 
         if (state.items.isEmpty()) {
             item {
-                EmptyPlaybackHistory()
+                StateMessageCard(
+                    text = "还没有本地播放历史",
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         } else {
             items(
@@ -180,27 +184,6 @@ private fun PlaybackHistoryManageCard(
                     Text("清空")
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun EmptyPlaybackHistory() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "还没有本地播放历史",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

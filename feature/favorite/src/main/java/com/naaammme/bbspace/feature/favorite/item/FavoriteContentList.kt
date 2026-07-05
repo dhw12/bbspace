@@ -28,10 +28,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.CoverImage
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.designsystem.component.VideoListCardSkeleton
 import com.naaammme.bbspace.core.model.FavoriteContentItem
 import com.naaammme.bbspace.core.model.FavoriteContentTarget
-import com.naaammme.bbspace.feature.favorite.FavoriteErrorState
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
@@ -101,9 +101,11 @@ fun FavoriteContentList(
                 key = "favorite_content_error",
                 contentType = "error"
             ) {
-                FavoriteErrorState(
-                    message = errorMessage,
-                    onRetry = onRetry
+                StateMessageCard(
+                    text = errorMessage.ifBlank { "加载收藏失败" },
+                    isError = true,
+                    actionText = "重试",
+                    onAction = onRetry
                 )
             }
         }

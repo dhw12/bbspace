@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -22,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.BiliPullToRefreshBox
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoTarget
@@ -76,9 +76,9 @@ fun DynamicScreen(
         ) {
             when {
                 !state.isLoggedIn -> {
-                    DynamicEmptyState(
+                    StateMessageCard(
                         text = "请先登录后查看动态",
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize().padding(24.dp)
                     )
                 }
 
@@ -92,16 +92,17 @@ fun DynamicScreen(
                 }
 
                 state.errorMessage != null && state.items.isEmpty() -> {
-                    DynamicEmptyState(
+                    StateMessageCard(
                         text = state.errorMessage.orEmpty().ifBlank { "加载动态失败" },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        isError = true
                     )
                 }
 
                 state.items.isEmpty() -> {
-                    DynamicEmptyState(
+                    StateMessageCard(
                         text = "暂无动态",
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize().padding(24.dp)
                     )
                 }
 
@@ -124,25 +125,6 @@ fun DynamicScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun DynamicEmptyState(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
