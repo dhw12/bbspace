@@ -73,6 +73,7 @@ import kotlinx.coroutines.withContext
 fun CommentPanel(
     subject: CommentSubject?,
     modifier: Modifier = Modifier,
+    isActive: Boolean = true,
     detailRecord: PublishedRecord? = null,
     onOpenSpace: (SpaceRoute) -> Unit = {},
     onDismissDetail: () -> Unit = {},
@@ -82,11 +83,13 @@ fun CommentPanel(
     header: (@Composable () -> Unit)? = null,
     viewModel: CommentViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(subject, detailRecord?.key) {
-        if (detailRecord != null) {
-            viewModel.bindDetail(detailRecord)
-        } else {
-            viewModel.bind(subject)
+    LaunchedEffect(isActive, subject, detailRecord?.key) {
+        if (isActive) {
+            if (detailRecord != null) {
+                viewModel.bindDetail(detailRecord)
+            } else {
+                viewModel.bind(subject)
+            }
         }
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

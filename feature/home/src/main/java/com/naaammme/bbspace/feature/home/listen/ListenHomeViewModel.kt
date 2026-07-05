@@ -24,7 +24,11 @@ class ListenHomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ListenHomeUiState())
     val uiState = _uiState.asStateFlow()
 
-    init {
+    private var hasLoaded = false
+
+    fun ensureLoaded() {
+        if (hasLoaded) return
+        hasLoaded = true
         loadInitial()
     }
 

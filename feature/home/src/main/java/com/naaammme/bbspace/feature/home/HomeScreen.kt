@@ -108,6 +108,7 @@ fun HomeScreen(
         ) { page ->
             when (page) {
                 0 -> ListenHomePage(
+                    isActive = pagerState.currentPage == page,
                     onItemClick = { item ->
                         onOpenListenItem(
                             item.oid,
