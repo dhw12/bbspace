@@ -1,7 +1,6 @@
 package com.naaammme.bbspace.feature.dynamic.detail
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +44,7 @@ import com.naaammme.bbspace.core.designsystem.component.AvatarImage
 import com.naaammme.bbspace.core.designsystem.component.PreviewImage
 import com.naaammme.bbspace.core.designsystem.component.PreviewImageGrid
 import com.naaammme.bbspace.core.designsystem.component.SelectableText
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.DynamicDetail
 import com.naaammme.bbspace.core.model.DynamicDetailAuthor
@@ -99,22 +99,12 @@ fun DynamicDetailScreen(
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = state.errorMessage.orEmpty().ifBlank { "加载失败" },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = "点击重试",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable(onClick = viewModel::retry)
-                        )
-                    }
+                    StateMessageCard(
+                        text = state.errorMessage.orEmpty().ifBlank { "加载失败" },
+                        isError = true,
+                        actionText = "点击重试",
+                        onAction = viewModel::retry
+                    )
                 }
             }
 
@@ -302,14 +292,14 @@ private fun DynamicDetailImageGrid(images: List<DynamicImage>, modifier: Modifie
 private fun DynamicDetailStats(stats: DynamicStats) {
     val text = remember(stats) {
         buildString {
-            if (stats.repost > 0) append("转发 ${formatCount(stats.repost)}")
+            if (stats.repost > 0) append("转发 ${stats.repost}")
             if (stats.reply > 0) {
                 if (isNotEmpty()) append("  ")
-                append("评论 ${formatCount(stats.reply)}")
+                append("评论 ${stats.reply}")
             }
             if (stats.like > 0) {
                 if (isNotEmpty()) append("  ")
-                append("点赞 ${formatCount(stats.like)}")
+                append("点赞 ${stats.like}")
             }
         }
     }
@@ -343,20 +333,6 @@ private fun LazyListScope.detailContentItems(detail: DynamicDetail) {
         item(key = "detail_stats", contentType = "stats") {
             DynamicDetailStats(stats)
         }
-    }
-}
-
-private fun formatCount(value: Long): String {
-    return when {
-        value >= 100_000_000L -> {
-            val number = value / 100_000_000f
-            if (number >= 10f) "${number.toInt()}亿" else "%.1f亿".format(number)
-        }
-        value >= 10_000L -> {
-            val number = value / 10_000f
-            if (number >= 10f) "${number.toInt()}万" else "%.1f万".format(number)
-        }
-        else -> value.toString()
     }
 }
 

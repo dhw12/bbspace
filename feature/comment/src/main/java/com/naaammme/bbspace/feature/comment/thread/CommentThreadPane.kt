@@ -25,11 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.CommentSort
 import com.naaammme.bbspace.feature.comment.component.CommentReplyAction
-import com.naaammme.bbspace.feature.comment.component.StateCard
 import com.naaammme.bbspace.feature.comment.component.ThreadReplyCard
-import com.naaammme.bbspace.feature.comment.component.formatCount
 
 @Composable
 internal fun CommentThreadPane(
@@ -169,7 +168,7 @@ private fun CommentThreadContent(
                         key = "reply_error",
                         contentType = "state"
                     ) {
-                        StateCard(text = state.error.orEmpty())
+                        StateMessageCard(text = state.error.orEmpty(), isError = true)
                     }
                 }
 
@@ -178,7 +177,7 @@ private fun CommentThreadContent(
                         key = "reply_empty",
                         contentType = "state"
                     ) {
-                        StateCard("还没有回复")
+                        StateMessageCard("还没有回复")
                     }
                 }
 
@@ -203,7 +202,7 @@ private fun CommentThreadContent(
                     key = "reply_load_more_error",
                     contentType = "footer"
                 ) {
-                    StateCard(text = state.loadMoreError.orEmpty())
+                    StateMessageCard(text = state.loadMoreError.orEmpty(), isError = true)
                 }
             }
         }
@@ -226,7 +225,7 @@ private fun ThreadInfoBar(
     ) {
         Text(
             text = if (count > 0L) {
-                "相关回复共${count.formatCount()}条"
+                "相关回复共${count}条"
             } else {
                 "相关回复"
             },

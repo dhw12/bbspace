@@ -10,12 +10,12 @@ import com.naaammme.bbspace.core.model.SpaceOrderOption
 import com.naaammme.bbspace.core.model.SpaceProfile
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.SpaceVideo
+import com.naaammme.bbspace.core.model.RelationUser
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.infra.network.BiliRestClient
 import com.naaammme.bbspace.infra.network.BiliRestParamBuilder
 import com.naaammme.bbspace.infra.network.BiliRestProfile
-import java.util.Locale
 import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -150,6 +150,7 @@ class SpaceRepository @Inject constructor(
         val article = data.optJSONObject("article")
         val season = data.optJSONObject("ugc_season")
         val series = data.optJSONObject("series")
+        val vip = card?.optJSONObject("vip")
         val level = card?.optJSONObject("level_info")?.optInt("current_level") ?: 0
         val likeCount = card?.optJSONObject("likes")?.optLong("like_num") ?: 0L
         val name = card?.optString("name")
@@ -162,6 +163,10 @@ class SpaceRepository @Inject constructor(
             face = card?.optString("face").orEmpty().httpsImageUrl().ifBlank { null },
             sign = card?.optString("sign").orEmpty(),
             level = level,
+            vipLabel = vip?.takeIf { it.optInt("vipStatus") > 0 }
+                ?.optJSONObject("label")
+                ?.optString("text")
+                ?.takeIf(String::isNotBlank),
             fansCount = card?.optLong("fans") ?: 0L,
             followingCount = card?.optLong("attention") ?: 0L,
             likeCount = likeCount,
@@ -224,11 +229,11 @@ class SpaceRepository @Inject constructor(
                         categoryName = item.optString("tname").ifBlank { null },
                         durationSec = item.optLong("duration").coerceAtLeast(0L),
                         viewText = item.optString("view_content").ifBlank {
-                            formatCount(item.optLong("play"))
+                            item.optLong("play").toString()
                         },
                         danmakuText = item.optLong("danmaku")
                             .takeIf { it > 0L }
-                            ?.let(::formatCount),
+                            ?.toString(),
                         publishTimeText = item.optString("publish_time_text").ifBlank {
                             item.optLong("ctime")
                                 .takeIf { it > 0L }
@@ -251,24 +256,6 @@ class SpaceRepository @Inject constructor(
         }.distinct()
     }
 
-    private fun formatCount(count: Long): String {
-        return when {
-            count >= 100_000_000L -> formatDecimal(count / 100_000_000f, "亿")
-            count >= 10_000L -> formatDecimal(count / 10_000f, "万")
-            else -> count.toString()
-        }
-    }
-
-    private fun formatDecimal(
-        value: Float,
-        suffix: String
-    ): String {
-        val text = String.format(Locale.ROOT, "%.1f", value)
-            .trimEnd('0')
-            .trimEnd('.')
-        return "$text$suffix"
-    }
-
     private fun formatPubDate(ts: Long): String {
         return DateFormat.format("yyyy-MM-dd", ts * 1000).toString()
     }
@@ -284,9 +271,62 @@ class SpaceRepository @Inject constructor(
             ?: 0L
     }
 
+    suspend fun fetchRelationUsers(vmid: Long, page: Int, isFans: Boolean): List<RelationUser> {
+        val ts = System.currentTimeMillis() / 1000L
+        val endpoint = if (isFans) FANS_ENDPOINT else FOLLOWINGS_ENDPOINT
+        val params = restParamBuilder.app(BiliRestProfile.APP, ts, authStore.accessToken) + buildMap {
+            put("vmid", vmid.toString())
+            put("pn", page.toString())
+            put("ps", PAGE_SIZE.toString())
+            put("scene", "1")
+        }
+        val json = restClient.getSigned(
+            url = "${BiliConstants.BASE_URL_API}$endpoint",
+            params = params,
+            profile = BiliRestProfile.APP
+        )
+        return withContext(Dispatchers.Default) {
+            parseRelationUsers(json)
+        }
+    }
+
+    private fun parseRelationUsers(json: JSONObject): List<RelationUser> {
+        val data = json.optJSONObject("data") ?: return emptyList()
+        val list = data.optJSONArray("list") ?: return emptyList()
+        return buildList {
+            for (i in 0 until list.length()) {
+                val item = list.optJSONObject(i) ?: continue
+                val mid = item.optLongCompat("mid")
+                if (mid <= 0L) continue
+                val uname = item.optString("uname").orEmpty()
+                val face = item.optString("face").orEmpty().httpsImageUrl()
+                val sign = item.optString("sign").orEmpty()
+                val vipObj = item.optJSONObject("vip")
+                val isVip = vipObj?.optInt("vipStatus") ?: 0 > 0
+                val vipLabel = vipObj
+                    ?.takeIf { isVip }
+                    ?.optJSONObject("label")
+                    ?.optString("text")
+                    ?.takeIf(String::isNotBlank)
+                add(
+                    RelationUser(
+                        mid = mid,
+                        uname = uname,
+                        face = face,
+                        sign = sign,
+                        isVip = isVip,
+                        vipLabel = vipLabel
+                    )
+                )
+            }
+        }
+    }
+
     private companion object {
         const val SPACE_HOME_ENDPOINT = "/x/v2/space"
         const val SPACE_ARCHIVE_CURSOR_ENDPOINT = "/x/v2/space/archive/cursor"
+        const val FOLLOWINGS_ENDPOINT = "/x/relation/followings"
+        const val FANS_ENDPOINT = "/x/relation/fans"
         const val PAGE_SIZE = 20
         const val DEFAULT_ORDER = "pubdate"
         const val SORT_DESC = "desc"

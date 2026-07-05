@@ -2,7 +2,6 @@ package com.naaammme.bbspace.feature.bbspace.publishedrecord
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,7 +25,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.SearchCapsuleField
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_COMMENT
 import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_LIVE_DANMAKU
 import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_VIDEO_DANMAKU
@@ -95,7 +94,7 @@ fun PublishedRecordPane(
             when {
                 state.error != null -> {
                     item {
-                        PublishedRecordStateCard(
+                        StateMessageCard(
                             text = state.error.orEmpty(),
                             isError = true
                         )
@@ -104,7 +103,14 @@ fun PublishedRecordPane(
 
                 state.items.isEmpty() && !state.isLoading -> {
                     item {
-                        EmptyPublishedRecord(hasQuery = state.hasQuery)
+                        StateMessageCard(
+                            text = if (state.hasQuery) {
+                                "没有匹配的记录"
+                            } else {
+                                "还没有本地发布记录"
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 
@@ -126,7 +132,7 @@ fun PublishedRecordPane(
 
             if (!state.hasMore && state.items.isNotEmpty() && !state.isLoadingMore) {
                 item {
-                    PublishedRecordStateCard(text = "已经到底了")
+                    StateMessageCard(text = "已经到底了")
                 }
             }
         }
@@ -199,27 +205,6 @@ private fun PublishedRecordFilterBar(
 }
 
 @Composable
-private fun EmptyPublishedRecord(hasQuery: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = if (hasQuery) "没有匹配的记录" else "还没有本地发布记录",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
 private fun PublishedRecordCard(
     item: PublishedRecord,
     onOpenTarget: (PublishedRecord) -> Unit,
@@ -287,30 +272,6 @@ private fun PublishedRecordCard(
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             cardContent()
-        }
-    }
-}
-
-@Composable
-private fun PublishedRecordStateCard(
-    text: String,
-    isError: Boolean = false
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

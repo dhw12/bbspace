@@ -28,10 +28,15 @@ import com.naaammme.bbspace.core.model.listen.ListenItem
 
 @Composable
 fun ListenHomePage(
+    isActive: Boolean,
     onItemClick: (ListenItem) -> Unit,
     viewModel: ListenHomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    androidx.compose.runtime.LaunchedEffect(isActive) {
+        if (isActive) viewModel.ensureLoaded()
+    }
 
     AdaptiveMediaGrid(
         items = state.items,
