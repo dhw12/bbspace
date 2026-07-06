@@ -107,7 +107,7 @@ class DynamicRepository @Inject constructor(
         check(accessToken.isNotBlank() && mid > 0L) { "请先登录" }
         check(dynamicId.isNotBlank()) { "动态 ID 不能为空" }
         val ts = System.currentTimeMillis() / 1000L
-        restClient.postSigned(
+        restClient.getSigned(
             url = "${BiliConstants.BASE_URL_VC_API}$LIKE_ENDPOINT",
             params = restParamBuilder.app(BiliRestProfile.APP, ts, accessToken) + mapOf(
                 "dynamic_id" to dynamicId,
