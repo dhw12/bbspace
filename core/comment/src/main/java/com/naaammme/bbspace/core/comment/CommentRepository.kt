@@ -703,7 +703,7 @@ class CommentRepository @Inject constructor(
         val accessToken = authProvider.accessToken
         check(accessToken.isNotBlank()) { "请先登录" }
         val ts = System.currentTimeMillis() / 1000L
-        restClient.postSigned(
+        restClient.getSigned(
             url = "${BiliConstants.BASE_URL_API}$LIKE_ENDPOINT",
             params = restParamBuilder.app(BiliRestProfile.APP, ts, accessToken) + mapOf(
                 "oid" to subject.oid.toString(),
