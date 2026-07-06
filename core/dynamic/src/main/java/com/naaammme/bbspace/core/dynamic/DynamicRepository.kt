@@ -216,7 +216,8 @@ class DynamicRepository @Inject constructor(
                 DynamicStats(
                     repost = s.repost,
                     reply = s.reply,
-                    like = s.like
+                    like = s.like,
+                    liked = s.likeInfo.isLike
                 )
             } else null
         }
