@@ -71,6 +71,8 @@ class DanmakuOverlayState internal constructor(
             requireTargetWindow = pendingSeek || hasSeek
         )
         val curReady = appliedWindowId == requiredWindowId
+        // 在 syncPosition 之前保存 pendingSeek，因为 syncPosition 会把它清为 false
+        val hadPendingSeek = pendingSeek
         if (config.enabled && hasSource) {
             syncPosition(
                 positionMs = clampedPositionMs,
@@ -86,7 +88,7 @@ class DanmakuOverlayState internal constructor(
             !hasSource ||
             lastPlayState?.isPlaying != true
         if (needStateOverride) {
-            val anchorMs = if (hasSeek || pendingSeek) {
+            val anchorMs = if (hasSeek || hadPendingSeek) {
                 clampedPositionMs
             } else {
                 timeProvider.getCurrentTimeMs()
