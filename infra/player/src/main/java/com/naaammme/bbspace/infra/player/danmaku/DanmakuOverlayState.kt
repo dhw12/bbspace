@@ -56,6 +56,14 @@ class DanmakuOverlayState internal constructor(
         if (hasSeek) {
             pendingSeek = true
         }
+        // 检测循环播放：从非播放变为播放但没有 seek 事件
+        val isLoopingResume = !hasSeek &&
+            lastPlayState?.isPlaying == false &&
+            isPlaying &&
+            lastPlayState != null
+        if (isLoopingResume) {
+            pendingSeek = true
+        }
         applyConfig(config)
         syncWindow(
             window = danmakuState.window,
@@ -73,11 +81,12 @@ class DanmakuOverlayState internal constructor(
         val canPlay = isPlaying && !pendingSeek
         val needStateOverride = hasSeek ||
             hasSpeedChange ||
+            pendingSeek ||
             !canPlay ||
             !hasSource ||
             lastPlayState?.isPlaying != true
         if (needStateOverride) {
-            val anchorMs = if (hasSeek) {
+            val anchorMs = if (hasSeek || pendingSeek) {
                 clampedPositionMs
             } else {
                 timeProvider.getCurrentTimeMs()
