@@ -81,7 +81,7 @@ class Media3PlayerEngine @Inject constructor(
             newPosition: Player.PositionInfo,
             reason: Int
         ) {
-            if (reason.isSeekDiscontinuity()) {
+            if (reason.isSeekDiscontinuity() || reason.isLoopResetDiscontinuity(oldPosition, newPosition)) {
                 updatePlaybackState { it.copy(seekEventSeq = it.seekEventSeq + 1L) }
             }
             updatePlaybackProgress()
@@ -492,7 +492,18 @@ class Media3PlayerEngine @Inject constructor(
             this == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT
     }
 
+    private fun Int.isLoopResetDiscontinuity(
+        oldPosition: Player.PositionInfo,
+        newPosition: Player.PositionInfo
+    ): Boolean {
+        return looping &&
+            this == Player.DISCONTINUITY_REASON_AUTO_TRANSITION &&
+            oldPosition.positionMs > newPosition.positionMs &&
+            newPosition.positionMs <= LOOP_RESET_POSITION_THRESHOLD_MS
+    }
+
     private companion object {
         const val TAG = "Media3Player"
+        const val LOOP_RESET_POSITION_THRESHOLD_MS = 1_500L
     }
 }

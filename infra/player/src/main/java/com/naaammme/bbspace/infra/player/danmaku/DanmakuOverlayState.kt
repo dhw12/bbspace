@@ -27,6 +27,7 @@ class DanmakuOverlayState internal constructor(
     private var lastPlayState: DanmakuPlayState? = null
     private var lastPlaybackSpeed = 1f
     private var lastSeekEventId = 0L
+    private var lastPositionMs: Long? = null
     private var appliedWindowId: Long? = null
     private var appliedWindowSignature: Int? = null
     private val itemMapper = DefaultDanmakuItemMapper()
@@ -51,9 +52,10 @@ class DanmakuOverlayState internal constructor(
         val requiredWindowId = clampedPositionMs.toDanmakuWindowId()
         syncSource(danmakuState.sourceKey)
         val hasSeek = consumeSeekEvent(seekEventId)
+        val hasPositionWrap = consumePositionWrap(clampedPositionMs)
         val hasSpeedChange = lastPlaybackSpeed != clampedSpeed
         lastPlaybackSpeed = clampedSpeed
-        if (hasSeek) {
+        if (hasSeek || hasPositionWrap) {
             pendingSeek = true
         }
         // 检测循环播放：从非播放变为播放但没有 seek 事件
@@ -88,7 +90,7 @@ class DanmakuOverlayState internal constructor(
             !hasSource ||
             lastPlayState?.isPlaying != true
         if (needStateOverride) {
-            val anchorMs = if (hasSeek || hadPendingSeek) {
+            val anchorMs = if (hasSeek || hasPositionWrap || hadPendingSeek) {
                 clampedPositionMs
             } else {
                 timeProvider.getCurrentTimeMs()
@@ -194,6 +196,7 @@ class DanmakuOverlayState internal constructor(
         if (released.get()) return
         lastSourceKey = null
         lastSeekEventId = 0L
+        lastPositionMs = null
         pendingSeek = true
         appliedWindowId = null
         appliedWindowSignature = null
@@ -213,6 +216,7 @@ class DanmakuOverlayState internal constructor(
 
         lastSourceKey = sourceKey
         lastSeekEventId = 0L
+        lastPositionMs = null
         pendingSeek = true
         appliedWindowId = null
         appliedWindowSignature = null
@@ -262,6 +266,15 @@ class DanmakuOverlayState internal constructor(
         lastSeekEventId = seekEventId
         return true
     }
+
+    private fun consumePositionWrap(positionMs: Long): Boolean {
+        val previous = lastPositionMs
+        lastPositionMs = positionMs
+        return previous != null &&
+            previous > LOOP_WRAP_MIN_PREVIOUS_POSITION_MS &&
+            previous > positionMs + LOOP_WRAP_POSITION_DELTA_MS &&
+            positionMs <= LOOP_WRAP_TARGET_POSITION_MS
+    }
 }
 
 private fun List<DanmakuItem>.windowSignature(): Int {
@@ -285,3 +298,6 @@ private data class DanmakuPlayState(
 
 private const val LIVE_DANMAKU_LEAD_MS = 1_200L
 private const val LIVE_DANMAKU_PRIORITY: Byte = 1
+private const val LOOP_WRAP_MIN_PREVIOUS_POSITION_MS = 5_000L
+private const val LOOP_WRAP_POSITION_DELTA_MS = 3_000L
+private const val LOOP_WRAP_TARGET_POSITION_MS = 2_000L
