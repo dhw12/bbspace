@@ -108,7 +108,7 @@ class DynamicRepository @Inject constructor(
         check(dynamicId.isNotBlank()) { "动态 ID 不能为空" }
         val ts = System.currentTimeMillis() / 1000L
         restClient.postSigned(
-            url = "${BiliConstants.BASE_URL_API}$LIKE_ENDPOINT",
+            url = "${BiliConstants.BASE_URL_VC_API}$LIKE_ENDPOINT",
             params = restParamBuilder.app(BiliRestProfile.APP, ts, accessToken) + mapOf(
                 "dynamic_id" to dynamicId,
                 "up" to if (like) "1" else "2",
@@ -758,7 +758,7 @@ class DynamicRepository @Inject constructor(
         const val ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynAll"
         const val OPUS_DETAIL_ENDPOINT = "bilibili.app.dynamic.v2.Opus/OpusDetail"
         const val SPACE_ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynSpace"
-        const val LIKE_ENDPOINT = "/x/dynamic/feed/operate/like"
+        const val LIKE_ENDPOINT = "/dynamic_like/v1/dynamic_like/thumb"
         const val DEFAULT_QN = 80L
         const val DEFAULT_FNVER = 0L
         const val DEFAULT_FNVAL = 272L
