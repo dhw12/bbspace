@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -113,6 +114,21 @@ class BiliRestClient @Inject constructor(
     }
 
     /**
+     * 发送签名后的标准表单 POST 请求并要求 code == 0
+     *
+     * 部分旧移动端接口要求 application/x-www-form-urlencoded，否则会返回非 JSON 文本。
+     */
+    suspend fun postSignedForm(
+        url: String,
+        params: Map<String, String>,
+        profile: BiliRestProfile = BiliRestProfile.APP
+    ): JSONObject {
+        val signedBody = AppSigner.sign(params, profile.appKey, profile.appSec)
+        val requestBody = signedBody.toRequestBody(FORM_URL_ENCODED)
+        return requireSuccess(executeJson(Request.Builder().url(url).post(requestBody).withHeaders(profile).build()))
+    }
+
+    /**
      * 发送签名后的 POST 请求但不检查业务 code
      *
      * 用于二维码轮询这类需要调用方自行处理特殊返回码的接口
@@ -169,6 +185,7 @@ class BiliRestClient @Inject constructor(
     }
 
     private companion object {
+        val FORM_URL_ENCODED = "application/x-www-form-urlencoded".toMediaType()
         const val MAX_ERROR_BODY_PREVIEW = 200
     }
 }
