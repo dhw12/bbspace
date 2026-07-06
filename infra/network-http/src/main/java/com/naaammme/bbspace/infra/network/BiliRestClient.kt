@@ -144,11 +144,18 @@ class BiliRestClient @Inject constructor(
     private suspend fun executeJson(request: Request): JSONObject {
         return withContext(Dispatchers.IO) {
             val resp = okHttpClient.newCall(request).execute()
-            val body = resp.body?.string() ?: throw BiliApiException(-1, "Empty response")
+            val body = resp.body?.string() ?: throw BiliApiException(resp.code, "Empty response")
             try {
                 JSONObject(body)
             } catch (e: JSONException) {
-                throw BiliApiException(-1, "服务器返回非 JSON 响应，请检查登录状态或接口权限")
+                val preview = body
+                    .replace('\n', ' ')
+                    .replace('\r', ' ')
+                    .take(MAX_ERROR_BODY_PREVIEW)
+                throw BiliApiException(
+                    resp.code,
+                    "服务器返回非 JSON 响应: ${request.url}. 响应片段: $preview"
+                )
             }
         }
     }
@@ -159,5 +166,9 @@ class BiliRestClient @Inject constructor(
     private fun Request.Builder.withHeaders(profile: BiliRestProfile): Request.Builder {
         headerBuilder.build(profile).forEach { (key, value) -> addHeader(key, value) }
         return this
+    }
+
+    private companion object {
+        const val MAX_ERROR_BODY_PREVIEW = 200
     }
 }
