@@ -4,10 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.naaammme.bbspace.core.common.log.Logger
-import com.naaammme.bbspace.core.space.SpaceRepository
-import com.naaammme.bbspace.core.model.SpaceHome
+import com.naaammme.bbspace.core.dynamic.DynamicRepository
+import com.naaammme.bbspace.core.model.SpaceProfile
 import com.naaammme.bbspace.core.model.SpaceRoute
-import com.naaammme.bbspace.core.model.SpaceVideo
+import com.naaammme.bbspace.core.model.SpaceRouteTool
+import com.naaammme.bbspace.core.space.SpaceRepository
 import com.naaammme.bbspace.feature.space.navigation.SPACE_FROM_ARG
 import com.naaammme.bbspace.feature.space.navigation.SPACE_FROM_VIEW_AID_ARG
 import com.naaammme.bbspace.feature.space.navigation.SPACE_MID_ARG
@@ -23,33 +24,49 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class SpaceViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val repo: SpaceRepository
+    private val repo: SpaceRepository,
+    private val dynamicRepo: DynamicRepository
 ) : ViewModel() {
 
     private val route = savedStateHandle.toSpaceRoute()
+    private val isValidRoute = route.mid > 0L || !route.name.isNullOrBlank()
 
-    private val _uiState = MutableStateFlow(SpaceUiState())
+    private val _uiState = MutableStateFlow(
+        SpaceUiState(header = route.toInitialHeaderState())
+    )
     val uiState: StateFlow<SpaceUiState> = _uiState.asStateFlow()
 
     init {
-        if (route.mid <= 0L && route.name.isNullOrBlank()) {
-            _uiState.update { it.copy(pageErrorMessage = "个人空间参数无效") }
+        if (!isValidRoute) {
+            _uiState.update {
+                it.copy(archive = it.archive.copy(message = "个人空间参数无效"))
+            }
         } else {
             refresh()
         }
     }
 
     fun refresh() {
-        if (route.mid <= 0L && route.name.isNullOrBlank()) return
+        if (!isValidRoute) return
         val state = _uiState.value
-        if (state.isPageLoading || state.archive.isRefreshing || state.archive.isLoadingMore) return
-        val hasHeader = state.header != null
+        if (
+            state.archive.isRefreshing ||
+            state.archive.isLoadingMore ||
+            state.dynamics.isRefreshing ||
+            state.dynamics.isLoadingMore
+        ) {
+            return
+        }
         _uiState.update {
             it.copy(
-                isPageLoading = !hasHeader,
-                pageErrorMessage = null,
                 archive = it.archive.copy(
-                    isRefreshing = hasHeader,
+                    isRefreshing = true,
+                    message = null,
+                    loadMoreError = null
+                ),
+                dynamics = it.dynamics.copy(
+                    isRefreshing = true,
+                    isLoadingMore = false,
                     message = null,
                     loadMoreError = null
                 )
@@ -62,7 +79,10 @@ class SpaceViewModel @Inject constructor(
                     .takeIf { selected -> home.orders.any { it.value == selected } }
                     ?: home.defaultOrder
                 val homeOrderState = resolveSpaceOrderState(home.orders, preferredOrder)
-                val headerState = home.toHeaderState()
+                val headerState = SpaceHeaderUiState(
+                    profile = home.profile,
+                    bannerUrl = home.bannerUrl
+                )
                 if (route.mid > 0L && homeOrderState.selectedOrder != home.defaultOrder) {
                     val page = repo.fetchArchive(
                         mid = route.mid,
@@ -82,12 +102,9 @@ class SpaceViewModel @Inject constructor(
                                 selectedOrder = archiveOrderState.selectedOrder,
                                 hasMore = page.hasMore,
                                 isRefreshing = false,
-                                isLoadingMore = false,
                                 message = null,
                                 loadMoreError = null
-                            ),
-                            isPageLoading = false,
-                            pageErrorMessage = null
+                            )
                         )
                     }
                 } else {
@@ -100,69 +117,100 @@ class SpaceViewModel @Inject constructor(
                                 selectedOrder = homeOrderState.selectedOrder,
                                 hasMore = route.mid > 0L && home.hasMore,
                                 isRefreshing = false,
-                                isLoadingMore = false,
                                 message = null,
                                 loadMoreError = null
-                            ),
-                            isPageLoading = false,
-                            pageErrorMessage = null
+                            )
                         )
                     }
                 }
+                loadDynamics()
             } catch (e: Exception) {
                 Logger.e(TAG, e) { "加载个人空间失败" }
                 val message = e.message ?: "加载个人空间失败"
                 _uiState.update {
-                    if (hasHeader) {
-                        it.copy(
-                            isPageLoading = false,
-                            pageErrorMessage = null,
-                            archive = it.archive.copy(
-                                isRefreshing = false,
-                                isLoadingMore = false,
-                                message = message
-                            )
+                    it.copy(
+                        archive = it.archive.copy(
+                            isRefreshing = false,
+                            message = message
+                        ),
+                        dynamics = it.dynamics.copy(
+                            isRefreshing = false,
+                            isLoadingMore = false,
+                            message = message
                         )
-                    } else {
-                        it.copy(
-                            isPageLoading = false,
-                            pageErrorMessage = message,
-                            archive = it.archive.copy(
-                                isRefreshing = false,
-                                isLoadingMore = false
-                            )
-                        )
-                    }
+                    )
                 }
             }
         }
     }
 
-    fun retry() {
-        refresh()
-    }
-
     fun selectOrder(order: String) {
         val state = _uiState.value
         if (route.mid <= 0L || order == state.archive.selectedOrder) return
-        if (state.isPageLoading || state.archive.isRefreshing || state.archive.isLoadingMore) return
+        if (state.archive.isRefreshing || state.archive.isLoadingMore) return
+        val prevArchive = state.archive
+        _uiState.update {
+            it.copy(
+                archive = prevArchive.copy(
+                    selectedOrder = order,
+                    isRefreshing = true,
+                    message = null,
+                    loadMoreError = null
+                ),
+                selectedSection = SpaceSection.VIDEO
+            )
+        }
         viewModelScope.launch {
-            reloadArchive(order)
+            try {
+                val page = repo.fetchArchive(
+                    mid = route.mid,
+                    order = order,
+                    fromViewAid = route.fromViewAid
+                )
+                val orderState = resolveSpaceOrderState(page.orders, order)
+                _uiState.update {
+                    it.copy(
+                        archive = it.archive.copy(
+                            videos = page.videos,
+                            orders = orderState.orders,
+                            selectedOrder = orderState.selectedOrder,
+                            hasMore = page.hasMore,
+                            isRefreshing = false,
+                            message = null,
+                            loadMoreError = null
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Logger.e(TAG, e) { "切换空间排序失败" }
+                _uiState.update {
+                    it.copy(
+                        archive = prevArchive.copy(
+                            isRefreshing = false,
+                            message = e.message ?: "切换排序失败"
+                        )
+                    )
+                }
+            }
         }
     }
 
+    fun selectSection(section: SpaceSection) {
+        _uiState.update { it.copy(selectedSection = section) }
+    }
+
     fun loadMore() {
+        when (_uiState.value.selectedSection) {
+            SpaceSection.VIDEO -> loadMoreVideos()
+            SpaceSection.DYNAMIC -> loadMoreDynamics()
+        }
+    }
+
+    private fun loadMoreVideos() {
         val archive = _uiState.value.archive
         if (route.mid <= 0L || !archive.canLoadMore) return
         val cursorAid = archive.videos.lastOrNull()?.aid ?: return
-        _uiState.update {
-            it.copy(
-                archive = it.archive.copy(
-                    isLoadingMore = true,
-                    loadMoreError = null
-                )
-            )
-        }
+        _uiState.update { it.copy(archive = it.archive.copy(isLoadingMore = true, loadMoreError = null)) }
         viewModelScope.launch {
             try {
                 val page = repo.fetchArchive(
@@ -198,69 +246,100 @@ class SpaceViewModel @Inject constructor(
         }
     }
 
-    private suspend fun reloadArchive(order: String) {
-        val prevArchive = _uiState.value.archive
+    private fun loadMoreDynamics() {
+        val dynamics = _uiState.value.dynamics
+        if (route.mid <= 0L || !dynamics.canLoadMore) return
         _uiState.update {
             it.copy(
-                archive = it.archive.copy(
-                    videos = emptyList(),
-                    selectedOrder = order,
-                    hasMore = false,
-                    isRefreshing = true,
-                    message = null,
+                dynamics = it.dynamics.copy(
+                    isLoadingMore = true,
                     loadMoreError = null
                 )
             )
         }
-        try {
-            val page = repo.fetchArchive(
-                mid = route.mid,
-                order = order,
-                fromViewAid = route.fromViewAid
-            )
-            val orderState = resolveSpaceOrderState(page.orders, order)
-            _uiState.update {
-                it.copy(
-                    archive = it.archive.copy(
-                        videos = page.videos,
-                        orders = orderState.orders,
-                        selectedOrder = orderState.selectedOrder,
-                        hasMore = page.hasMore,
-                        isRefreshing = false,
-                        message = null,
-                        loadMoreError = null
-                    )
+        viewModelScope.launch {
+            try {
+                val page = dynamicRepo.fetchSpace(
+                    hostUid = route.mid,
+                    page = dynamics.page,
+                    historyOffset = dynamics.historyOffset,
+                    from = "space"
                 )
-            }
-        } catch (e: Exception) {
-            Logger.e(TAG, e) { "切换空间排序失败" }
-            _uiState.update {
-                it.copy(
-                    archive = prevArchive.copy(
-                        message = e.message ?: "切换排序失败",
-                        loadMoreError = null
+                _uiState.update {
+                    it.copy(
+                        dynamics = it.dynamics.copy(
+                            items = mergeDynamics(it.dynamics.items, page.items),
+                            historyOffset = page.cursor.historyOffset,
+                            page = page.cursor.page,
+                            hasMore = page.hasMore,
+                            isRefreshing = false,
+                            isLoadingMore = false,
+                            message = null,
+                            loadMoreError = null
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                Logger.e(TAG, e) { "加载空间动态更多失败" }
+                _uiState.update {
+                    it.copy(
+                        dynamics = it.dynamics.copy(
+                            isLoadingMore = false,
+                            loadMoreError = e.message ?: "加载更多失败"
+                        )
+                    )
+                }
             }
         }
     }
 
-    private fun SpaceHome.toHeaderState(): SpaceHeaderUiState {
-        return SpaceHeaderUiState(
-            profile = profile,
-            bannerUrl = bannerUrl
-        )
+    private fun loadDynamics() {
+        val current = _uiState.value.dynamics
+        if (route.mid <= 0L) return
+        viewModelScope.launch {
+            try {
+                val page = dynamicRepo.fetchSpace(
+                    hostUid = route.mid,
+                    page = 1,
+                    historyOffset = "",
+                    from = "space"
+                )
+                _uiState.update {
+                    it.copy(
+                        dynamics = it.dynamics.copy(
+                            items = page.items,
+                            historyOffset = page.cursor.historyOffset,
+                            page = page.cursor.page,
+                            hasMore = page.hasMore,
+                            isRefreshing = false,
+                            isLoadingMore = false,
+                            message = null,
+                            loadMoreError = null
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Logger.e(TAG, e) { "加载空间动态失败" }
+                _uiState.update {
+                    it.copy(
+                        dynamics = current.copy(
+                            isRefreshing = false,
+                            isLoadingMore = false,
+                            message = e.message ?: "加载动态失败"
+                        )
+                    )
+                }
+            }
+        }
     }
 
     private fun mergeVideos(
-        current: List<SpaceVideo>,
-        next: List<SpaceVideo>
-    ): List<SpaceVideo> {
+        current: List<com.naaammme.bbspace.core.model.SpaceVideo>,
+        next: List<com.naaammme.bbspace.core.model.SpaceVideo>
+    ): List<com.naaammme.bbspace.core.model.SpaceVideo> {
         if (next.isEmpty()) return current
         val merged = current.toMutableList()
-        val seen = current.asSequence()
-            .map { it.aid to it.cid }
-            .toMutableSet()
+        val seen = current.asSequence().map { it.aid to it.cid }.toMutableSet()
         next.forEach { video ->
             if (seen.add(video.aid to video.cid)) {
                 merged += video
@@ -269,19 +348,54 @@ class SpaceViewModel @Inject constructor(
         return merged
     }
 
+    private fun mergeDynamics(
+        current: List<com.naaammme.bbspace.core.model.DynamicItem>,
+        next: List<com.naaammme.bbspace.core.model.DynamicItem>
+    ): List<com.naaammme.bbspace.core.model.DynamicItem> {
+        if (next.isEmpty()) return current
+        val merged = current.toMutableList()
+        val seen = current.mapTo(HashSet(current.size + next.size)) { it.id }
+        next.forEach { item ->
+            if (seen.add(item.id)) {
+                merged += item
+            }
+        }
+        return merged
+    }
+
+    private fun SpaceRoute.toInitialHeaderState(): SpaceHeaderUiState? {
+        if (mid <= 0L && name.isNullOrBlank()) return null
+        return SpaceHeaderUiState(
+            profile = SpaceProfile(
+                mid = mid,
+                name = name?.takeIf(String::isNotBlank) ?: "个人空间",
+                face = null,
+                sign = "",
+                level = 0,
+                vipLabel = null,
+                fansCount = 0L,
+                followingCount = 0L,
+                likeCount = 0L,
+                videoCount = 0,
+                articleCount = 0,
+                seasonCount = 0,
+                seriesCount = 0,
+                tags = emptyList()
+            ),
+            bannerUrl = null
+        )
+    }
+
+    private fun SavedStateHandle.toSpaceRoute(): SpaceRoute {
+        return SpaceRoute(
+            mid = get<Long>(SPACE_MID_ARG) ?: 0L,
+            name = get<String>(SPACE_NAME_ARG)?.takeIf(String::isNotBlank),
+            from = get<Int>(SPACE_FROM_ARG) ?: SpaceRouteTool.FROM_DEFAULT,
+            fromViewAid = get<Long>(SPACE_FROM_VIEW_AID_ARG)?.takeIf { it > 0L }
+        )
+    }
+
     private companion object {
         const val TAG = "SpaceViewModel"
     }
-}
-
-private fun SavedStateHandle.toSpaceRoute(): SpaceRoute {
-    val mid = get<Long>(SPACE_MID_ARG) ?: 0L
-    val name = get<String>(SPACE_NAME_ARG)?.takeIf(String::isNotBlank)
-    val fromViewAid = get<Long>(SPACE_FROM_VIEW_AID_ARG)?.takeIf { it > 0L }
-    return SpaceRoute(
-        mid = mid,
-        name = name,
-        from = get<Int>(SPACE_FROM_ARG) ?: 0,
-        fromViewAid = fromViewAid
-    )
 }

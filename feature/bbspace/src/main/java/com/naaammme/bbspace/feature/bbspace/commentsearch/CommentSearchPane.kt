@@ -17,7 +17,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -109,7 +109,7 @@ fun CommentSearchPane(
 
         if (state.allCount != null && state.items.isEmpty() && state.error == null && !state.isLoading) {
             item {
-                CommentSearchStateCard(text = "没有匹配结果")
+                StateMessageCard(text = "没有匹配结果")
             }
         }
 
@@ -124,23 +124,24 @@ fun CommentSearchPane(
 
         if (state.isLoadingMore) {
             item {
-                CommentSearchStateCard(text = "加载更多中")
+                StateMessageCard(text = "加载更多中")
             }
         }
 
         state.appendError?.let { message ->
             item {
-                CommentSearchRetryCard(
+                StateMessageCard(
                     text = message,
-                    buttonText = "重试加载更多",
-                    onClick = vm::loadMore
+                    isError = true,
+                    actionText = "重试加载更多",
+                    onAction = vm::loadMore
                 )
             }
         }
 
         state.error?.let { message ->
             item {
-                CommentSearchStateCard(text = message, isError = true)
+                StateMessageCard(text = message, isError = true)
             }
         }
     }
@@ -259,35 +260,6 @@ private fun CommentSearchCard(item: CommentSearchItem) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun CommentSearchStateCard(text: String, isError: Boolean = false) {
-    CommentSearchBaseCard {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun CommentSearchRetryCard(
-    text: String,
-    buttonText: String,
-    onClick: () -> Unit
-) {
-    CommentSearchBaseCard {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error
-        )
-        OutlinedButton(onClick = onClick) {
-            Text(buttonText)
         }
     }
 }

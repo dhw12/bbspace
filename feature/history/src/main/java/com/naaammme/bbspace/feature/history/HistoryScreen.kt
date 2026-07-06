@@ -26,11 +26,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.BiliPullToRefreshBox
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
 import com.naaammme.bbspace.core.designsystem.component.FilledTabRow
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.designsystem.component.VideoListCardSkeleton
 import com.naaammme.bbspace.core.model.HistoryTab
 import com.naaammme.bbspace.core.model.HistoryTarget
-import com.naaammme.bbspace.feature.history.component.HistoryEmptyState
-import com.naaammme.bbspace.feature.history.component.HistoryErrorState
 import com.naaammme.bbspace.feature.history.component.HistoryItemCard
 import com.naaammme.bbspace.feature.history.component.HistoryListLoading
 import com.naaammme.bbspace.feature.history.component.LOAD_MORE_SKELETON_COUNT
@@ -112,16 +111,17 @@ fun HistoryScreen(
                     }
 
                     state.errorMessage != null && state.items.isEmpty() -> {
-                        HistoryErrorState(
-                            message = state.errorMessage.orEmpty(),
-                            fallbackMessage = "加载历史记录失败",
-                            onRetry = viewModel::refresh,
-                            modifier = Modifier.fillMaxSize()
+                        StateMessageCard(
+                            text = state.errorMessage.orEmpty().ifBlank { "加载历史记录失败" },
+                            modifier = Modifier.fillMaxSize(),
+                            isError = true,
+                            actionText = "重试",
+                            onAction = viewModel::refresh
                         )
                     }
 
                     state.items.isEmpty() -> {
-                        HistoryEmptyState(
+                        StateMessageCard(
                             text = "暂无${state.tab.title}历史",
                             modifier = Modifier.fillMaxSize()
                         )
@@ -160,10 +160,11 @@ fun HistoryScreen(
                                     key = "history_error",
                                     contentType = "error"
                                 ) {
-                                    HistoryErrorState(
-                                        message = state.errorMessage.orEmpty(),
-                                        fallbackMessage = "加载历史记录失败",
-                                        onRetry = if (state.errorOnLoadMore) {
+                                    StateMessageCard(
+                                        text = state.errorMessage.orEmpty().ifBlank { "加载历史记录失败" },
+                                        isError = true,
+                                        actionText = "重试",
+                                        onAction = if (state.errorOnLoadMore) {
                                             viewModel::loadMore
                                         } else {
                                             viewModel::refresh

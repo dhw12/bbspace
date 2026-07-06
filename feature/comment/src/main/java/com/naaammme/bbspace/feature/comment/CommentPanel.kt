@@ -52,6 +52,7 @@ import com.naaammme.bbspace.core.common.media.ImageSaver
 import com.naaammme.bbspace.core.designsystem.component.CommentCardSkeleton
 import com.naaammme.bbspace.core.designsystem.component.CommentHeaderSkeleton
 import com.naaammme.bbspace.core.designsystem.component.PreviewImage
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.PublishedRecord
 import com.naaammme.bbspace.core.model.CommentSubjectTool
 import com.naaammme.bbspace.core.model.CommentSort
@@ -60,8 +61,6 @@ import com.naaammme.bbspace.core.model.CommentUser
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.feature.comment.component.CommentCard
 import com.naaammme.bbspace.feature.comment.component.CommentReplyAction
-import com.naaammme.bbspace.feature.comment.component.StateCard
-import com.naaammme.bbspace.feature.comment.component.formatCount
 import com.naaammme.bbspace.feature.comment.editor.CommentEditorFab
 import com.naaammme.bbspace.feature.comment.editor.CommentEditorSheet
 import com.naaammme.bbspace.feature.comment.thread.CommentThreadPane
@@ -74,6 +73,7 @@ import kotlinx.coroutines.withContext
 fun CommentPanel(
     subject: CommentSubject?,
     modifier: Modifier = Modifier,
+    isActive: Boolean = true,
     detailRecord: PublishedRecord? = null,
     onOpenSpace: (SpaceRoute) -> Unit = {},
     onDismissDetail: () -> Unit = {},
@@ -83,11 +83,13 @@ fun CommentPanel(
     header: (@Composable () -> Unit)? = null,
     viewModel: CommentViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(subject, detailRecord?.key) {
-        if (detailRecord != null) {
-            viewModel.bindDetail(detailRecord)
-        } else {
-            viewModel.bind(subject)
+    LaunchedEffect(isActive, subject, detailRecord?.key) {
+        if (isActive) {
+            if (detailRecord != null) {
+                viewModel.bindDetail(detailRecord)
+            } else {
+                viewModel.bind(subject)
+            }
         }
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -255,7 +257,7 @@ fun CommentPanel(
                             key = "comment_empty_subject",
                             contentType = "state"
                         ) {
-                            StateCard(text = "暂无评论信息")
+                            StateMessageCard(text = "暂无评论信息")
                         }
                     }
 
@@ -274,7 +276,7 @@ fun CommentPanel(
                             key = "comment_error",
                             contentType = "state"
                         ) {
-                            StateCard(text = uiState.error.orEmpty())
+                            StateMessageCard(text = uiState.error.orEmpty(), isError = true)
                         }
                     }
 
@@ -283,7 +285,7 @@ fun CommentPanel(
                             key = "comment_no_data",
                             contentType = "state"
                         ) {
-                            StateCard(text = "还没有评论")
+                            StateMessageCard(text = "还没有评论")
                         }
                     }
 
@@ -316,14 +318,14 @@ fun CommentPanel(
                         key = "comment_load_more_error",
                         contentType = "footer"
                     ) {
-                        StateCard(text = uiState.loadMoreError.orEmpty())
+                        StateMessageCard(text = uiState.loadMoreError.orEmpty(), isError = true)
                     }
                 } else if (!uiState.hasMore && uiState.items.isNotEmpty()) {
                     item(
                         key = "comment_end",
                         contentType = "footer"
                     ) {
-                        StateCard(
+                        StateMessageCard(
                             text = uiState.endText
                                 ?: if (uiState.sort == CommentSort.HOT) {
                                     "热门评论已展示完"
@@ -488,7 +490,7 @@ private fun sortText(sort: CommentSort): String {
 
 private fun headerCount(count: Long): String {
     return if (count > 0L) {
-        "${count.formatCount()} 条评论"
+        "$count 条评论"
     } else {
         "暂无评论"
     }

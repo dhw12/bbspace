@@ -1,5 +1,6 @@
 package com.naaammme.bbspace.feature.space.header
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -15,19 +16,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.AvatarImage
 import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
+import com.naaammme.bbspace.core.designsystem.component.PreviewImage
+import com.naaammme.bbspace.core.designsystem.component.PreviewImageDialog
 import com.naaammme.bbspace.core.designsystem.component.SelectableText
 import com.naaammme.bbspace.feature.space.SpaceHeaderUiState
-import java.util.Locale
 
 internal fun LazyListScope.spaceHeaderSection(
-    state: SpaceHeaderUiState
+    state: SpaceHeaderUiState,
+    onOpenFollowings: () -> Unit,
+    onOpenFollowers: () -> Unit
 ) {
     state.bannerUrl?.let { banner ->
         item(
@@ -42,7 +51,11 @@ internal fun LazyListScope.spaceHeaderSection(
         key = "header_profile",
         contentType = "profile"
     ) {
-        ProfileCard(state = state)
+        ProfileCard(
+            state = state,
+            onOpenFollowings = onOpenFollowings,
+            onOpenFollowers = onOpenFollowers
+        )
     }
 }
 
@@ -68,8 +81,24 @@ private fun BannerCard(imageUrl: String) {
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun ProfileCard(state: SpaceHeaderUiState) {
+private fun ProfileCard(
+    state: SpaceHeaderUiState,
+    onOpenFollowings: () -> Unit,
+    onOpenFollowers: () -> Unit
+) {
     val profile = state.profile
+    val faceUrl = profile.face
+    var showAvatarPreview by remember { mutableStateOf(false) }
+
+    if (showAvatarPreview && !faceUrl.isNullOrBlank()) {
+        PreviewImageDialog(
+            images = listOf(PreviewImage(url = faceUrl)),
+            startIdx = 0,
+            onDismiss = { showAvatarPreview = false },
+            onSaveImage = null
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -86,9 +115,13 @@ private fun ProfileCard(state: SpaceHeaderUiState) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AvatarImage(
-                    url = profile.face,
+                    url = faceUrl,
                     contentDescription = profile.name,
-                    modifier = Modifier.size(72.dp),
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clickable(enabled = !faceUrl.isNullOrBlank()) {
+                            showAvatarPreview = true
+                        },
                     fallbackContent = {
                         Text(
                             text = profile.name.take(1),
@@ -110,11 +143,29 @@ private fun ProfileCard(state: SpaceHeaderUiState) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    SelectableText(
-                        text = "Lv${profile.level}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SelectableText(
+                            text = "Lv${profile.level}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        profile.vipLabel?.let { vipLabel ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondary,
+                                shape = MaterialTheme.shapes.extraSmall
+                            ) {
+                                Text(
+                                    text = vipLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -130,10 +181,10 @@ private fun ProfileCard(state: SpaceHeaderUiState) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                SpaceStatChip("粉丝", formatCount(profile.fansCount))
-                SpaceStatChip("关注", formatCount(profile.followingCount))
+                SpaceStatChip("粉丝", profile.fansCount.toString(), onClick = onOpenFollowers)
+                SpaceStatChip("关注", profile.followingCount.toString(), onClick = onOpenFollowings)
                 if (profile.likeCount > 0L) {
-                    SpaceStatChip("获赞", formatCount(profile.likeCount))
+                    SpaceStatChip("获赞", profile.likeCount.toString())
                 }
                 SpaceStatChip("视频", profile.videoCount.toString())
                 if (profile.articleCount > 0) {
@@ -164,11 +215,20 @@ private fun ProfileCard(state: SpaceHeaderUiState) {
 @Composable
 private fun SpaceStatChip(
     label: String,
-    value: String
+    value: String,
+    onClick: (() -> Unit)? = null
 ) {
+    val shape = MaterialTheme.shapes.small
     Surface(
+        modifier = if (onClick != null) {
+            Modifier
+                .clip(shape)
+                .clickable(onClick = onClick)
+        } else {
+            Modifier
+        },
         color = MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.small
+        shape = shape
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -202,22 +262,4 @@ private fun TagChip(text: String) {
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         )
     }
-}
-
-private fun formatCount(count: Long): String {
-    return when {
-        count >= 100_000_000L -> formatDecimal(count / 100_000_000f, "亿")
-        count >= 10_000L -> formatDecimal(count / 10_000f, "万")
-        else -> count.toString()
-    }
-}
-
-private fun formatDecimal(
-    value: Float,
-    suffix: String
-): String {
-    val text = String.format(Locale.ROOT, "%.1f", value)
-        .trimEnd('0')
-        .trimEnd('.')
-    return "$text$suffix"
 }

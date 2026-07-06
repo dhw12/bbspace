@@ -17,9 +17,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.BiliPullToRefreshBox
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.model.FavoriteContentTarget
-import com.naaammme.bbspace.feature.favorite.FavoriteEmptyState
-import com.naaammme.bbspace.feature.favorite.FavoriteErrorState
 import com.naaammme.bbspace.feature.favorite.FavoriteLoading
 import com.naaammme.bbspace.feature.favorite.item.FavoriteContentList
 
@@ -71,15 +70,17 @@ fun FavoriteFolderDetailScreen(
                 }
 
                 state.errorMessage != null && state.items.isEmpty() -> {
-                    FavoriteErrorState(
-                        message = state.errorMessage.orEmpty(),
-                        onRetry = viewModel::refresh,
-                        modifier = Modifier.fillMaxSize()
+                    StateMessageCard(
+                        text = state.errorMessage.orEmpty().ifBlank { "加载收藏失败" },
+                        modifier = Modifier.fillMaxSize(),
+                        isError = true,
+                        actionText = "重试",
+                        onAction = viewModel::refresh
                     )
                 }
 
                 state.items.isEmpty() -> {
-                    FavoriteEmptyState(
+                    StateMessageCard(
                         text = if (state.hasInvalid) "收藏夹暂无可用视频" else "收藏夹暂无内容",
                         modifier = Modifier.fillMaxSize()
                     )

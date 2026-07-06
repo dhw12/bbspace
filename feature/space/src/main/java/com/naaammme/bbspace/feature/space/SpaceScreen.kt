@@ -24,11 +24,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
+import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.feature.space.archive.spaceArchiveSection
-import com.naaammme.bbspace.feature.space.component.SpaceError
 import com.naaammme.bbspace.feature.space.header.spaceHeaderSection
-import com.naaammme.bbspace.feature.space.note.spaceNoteSection
+import com.naaammme.bbspace.feature.space.note.SpaceNoteTitleButton
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
@@ -37,14 +37,24 @@ import kotlinx.coroutines.flow.filter
 fun SpaceScreen(
     onBack: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
+    onOpenDynamic: (String) -> Unit = {},
+    onOpenLive: (LiveRoute) -> Unit = {},
     onOpenIm: ((Long, String, String?) -> Unit)? = null,
+    onOpenRelation: (Long, Int) -> Unit = { _, _ -> },
     viewModel: SpaceViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState()
-    val archiveState by rememberUpdatedState(state.archive)
+    val videoListState = rememberLazyListState()
+    val dynamicListState = rememberLazyListState()
+    val listState = when (state.selectedSection) {
+        SpaceSection.VIDEO -> videoListState
+        SpaceSection.DYNAMIC -> dynamicListState
+    }
+    val archiveState = rememberUpdatedState(state.archive)
+    val dynamicsState = rememberUpdatedState(state.dynamics)
+    val selectedSectionState = rememberUpdatedState(state.selectedSection)
 
-    LaunchedEffect(listState) {
+    LaunchedEffect(listState, state.selectedSection) {
         snapshotFlow {
             val total = listState.layoutInfo.totalItemsCount
             val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
@@ -52,28 +62,38 @@ fun SpaceScreen(
         }
             .distinctUntilChanged()
             .filter { (total, last) ->
-                archiveState.canLoadMore &&
+                when (selectedSectionState.value) {
+                    SpaceSection.VIDEO -> archiveState.value.canLoadMore
+                    SpaceSection.DYNAMIC -> dynamicsState.value.canLoadMore
+                } &&
                         total > 0 &&
                         last >= total - LOAD_MORE_TRIGGER_OFFSET
             }
-            .collect {
-                viewModel.loadMore()
-            }
+            .collect { viewModel.loadMore() }
     }
 
     LaunchedEffect(state.archive.selectedOrder) {
-        val needScrollTop = listState.firstVisibleItemIndex > 0 ||
-                listState.firstVisibleItemScrollOffset > 0
+        val needScrollTop = videoListState.firstVisibleItemIndex > 0 ||
+                videoListState.firstVisibleItemScrollOffset > 0
         if (needScrollTop) {
-            listState.scrollToItem(0)
+            videoListState.scrollToItem(0)
         }
     }
 
     CollapsingTopBarScaffold(
         topBar = { scrollBehavior ->
+            val header = state.header
             TopAppBar(
                 title = {
-                    Text(text = state.title)
+                    if (header != null && header.profile.mid > 0L) {
+                        SpaceNoteTitleButton(
+                            uid = header.profile.mid,
+                            name = header.profile.name,
+                            face = header.profile.face
+                        )
+                    } else {
+                        Text(text = state.title)
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -84,8 +104,7 @@ fun SpaceScreen(
                     }
                 },
                 actions = {
-                    val header = state.header
-                    if (header != null && onOpenIm != null) {
+                    if (header != null && header.profile.mid > 0L && onOpenIm != null) {
                         IconButton(
                             onClick = {
                                 onOpenIm.invoke(
@@ -106,45 +125,38 @@ fun SpaceScreen(
             )
         }
     ) { padding ->
-        when {
-            state.isPageLoading && state.header == null -> {
-                Unit
-            }
-
-            state.header == null -> {
-                SpaceError(
-                    message = state.pageErrorMessage ?: "加载个人空间失败",
-                    onRetry = viewModel::retry,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
+        val header = state.header
+        if (header != null) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                spaceHeaderSection(
+                    state = header,
+                    onOpenFollowings = {
+                        onOpenRelation(header.profile.mid, 0)
+                    },
+                    onOpenFollowers = {
+                        onOpenRelation(header.profile.mid, 1)
+                    }
                 )
-            }
-
-            else -> {
-                val header = state.header ?: return@CollapsingTopBarScaffold
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    spaceHeaderSection(header)
-                    spaceNoteSection(
-                        uid = header.profile.mid,
-                        name = header.profile.name,
-                        face = header.profile.face
-                    )
-                    spaceArchiveSection(
-                        state = state.archive,
-                        onOpenVideo = onOpenVideo,
-                        onRetry = viewModel::retry,
-                        onLoadMore = viewModel::loadMore,
-                        onSelectOrder = viewModel::selectOrder
-                    )
-                }
+                spaceArchiveSection(
+                    state = state.archive,
+                    videoCount = header.profile.videoCount,
+                    dynamics = state.dynamics,
+                    section = state.selectedSection,
+                    onOpenVideo = onOpenVideo,
+                    onSelectOrder = viewModel::selectOrder,
+                    onSelectSection = viewModel::selectSection,
+                    onOpenDynamic = onOpenDynamic,
+                    onOpenLive = onOpenLive,
+                    onRefresh = viewModel::refresh,
+                    onLoadMore = viewModel::loadMore
+                )
             }
         }
     }

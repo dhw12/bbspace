@@ -6,6 +6,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.SpaceRouteTool
 import com.naaammme.bbspace.core.model.VideoTarget
@@ -34,7 +35,10 @@ fun NavController.navigateToSpace(route: SpaceRoute) {
 fun NavGraphBuilder.spaceScreen(
     onBack: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
-    onOpenIm: ((Long, String, String?) -> Unit)? = null
+    onOpenDynamic: (String) -> Unit = {},
+    onOpenLive: (LiveRoute) -> Unit = {},
+    onOpenIm: ((Long, String, String?) -> Unit)? = null,
+    onOpenRelation: (Long, Int) -> Unit = { _, _ -> }
 ) {
     composable(
         route = SPACE_ROUTE,
@@ -60,7 +64,38 @@ fun NavGraphBuilder.spaceScreen(
         SpaceScreen(
             onBack = onBack,
             onOpenVideo = onOpenVideo,
-            onOpenIm = onOpenIm
+            onOpenDynamic = onOpenDynamic,
+            onOpenLive = onOpenLive,
+            onOpenIm = onOpenIm,
+            onOpenRelation = onOpenRelation
+        )
+    }
+}
+
+fun NavController.navigateToSpaceRelation(vmid: Long, initialTab: Int) {
+    navigate("space_relation/$vmid?initialTab=$initialTab")
+}
+
+fun NavGraphBuilder.spaceRelationScreen(
+    onBack: () -> Unit,
+    onOpenSpace: (SpaceRoute) -> Unit
+) {
+    composable(
+        route = "space_relation/{vmid}?initialTab={initialTab}",
+        arguments = listOf(
+            navArgument("vmid") {
+                type = NavType.LongType
+                defaultValue = 0L
+            },
+            navArgument("initialTab") {
+                type = NavType.IntType
+                defaultValue = 0
+            }
+        )
+    ) {
+        com.naaammme.bbspace.feature.space.relation.RelationScreen(
+            onBack = onBack,
+            onOpenSpace = onOpenSpace
         )
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.AvatarImage
 import com.naaammme.bbspace.core.designsystem.component.CoverImage
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.designsystem.component.UpListRow
 import com.naaammme.bbspace.core.model.DynamicBody
 import com.naaammme.bbspace.core.model.DynamicImage
@@ -113,10 +114,11 @@ fun DynamicFeed(
                 key = "dynamic_error",
                 contentType = "error"
             ) {
-                DynamicError(
-                    message = errorMessage,
-                    retryText = "点击重试",
-                    onRetry = onRetryRefresh
+                StateMessageCard(
+                    text = errorMessage.ifBlank { "加载动态失败" },
+                    isError = true,
+                    actionText = "点击重试",
+                    onAction = onRetryRefresh
                 )
             }
         }
@@ -126,10 +128,11 @@ fun DynamicFeed(
                 key = "dynamic_load_more_error",
                 contentType = "error"
             ) {
-                DynamicError(
-                    message = loadMoreError,
-                    retryText = "点击重试加载更多",
-                    onRetry = onRetryLoadMore
+                StateMessageCard(
+                    text = loadMoreError.ifBlank { "加载动态失败" },
+                    isError = true,
+                    actionText = "点击重试加载更多",
+                    onAction = onRetryLoadMore
                 )
             }
         }
@@ -180,7 +183,7 @@ private fun DynamicCardContent(
         DynamicBodyContent(item = item)
         item.stats?.let { stats ->
             Text(
-                text = "转发 ${formatCount(stats.repost)}  评论 ${formatCount(stats.reply)}  点赞 ${formatCount(stats.like)}",
+                text = "转发 ${stats.repost}  评论 ${stats.reply}  点赞 ${stats.like}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -392,7 +395,7 @@ private fun DynamicImageRow(images: List<DynamicImage>) {
                 url = image.url,
                 modifier = Modifier
                     .width(140.dp)
-                    .aspectRatio(image.aspectRatio()),
+                    .aspectRatio(image.displayAspectRatio()),
                 shape = MaterialTheme.shapes.small
             )
         }
@@ -411,58 +414,11 @@ private fun DynamicText(text: String) {
     )
 }
 
-@Composable
-private fun DynamicError(
-    message: String,
-    retryText: String,
-    onRetry: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = message.ifBlank { "加载动态失败" },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error
-            )
-            Text(
-                text = retryText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable(onClick = onRetry)
-            )
-        }
-    }
-}
-
-private fun DynamicImage.aspectRatio(): Float {
+private fun DynamicImage.displayAspectRatio(): Float {
     return if (width > 0 && height > 0) {
-        width.toFloat() / height.toFloat()
+        (width.toFloat() / height.toFloat()).coerceIn(0.72f, 1.5f)
     } else {
         1f
-    }
-}
-
-private fun formatCount(value: Long): String {
-    return when {
-        value >= 100_000_000L -> {
-            val number = value / 100_000_000f
-            if (number >= 10f) "${number.toInt()}亿" else "%.1f亿".format(number)
-        }
-
-        value >= 10_000L -> {
-            val number = value / 10_000f
-            if (number >= 10f) "${number.toInt()}万" else "%.1f万".format(number)
-        }
-
-        else -> value.toString()
     }
 }
 

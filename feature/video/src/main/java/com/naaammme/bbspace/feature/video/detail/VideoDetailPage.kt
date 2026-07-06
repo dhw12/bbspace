@@ -1,4 +1,4 @@
-﻿package com.naaammme.bbspace.feature.video.detail
+package com.naaammme.bbspace.feature.video.detail
 
 import android.text.format.DateFormat
 import android.widget.Toast
@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.BiliAsyncImage
+import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 import com.naaammme.bbspace.core.designsystem.component.VideoDetailInfoSkeleton
 import com.naaammme.bbspace.core.designsystem.component.VideoRelateCardSkeleton
 import com.naaammme.bbspace.core.designsystem.component.copyTextOnLongPress
@@ -165,23 +166,20 @@ internal fun VideoDetailPage(
             )
 
             else -> {
-                if (pagerState.currentPage == 1) {
-                    CommentPanel(
-                        subject = commentSubject,
-                        onOpenSpace = onOpenSpace,
-                        modifier = Modifier.fillMaxSize(),
-                        listState = commentListState,
-                        threadListState = commentThreadListState,
-                        contentPadding = PaddingValues(
-                            start = contentHorizontalPad,
-                            top = 12.dp,
-                            end = contentHorizontalPad,
-                            bottom = 20.dp
-                        )
+                CommentPanel(
+                    subject = commentSubject,
+                    isActive = pagerState.currentPage == page,
+                    onOpenSpace = onOpenSpace,
+                    modifier = Modifier.fillMaxSize(),
+                    listState = commentListState,
+                    threadListState = commentThreadListState,
+                    contentPadding = PaddingValues(
+                        start = contentHorizontalPad,
+                        top = 12.dp,
+                        end = contentHorizontalPad,
+                        bottom = 20.dp
                     )
-                } else {
-                    Box(modifier = Modifier.fillMaxSize())
-                }
+                )
             }
         }
     }
@@ -328,7 +326,7 @@ private fun LazyListScope.detailItems(
                 key = "detail_error",
                 contentType = "state"
             ) {
-                StateCard(
+                StateMessageCard(
                     text = detailError,
                     modifier = itemMod,
                     isError = true
@@ -408,7 +406,7 @@ private fun LazyListScope.detailItems(
                 key = "detail_empty",
                 contentType = "state"
             ) {
-                StateCard(
+                StateMessageCard(
                     text = "暂无简介信息",
                     modifier = itemMod
                 )
@@ -1195,26 +1193,6 @@ private fun RelateRow(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun StateCard(
-    text: String,
-    modifier: Modifier = Modifier,
-    isError: Boolean = false
-) {
-    Card(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isError) {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.padding(16.dp)
-        )
     }
 }
 
