@@ -47,6 +47,7 @@ internal sealed interface CommentReplyAction {
     data class Check(val rpid: Long) : CommentReplyAction
     data class Translate(val rpid: Long) : CommentReplyAction
     data class Delete(val reply: CommentReply) : CommentReplyAction
+    data class Like(val reply: CommentReply) : CommentReplyAction
     data class Reply(val reply: CommentReply) : CommentReplyAction
     data class SaveImage(val image: PreviewImage) : CommentReplyAction
     data class OpenReplies(val reply: CommentReply) : CommentReplyAction
@@ -242,9 +243,10 @@ private fun ReplyBody(
                         )
                     }
                     Text(
-                        text = "点赞 ${reply.likeCount}",
+                        text = if (reply.liked) "已赞 ${reply.likeCount}" else "点赞 ${reply.likeCount}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (reply.liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clickable { onAction(CommentReplyAction.Like(reply)) }
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))

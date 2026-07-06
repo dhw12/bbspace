@@ -695,6 +695,26 @@ class CommentRepository @Inject constructor(
         }
     }
 
+    suspend fun likeReply(
+        subject: CommentSubject,
+        rpid: Long,
+        like: Boolean
+    ) {
+        val accessToken = authProvider.accessToken
+        check(accessToken.isNotBlank()) { "请先登录" }
+        val ts = System.currentTimeMillis() / 1000L
+        restClient.postSigned(
+            url = "${BiliConstants.BASE_URL_API}$LIKE_ENDPOINT",
+            params = restParamBuilder.app(BiliRestProfile.APP, ts, accessToken) + mapOf(
+                "oid" to subject.oid.toString(),
+                "type" to subject.type.toString(),
+                "rpid" to rpid.toString(),
+                "action" to if (like) "1" else "2"
+            ),
+            profile = BiliRestProfile.APP
+        )
+    }
+
     private companion object {
         const val MINUTE_MS = 60_000L
         const val HOUR_MS = 3_600_000L
@@ -703,6 +723,7 @@ class CommentRepository @Inject constructor(
         const val DETAIL_ENDPOINT = "bilibili.main.community.reply.v1.Reply/DetailList"
         const val REPLY_INFO_ENDPOINT = "bilibili.main.community.reply.v1.Reply/ReplyInfo"
         const val TRANSLATE_ENDPOINT = "bilibili.main.community.reply.v1.Reply/TranslateReply"
+        const val LIKE_ENDPOINT = "/x/v2/reply/like"
         const val ADD_ENDPOINT = "/x/v2/reply/add"
         const val DEL_ENDPOINT = "/x/v2/reply/del"
         const val UPLOAD_ENDPOINT = "/x/dynamic/feed/draw/upload_bfs"
