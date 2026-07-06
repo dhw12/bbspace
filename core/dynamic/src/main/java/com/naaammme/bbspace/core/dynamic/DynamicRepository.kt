@@ -22,6 +22,8 @@ import com.bapis.bilibili.app.dynamic.v2.MdlDynUGCSeason
 import com.bapis.bilibili.app.dynamic.v2.OpusDetailReq
 import com.bapis.bilibili.app.dynamic.v2.OpusDetailResp
 import com.bapis.bilibili.app.dynamic.v2.Refresh
+import com.naaammme.bbspace.core.common.AuthProvider
+import com.naaammme.bbspace.core.common.BiliConstants
 import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
 import com.naaammme.bbspace.core.model.DynamicAuthor
 import com.naaammme.bbspace.core.model.DynamicBody
@@ -43,6 +45,9 @@ import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.infra.grpc.BiliGrpcClient
+import com.naaammme.bbspace.infra.network.BiliRestClient
+import com.naaammme.bbspace.infra.network.BiliRestParamBuilder
+import com.naaammme.bbspace.infra.network.BiliRestProfile
 import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,7 +57,10 @@ import org.json.JSONObject
 
 @Singleton
 class DynamicRepository @Inject constructor(
-    private val grpcClient: BiliGrpcClient
+    private val grpcClient: BiliGrpcClient,
+    private val restClient: BiliRestClient,
+    private val restParamBuilder: BiliRestParamBuilder,
+    private val authProvider: AuthProvider
 ) {
 
     suspend fun fetchAll(
@@ -88,6 +96,26 @@ class DynamicRepository @Inject constructor(
         return withContext(Dispatchers.Default) {
             mapDetail(reply.opusItem)
         }
+    }
+
+    suspend fun likeDynamic(
+        dynamicId: String,
+        like: Boolean
+    ) {
+        val accessToken = authProvider.accessToken
+        val mid = authProvider.mid
+        check(accessToken.isNotBlank() && mid > 0L) { "请先登录" }
+        check(dynamicId.isNotBlank()) { "动态 ID 不能为空" }
+        val ts = System.currentTimeMillis() / 1000L
+        restClient.postSigned(
+            url = "${BiliConstants.BASE_URL_API}$LIKE_ENDPOINT",
+            params = restParamBuilder.app(BiliRestProfile.APP, ts, accessToken) + mapOf(
+                "dynamic_id" to dynamicId,
+                "up" to if (like) "1" else "2",
+                "uid" to mid.toString()
+            ),
+            profile = BiliRestProfile.APP
+        )
     }
 
     suspend fun fetchSpace(
@@ -195,6 +223,7 @@ class DynamicRepository @Inject constructor(
 
         val reply = opus.extend.reply
         return DynamicDetail(
+            id = opus.opusId.takeIf { it > 0L }?.toString().orEmpty(),
             author = author,
             paragraphs = paragraphs,
             stats = stats,
@@ -365,7 +394,8 @@ class DynamicRepository @Inject constructor(
         return DynamicStats(
             repost = stat.repost,
             reply = stat.reply,
-            like = stat.like
+            like = stat.like,
+            liked = stat.likeInfo.isLike
         )
     }
 
@@ -727,6 +757,7 @@ class DynamicRepository @Inject constructor(
         const val ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynAll"
         const val OPUS_DETAIL_ENDPOINT = "bilibili.app.dynamic.v2.Opus/OpusDetail"
         const val SPACE_ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynSpace"
+        const val LIKE_ENDPOINT = "/x/v2/dynamic/like"
         const val DEFAULT_QN = 80L
         const val DEFAULT_FNVER = 0L
         const val DEFAULT_FNVAL = 272L
