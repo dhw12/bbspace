@@ -323,10 +323,6 @@ private fun DynamicDetailStats(
                 if (isNotEmpty()) append("  ")
                 append("评论 ${stats.reply}")
             }
-            if (stats.like > 0) {
-                if (isNotEmpty()) append("  ")
-                append("点赞 ${stats.like}")
-            }
         }
     }
     Row(
