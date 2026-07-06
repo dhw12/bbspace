@@ -116,6 +116,8 @@ fun DynamicScreen(
                         loadMoreError = state.loadMoreError,
                         onRetryRefresh = viewModel::refresh,
                         onRetryLoadMore = viewModel::loadMore,
+                        onToggleLike = viewModel::toggleLike,
+                        likingDynamicIds = state.likingDynamicIds,
                         onOpenVideo = onOpenVideo,
                         onOpenSpace = onOpenSpace,
                         onOpenLive = onOpenLive,
