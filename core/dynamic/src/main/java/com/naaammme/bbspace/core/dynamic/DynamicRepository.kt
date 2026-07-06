@@ -758,7 +758,7 @@ class DynamicRepository @Inject constructor(
         const val ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynAll"
         const val OPUS_DETAIL_ENDPOINT = "bilibili.app.dynamic.v2.Opus/OpusDetail"
         const val SPACE_ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynSpace"
-        const val LIKE_ENDPOINT = "/x/v2/dynamic/like"
+        const val LIKE_ENDPOINT = "/x/dynamic/feed/operate/like"
         const val DEFAULT_QN = 80L
         const val DEFAULT_FNVER = 0L
         const val DEFAULT_FNVAL = 272L
