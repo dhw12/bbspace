@@ -537,6 +537,10 @@ private fun VideoPlayerOverlay(
                             next
                         }
                     },
+                    onSwipeUp = {
+                        onShowCtrlChange(true)
+                        onToggleFull()
+                    },
                     onDragStart = { dragType ->
                         when (dragType) {
                             DragType.Brightness -> {
@@ -584,7 +588,6 @@ private fun VideoPlayerOverlay(
                 viewModel = viewModel,
                 state = state,
                 player = player,
-                isFull = isFull,
                 dragMs = { dragMs },
                 gestureSeekMs = gestureState.dragSeekPosMs,
                 onDragMsChange = { dragMs = it },
@@ -593,7 +596,6 @@ private fun VideoPlayerOverlay(
                 onShowQ = onShowQ,
                 onShowSp = onShowSp,
                 onShowTimer = onShowTimer,
-                onToggleFull = onToggleFull,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 6.dp, vertical = 4.dp)
@@ -607,7 +609,6 @@ private fun PlayerCtrlBarHost(
     viewModel: VideoViewModel,
     state: VideoPlaybackState,
     player: Player?,
-    isFull: Boolean,
     dragMs: () -> Long?,
     gestureSeekMs: Long?,
     onDragMsChange: (Long?) -> Unit,
@@ -615,7 +616,6 @@ private fun PlayerCtrlBarHost(
     onShowA: () -> Unit,
     onShowQ: () -> Unit,
     onShowSp: () -> Unit,
-    onToggleFull: () -> Unit,
     onShowTimer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -648,7 +648,6 @@ private fun PlayerCtrlBarHost(
         loopText = if (state.isLooping) "循环" else "单次",
         timerText = timerText,
         timerOn = timerOn,
-        fullText = if (isFull) "还原" else "全屏",
         sliderVal = sliderVal,
         sliderOn = durationMs > 0L,
         audioOn = (state.playbackSource?.audios?.size ?: 0) > 1,
@@ -658,7 +657,6 @@ private fun PlayerCtrlBarHost(
         onSpeedClick = onShowSp,
         onLoopClick = viewModel::toggleLooping,
         onTimerClick = onShowTimer,
-        onFullClick = onToggleFull,
         onSeekChange = { frac ->
             onShowCtrlChange(true)
             onDragMsChange((durationMs * frac).toLong())
@@ -681,7 +679,6 @@ private fun PlayerCtrlBar(
     loopText: String,
     timerText: String,
     timerOn: Boolean,
-    fullText: String,
     sliderVal: Float,
     sliderOn: Boolean,
     audioOn: Boolean,
@@ -691,7 +688,6 @@ private fun PlayerCtrlBar(
     onSpeedClick: () -> Unit,
     onLoopClick: () -> Unit,
     onTimerClick: () -> Unit,
-    onFullClick: () -> Unit,
     onSeekChange: (Float) -> Unit,
     onSeekDone: () -> Unit,
     modifier: Modifier = Modifier
@@ -773,12 +769,6 @@ private fun PlayerCtrlBar(
                     text = timerText,
                     on = true,
                     onClick = onTimerClick,
-                    modifier = Modifier.weight(1f)
-                )
-                CtrlBtn(
-                    text = fullText,
-                    on = true,
-                    onClick = onFullClick,
                     modifier = Modifier.weight(1f)
                 )
             }
