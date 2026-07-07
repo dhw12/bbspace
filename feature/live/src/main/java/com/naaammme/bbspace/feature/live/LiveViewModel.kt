@@ -14,6 +14,7 @@ import com.naaammme.bbspace.core.model.LiveRoomSessionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,6 +42,8 @@ class LiveViewModel @Inject constructor(
         )
     val playbackState: StateFlow<LivePlaybackViewState> = playbackController.liveState
     val settingsState = playerSettings.state
+    private val _sleepTimerState = MutableStateFlow(SleepTimerState())
+    val sleepTimerState: StateFlow<SleepTimerState> = _sleepTimerState
     private val emptyRoomSession = MutableStateFlow(LiveRoomSessionState())
     val roomSession: StateFlow<LiveRoomSessionState> = route
         .flatMapLatest { curRoute ->
@@ -129,6 +132,30 @@ class LiveViewModel @Inject constructor(
         }
     }
 
+    private var sleepTimerJob: Job? = null
+
+    fun startSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        val totalMs = minutes * 60_000L
+        _sleepTimerState.value = SleepTimerState(remainingMs = totalMs, isActive = true)
+        sleepTimerJob = viewModelScope.launch {
+            var remaining = totalMs
+            while (remaining > 0) {
+                delay(1000)
+                remaining -= 1000
+                _sleepTimerState.value = SleepTimerState(remainingMs = remaining.coerceAtLeast(0), isActive = true)
+            }
+            playbackController.pause()
+            _sleepTimerState.value = SleepTimerState()
+        }
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _sleepTimerState.value = SleepTimerState()
+    }
+
     fun retry() {
         val target = route.value ?: return
         startJob?.cancel()
@@ -155,6 +182,8 @@ class LiveViewModel @Inject constructor(
     override fun onCleared() {
         startJob?.cancel()
         startJob = null
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
         super.onCleared()
     }
 }
@@ -165,3 +194,8 @@ internal fun LivePlaybackError.toUiMessage(): String {
         is LivePlaybackError.RequestFailed -> message
     }
 }
+
+internal data class SleepTimerState(
+    val remainingMs: Long = 0L,
+    val isActive: Boolean = false
+)

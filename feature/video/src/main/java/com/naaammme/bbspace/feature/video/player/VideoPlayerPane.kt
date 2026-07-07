@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -25,6 +26,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 
@@ -49,6 +52,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -70,6 +74,7 @@ import com.naaammme.bbspace.core.model.QualityOption
 import com.naaammme.bbspace.core.model.VideoPlaybackState
 import com.naaammme.bbspace.feature.video.detail.QualityOptionItem
 import com.naaammme.bbspace.feature.video.VideoViewModel
+import com.naaammme.bbspace.feature.video.formatDuration
 import com.naaammme.bbspace.feature.video.formatPlaybackTime
 import com.naaammme.bbspace.feature.video.formatSpeed
 import com.naaammme.bbspace.feature.video.getAudioName
@@ -88,7 +93,8 @@ internal enum class PlayerVideoResizeMode {
 private enum class PlayerDialog {
     Quality,
     Audio,
-    Speed
+    Speed,
+    SleepTimer
 }
 
 internal val LocalVideoResizeModeState = compositionLocalOf<MutableState<PlayerVideoResizeMode>> {
@@ -116,6 +122,7 @@ internal fun VideoPlayerPane(
     var activeDialog by remember { mutableStateOf<PlayerDialog?>(null) }
     var showPlaybackSheet by remember { mutableStateOf(false) }
     var showCtrl by remember { mutableStateOf(false) }
+    val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     val videoResizeMode = rememberSaveable { mutableStateOf(PlayerVideoResizeMode.Fit) }
     val topMetaText = remember(showCtrl, isFull) {
         if (showCtrl && isFull) {
@@ -234,6 +241,10 @@ internal fun VideoPlayerPane(
                 onShowSp = {
                     showCtrl = true
                     activeDialog = PlayerDialog.Speed
+                },
+                onShowTimer = {
+                    showCtrl = true
+                    activeDialog = PlayerDialog.SleepTimer
                 },
                 onToggleFull = {
                     showCtrl = true
@@ -386,6 +397,22 @@ internal fun VideoPlayerPane(
             )
         }
 
+        if (activeDialog == PlayerDialog.SleepTimer) {
+            SleepTimerSelectionDialog(
+                timerActive = sleepTimerState.isActive,
+                remainingMs = sleepTimerState.remainingMs,
+                onDismiss = { activeDialog = null },
+                onStart = { minutes ->
+                    viewModel.startSleepTimer(minutes)
+                    activeDialog = null
+                },
+                onCancel = {
+                    viewModel.cancelSleepTimer()
+                    activeDialog = null
+                }
+            )
+        }
+
         if (!isFull && showPlaybackSheet) {
             VideoPlaybackSheet(
                 state = state,
@@ -435,6 +462,7 @@ private fun VideoPlayerOverlay(
     onShowA: () -> Unit,
     onShowQ: () -> Unit,
     onShowSp: () -> Unit,
+    onShowTimer: () -> Unit,
     onToggleFull: () -> Unit
 ) {
     val context = LocalContext.current
@@ -564,6 +592,7 @@ private fun VideoPlayerOverlay(
                 onShowA = onShowA,
                 onShowQ = onShowQ,
                 onShowSp = onShowSp,
+                onShowTimer = onShowTimer,
                 onToggleFull = onToggleFull,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -587,6 +616,7 @@ private fun PlayerCtrlBarHost(
     onShowQ: () -> Unit,
     onShowSp: () -> Unit,
     onToggleFull: () -> Unit,
+    onShowTimer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val progress by viewModel.playbackProgress.collectAsStateWithLifecycle()
@@ -602,6 +632,13 @@ private fun PlayerCtrlBarHost(
     } else {
         0f
     }
+    val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
+    val timerText = if (sleepTimerState.isActive) {
+        formatDuration(sleepTimerState.remainingMs)
+    } else {
+        "定时"
+    }
+    val timerOn = sleepTimerState.isActive
 
     PlayerCtrlBar(
         playText = if (state.isPlaying) "暂停" else "播放",
@@ -610,6 +647,8 @@ private fun PlayerCtrlBarHost(
         qualityText = getQualityName(state.playbackSource, state.currentStream),
         speedText = formatSpeed(state.speed),
         loopText = if (state.isLooping) "循环" else "单次",
+        timerText = timerText,
+        timerOn = timerOn,
         fullText = if (isFull) "还原" else "全屏",
         sliderVal = sliderVal,
         sliderOn = durationMs > 0L,
@@ -620,6 +659,7 @@ private fun PlayerCtrlBarHost(
         onQualityClick = onShowQ,
         onSpeedClick = onShowSp,
         onLoopClick = viewModel::toggleLooping,
+        onTimerClick = onShowTimer,
         onFullClick = onToggleFull,
         onSeekChange = { frac ->
             onShowCtrlChange(true)
@@ -642,6 +682,8 @@ private fun PlayerCtrlBar(
     qualityText: String,
     speedText: String,
     loopText: String,
+    timerText: String,
+    timerOn: Boolean,
     fullText: String,
     sliderVal: Float,
     sliderOn: Boolean,
@@ -652,6 +694,7 @@ private fun PlayerCtrlBar(
     onQualityClick: () -> Unit,
     onSpeedClick: () -> Unit,
     onLoopClick: () -> Unit,
+    onTimerClick: () -> Unit,
     onFullClick: () -> Unit,
     onSeekChange: (Float) -> Unit,
     onSeekDone: () -> Unit,
@@ -734,6 +777,12 @@ private fun PlayerCtrlBar(
                     text = loopText,
                     on = true,
                     onClick = onLoopClick,
+                    modifier = Modifier.weight(1f)
+                )
+                CtrlBtn(
+                    text = timerText,
+                    on = true,
+                    onClick = onTimerClick,
                     modifier = Modifier.weight(1f)
                 )
                 CtrlBtn(
@@ -909,5 +958,101 @@ private fun readPlayerTopMetaText(
         ?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
         ?.takeIf { it in 0..100 }
     return if (battery != null) "$time  ${battery}%" else time
+}
+
+@Composable
+private fun SleepTimerSelectionDialog(
+    timerActive: Boolean,
+    remainingMs: Long,
+    onDismiss: () -> Unit,
+    onStart: (Int) -> Unit,
+    onCancel: () -> Unit
+) {
+    var customMinutes by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("定时暂停播放") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (timerActive) {
+                    Text(
+                        text = "将在 ${formatDuration(remainingMs)} 后暂停播放",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    presetTimeButton("10分钟", 10, onStart, Modifier.weight(1f))
+                    presetTimeButton("15分钟", 15, onStart, Modifier.weight(1f))
+                    presetTimeButton("30分钟", 30, onStart, Modifier.weight(1f))
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = customMinutes,
+                        onValueChange = { value ->
+                            customMinutes = value.filter { it.isDigit() }
+                        },
+                        label = { Text("自定义(分钟)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        onClick = {
+                            val mins = customMinutes.toIntOrNull()
+                            if (mins != null && mins > 0) {
+                                onStart(mins)
+                            }
+                        },
+                        enabled = customMinutes.toIntOrNull()?.let { it > 0 } == true
+                    ) {
+                        Text("确定")
+                    }
+                }
+
+                if (timerActive) {
+                    TextButton(
+                        onClick = onCancel,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("取消定时", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
+}
+
+@Composable
+private fun presetTimeButton(
+    label: String,
+    minutes: Int,
+    onStart: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = { onStart(minutes) },
+        modifier = modifier
+    ) {
+        Text(label)
+    }
 }
 

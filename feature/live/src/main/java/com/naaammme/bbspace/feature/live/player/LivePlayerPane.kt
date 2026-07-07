@@ -19,6 +19,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,11 +35,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -60,6 +64,7 @@ import com.naaammme.bbspace.core.model.PlayerSettingsState
 import com.naaammme.bbspace.core.model.DanmakuItem
 import com.naaammme.bbspace.core.model.DanmakuSessionState
 import com.naaammme.bbspace.feature.live.toUiMessage
+import com.naaammme.bbspace.feature.live.SleepTimerState
 import com.naaammme.bbspace.infra.player.PlayerViewTargetBinder
 import com.naaammme.bbspace.infra.player.danmaku.DanmakuLayer
 import com.naaammme.bbspace.infra.player.danmaku.DanmakuOverlayState
@@ -70,6 +75,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 
 @Suppress("UnsafeOptInUsageError")
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -86,6 +92,9 @@ internal fun LivePlayerPane(
     onRetry: () -> Unit,
     onSwitchQuality: (Int) -> Unit,
     settingsState: PlayerSettingsState,
+    sleepTimerState: SleepTimerState,
+    onStartSleepTimer: (Int) -> Unit,
+    onCancelSleepTimer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -94,6 +103,7 @@ internal fun LivePlayerPane(
     var showCtrl by remember { mutableStateOf(true) }
     var showQualityDialog by remember { mutableStateOf(false) }
     var showInfoDialog by remember { mutableStateOf(false) }
+    var showTimerDialog by remember { mutableStateOf(false) }
     val qualityText = playbackState.playbackSource?.currentDescription
         ?.takeIf(String::isNotBlank)
         ?: "画质"
@@ -127,14 +137,16 @@ internal fun LivePlayerPane(
         playbackState.isPlaying,
         playbackState.error,
         showQualityDialog,
-        showInfoDialog
+        showInfoDialog,
+        showTimerDialog
     ) {
         if (
             showCtrl &&
             playbackState.isPlaying &&
             playbackState.error == null &&
             !showQualityDialog &&
-            !showInfoDialog
+            !showInfoDialog &&
+            !showTimerDialog
         ) {
             delay(3_000)
             showCtrl = false
@@ -223,10 +235,16 @@ internal fun LivePlayerPane(
         }
 
         if (showCtrl) {
+            val timerText = if (sleepTimerState.isActive) {
+                formatDuration(sleepTimerState.remainingMs)
+            } else {
+                "定时"
+            }
             LivePlayerCtrlBar(
                 playText = if (playbackState.isPlaying) "暂停" else "播放",
                 qualityText = qualityText,
                 fullText = if (isFull) "退出全屏" else "全屏",
+                timerText = timerText,
                 playOn = playbackState.playbackSource != null,
                 qualityOn = (playbackState.playbackSource?.qualityOptions?.size ?: 0) > 1,
                 danmakuText = if (danmakuOn) "弹幕" else "弹幕关",
@@ -245,6 +263,10 @@ internal fun LivePlayerPane(
                 onInfoClick = {
                     showCtrl = true
                     showInfoDialog = true
+                },
+                onTimerClick = {
+                    showCtrl = true
+                    showTimerDialog = true
                 },
                 onFullClick = {
                     showCtrl = true
@@ -296,6 +318,22 @@ internal fun LivePlayerPane(
         LivePlaybackInfoDialog(
             state = playbackState,
             onDismiss = { showInfoDialog = false }
+        )
+    }
+
+    if (showTimerDialog) {
+        LiveSleepTimerDialog(
+            timerActive = sleepTimerState.isActive,
+            remainingMs = sleepTimerState.remainingMs,
+            onDismiss = { showTimerDialog = false },
+            onStart = { minutes ->
+                onStartSleepTimer(minutes)
+                showTimerDialog = false
+            },
+            onCancel = {
+                onCancelSleepTimer()
+                showTimerDialog = false
+            }
         )
     }
 }
@@ -357,6 +395,7 @@ private fun LivePlayerCtrlBar(
     playText: String,
     qualityText: String,
     danmakuText: String,
+    timerText: String,
     fullText: String,
     playOn: Boolean,
     qualityOn: Boolean,
@@ -364,6 +403,7 @@ private fun LivePlayerCtrlBar(
     onDanmakuClick: () -> Unit,
     onQualityClick: () -> Unit,
     onInfoClick: () -> Unit,
+    onTimerClick: () -> Unit,
     onFullClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -408,6 +448,12 @@ private fun LivePlayerCtrlBar(
                 text = "信息",
                 enabled = true,
                 onClick = onInfoClick,
+                modifier = Modifier.weight(1f)
+            )
+            LiveCtrlBtn(
+                text = timerText,
+                enabled = true,
+                onClick = onTimerClick,
                 modifier = Modifier.weight(1f)
             )
             LiveCtrlBtn(
@@ -629,4 +675,112 @@ private fun LiveRoomMessage.toLiveDanmakuItem(): DanmakuItem {
         oid = 0L,
         dmFromType = 0
     )
+}
+
+private fun formatDuration(ms: Long): String {
+    val totalSec = (ms / 1000L).coerceAtLeast(0L)
+    val min = totalSec / 60
+    val sec = totalSec % 60
+    val hour = min / 60
+    return if (hour > 0) {
+        String.format(Locale.ROOT, "%d:%02d:%02d", hour, min % 60, sec % 60)
+    } else {
+        String.format(Locale.ROOT, "%d:%02d", min, sec % 60)
+    }
+}
+
+@Composable
+private fun LiveSleepTimerDialog(
+    timerActive: Boolean,
+    remainingMs: Long,
+    onDismiss: () -> Unit,
+    onStart: (Int) -> Unit,
+    onCancel: () -> Unit
+) {
+    var customMinutes by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("定时暂停播放") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (timerActive) {
+                    Text(
+                        text = "将在 ${formatDuration(remainingMs)} 后暂停播放",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LivePresetTimeButton("10分钟", 10, onStart, Modifier.weight(1f))
+                    LivePresetTimeButton("15分钟", 15, onStart, Modifier.weight(1f))
+                    LivePresetTimeButton("30分钟", 30, onStart, Modifier.weight(1f))
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = customMinutes,
+                        onValueChange = { value ->
+                            customMinutes = value.filter { it.isDigit() }
+                        },
+                        label = { Text("自定义(分钟)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        onClick = {
+                            val mins = customMinutes.toIntOrNull()
+                            if (mins != null && mins > 0) {
+                                onStart(mins)
+                            }
+                        },
+                        enabled = customMinutes.toIntOrNull()?.let { it > 0 } == true
+                    ) {
+                        Text("确定")
+                    }
+                }
+
+                if (timerActive) {
+                    TextButton(
+                        onClick = onCancel,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("取消定时", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
+}
+
+@Composable
+private fun LivePresetTimeButton(
+    label: String,
+    minutes: Int,
+    onStart: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = { onStart(minutes) },
+        modifier = modifier
+    ) {
+        Text(label)
+    }
 }

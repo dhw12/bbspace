@@ -22,6 +22,8 @@ import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.isSameEntry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -38,11 +40,13 @@ class VideoViewModel @Inject constructor(
 
     private val _targetStack = MutableStateFlow<List<VideoTarget>>(emptyList())
     private val _videoActionState = MutableStateFlow(VideoActionUiState())
+    private val _sleepTimerState = MutableStateFlow(SleepTimerState())
 
     val player: StateFlow<Player?> = playbackController.player
     val videoState: StateFlow<VideoPlaybackState> = playbackController.videoState
     val playbackProgress: StateFlow<PlaybackProgress> = playbackController.playbackProgress
     internal val videoActionState: StateFlow<VideoActionUiState> = _videoActionState
+    internal val sleepTimerState: StateFlow<SleepTimerState> = _sleepTimerState
     val settingsState = playerSettings.state
 
     init {
@@ -132,6 +136,30 @@ class VideoViewModel @Inject constructor(
         viewModelScope.launch {
             playerSettings.setLooping(looping)
         }
+    }
+
+    private var sleepTimerJob: Job? = null
+
+    fun startSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        val totalMs = minutes * 60_000L
+        _sleepTimerState.value = SleepTimerState(remainingMs = totalMs, isActive = true)
+        sleepTimerJob = viewModelScope.launch {
+            var remaining = totalMs
+            while (remaining > 0) {
+                delay(1000)
+                remaining -= 1000
+                _sleepTimerState.value = SleepTimerState(remainingMs = remaining.coerceAtLeast(0), isActive = true)
+            }
+            playbackController.pause()
+            _sleepTimerState.value = SleepTimerState()
+        }
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _sleepTimerState.value = SleepTimerState()
     }
 
     fun likeVideo() {
@@ -401,3 +429,8 @@ internal enum class VideoUserAction {
     LIKE,
     FAVORITE
 }
+
+internal data class SleepTimerState(
+    val remainingMs: Long = 0L,
+    val isActive: Boolean = false
+)
