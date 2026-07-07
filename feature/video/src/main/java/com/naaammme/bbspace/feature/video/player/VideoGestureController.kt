@@ -97,7 +97,7 @@ private const val DOUBLE_TAP_SEEK_MS = 10_000L
 private const val DRAG_SENSITIVITY = 0.6f
 private const val SIDE_GESTURE_ZONE = 1f / 3f
 private const val RIGHT_GESTURE_ZONE_START = 2f / 3f
-private const val SWIPE_UP_THRESHOLD_DP = 80f
+private const val SWIPE_UP_THRESHOLD_DP = 50f
 private val FullscreenVerticalDragBlockExtra = 8.dp
 private val SpeedBadgeTopPadding = 20.dp
 
