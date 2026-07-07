@@ -65,7 +65,8 @@ fun HomeVideoPage(
     onOpenLive: (LiveRoute) -> Unit,
     onDislike: (FeedItem, ThreePointReason) -> Unit,
     onCancelDislike: (FeedItem) -> Unit,
-    onToastShown: () -> Unit
+    onToastShown: () -> Unit,
+    scrollToTopTrigger: Long = 0L
 ) {
     val context = LocalContext.current
     val gridState = rememberLazyStaggeredGridState()
@@ -81,6 +82,12 @@ fun HomeVideoPage(
             gridState.scrollToItem(0)
         }
         wasRefreshing = isRefreshing
+    }
+    LaunchedEffect(scrollToTopTrigger) {
+        if (scrollToTopTrigger > 0L) {
+            gridState.scrollToItem(0)
+            onRefresh()
+        }
     }
     AdaptiveMediaGrid(
         items = items,

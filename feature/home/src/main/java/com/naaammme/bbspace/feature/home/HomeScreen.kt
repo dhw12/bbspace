@@ -68,11 +68,17 @@ fun HomeScreen(
     onOpenLive: (LiveRoute) -> Unit = {},
     onOpenArticle: (String, Int) -> Unit = { _, _ -> },
     onOpenListenItem: (Long, Int, Long, String, String, String) -> Unit = { _, _, _, _, _, _ -> },
+    scrollToTopTrigger: Long = 0L,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
     LaunchedEffect(Unit) {
         viewModel.refreshPageAction()
+    }
+    LaunchedEffect(scrollToTopTrigger) {
+        if (scrollToTopTrigger > 0L) {
+            pagerState.animateScrollToPage(1)
+        }
     }
     val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
     val scope = rememberCoroutineScope()
@@ -135,7 +141,8 @@ fun HomeScreen(
                     onOpenLive = onOpenLive,
                     onDislike = viewModel::submitDislike,
                     onCancelDislike = viewModel::cancelDislike,
-                    onToastShown = viewModel::consumeToast
+                    onToastShown = viewModel::consumeToast,
+                    scrollToTopTrigger = scrollToTopTrigger
                 )
 
                 2 -> HomeLivePage(
