@@ -576,6 +576,12 @@ private fun TopLevelFloatingNavigation(
                             }
                             else -> {}
                         }
+                    } else {
+                        when (tab) {
+                            TopLevelRoute.HOME -> lastHomeTapTime.value = 0L
+                            TopLevelRoute.DYNAMIC -> lastDynamicTapTime.value = 0L
+                            else -> {}
+                        }
                     }
                     onTabChange(tab)
                 }
