@@ -641,7 +641,6 @@ private fun PlayerCtrlBarHost(
     val timerOn = sleepTimerState.isActive
 
     PlayerCtrlBar(
-        playText = if (state.isPlaying) "暂停" else "播放",
         timeText = formatPlaybackTime(barMs, durationMs),
         audioText = state.currentAudio?.let { getAudioName(it.id, short = true) } ?: "音频",
         qualityText = getQualityName(state.playbackSource, state.currentStream),
@@ -654,7 +653,6 @@ private fun PlayerCtrlBarHost(
         sliderOn = durationMs > 0L,
         audioOn = (state.playbackSource?.audios?.size ?: 0) > 1,
         qualityOn = (state.playbackSource?.qualityOptions?.size ?: 0) > 1,
-        onTogglePlay = viewModel::togglePlayPause,
         onAudioClick = onShowA,
         onQualityClick = onShowQ,
         onSpeedClick = onShowSp,
@@ -676,7 +674,6 @@ private fun PlayerCtrlBarHost(
 
 @Composable
 private fun PlayerCtrlBar(
-    playText: String,
     timeText: String,
     audioText: String,
     qualityText: String,
@@ -689,7 +686,6 @@ private fun PlayerCtrlBar(
     sliderOn: Boolean,
     audioOn: Boolean,
     qualityOn: Boolean,
-    onTogglePlay: () -> Unit,
     onAudioClick: () -> Unit,
     onQualityClick: () -> Unit,
     onSpeedClick: () -> Unit,
@@ -743,12 +739,6 @@ private fun PlayerCtrlBar(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CtrlBtn(
-                    text = playText,
-                    on = true,
-                    onClick = onTogglePlay,
-                    modifier = Modifier.weight(1f)
-                )
                 Text(
                     text = timeText,
                     color = Color.White,
