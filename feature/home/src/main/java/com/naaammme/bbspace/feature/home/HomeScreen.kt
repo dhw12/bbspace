@@ -72,6 +72,9 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
+    val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(Unit) {
         viewModel.refreshPageAction()
     }
@@ -80,8 +83,6 @@ fun HomeScreen(
             pagerState.animateScrollToPage(1)
         }
     }
-    val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
-    val scope = rememberCoroutineScope()
 
     state.interestChoose?.let { interestChoose ->
         InterestDialog(
