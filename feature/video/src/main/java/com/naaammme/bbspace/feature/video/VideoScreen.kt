@@ -3,6 +3,7 @@ package com.naaammme.bbspace.feature.video
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -176,14 +177,15 @@ fun VideoScreen(
         val expandedPlayerW = expandedContentW * 0.54f
         val expandedPlayerH = (maxHeight - statusTop - (playerTopPad * 2)).coerceAtLeast(0.dp)
 
+        Crossfade(targetState = fullOn) { targetFullOn ->
         when {
-            !hostExpanded || fullOn -> {
+            !hostExpanded || targetFullOn -> {
                 Box(modifier = Modifier.fillMaxSize()) {
                     VideoPlayerPane(
                         modifier = Modifier.fillMaxSize(),
                         viewModel = viewModel,
                         videoTitle = videoState.detail?.title,
-                        isFull = fullOn,
+                        isFull = targetFullOn,
                         onToggleFull = { isFull = !isFull },
                         onBackClick = handleBack,
                         onGoHome = onGoHome
@@ -279,6 +281,7 @@ fun VideoScreen(
                     )
                 }
             }
+        }
         }
     }
 
