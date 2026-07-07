@@ -71,6 +71,7 @@ fun HomeVideoPage(
     val context = LocalContext.current
     val gridState = rememberLazyStaggeredGridState()
     var wasRefreshing by remember { mutableStateOf(false) }
+    var lastScrollTrigger by remember { mutableStateOf(-1L) }
     LaunchedEffect(toastMessage, context) {
         if (toastMessage.isNotEmpty()) {
             Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
@@ -84,7 +85,8 @@ fun HomeVideoPage(
         wasRefreshing = isRefreshing
     }
     LaunchedEffect(scrollToTopTrigger) {
-        if (scrollToTopTrigger > 0L) {
+        if (scrollToTopTrigger > 0L && scrollToTopTrigger != lastScrollTrigger) {
+            lastScrollTrigger = scrollToTopTrigger
             gridState.scrollToItem(0)
             onRefresh()
         }
