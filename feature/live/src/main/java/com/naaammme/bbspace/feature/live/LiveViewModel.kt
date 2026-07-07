@@ -43,7 +43,7 @@ class LiveViewModel @Inject constructor(
     val playbackState: StateFlow<LivePlaybackViewState> = playbackController.liveState
     val settingsState = playerSettings.state
     private val _sleepTimerState = MutableStateFlow(SleepTimerState())
-    val sleepTimerState: StateFlow<SleepTimerState> = _sleepTimerState
+    internal val sleepTimerState: StateFlow<SleepTimerState> = _sleepTimerState
     private val emptyRoomSession = MutableStateFlow(LiveRoomSessionState())
     val roomSession: StateFlow<LiveRoomSessionState> = route
         .flatMapLatest { curRoute ->
