@@ -3,7 +3,8 @@ package com.naaammme.bbspace.feature.video
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
-import androidx.compose.animation.Crossfade
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -150,6 +151,18 @@ fun VideoScreen(
                 ctrl.show(WindowInsetsCompat.Type.systemBars())
             }
         }
+
+        DisposableEffect(win, fullOn) {
+            if (fullOn) {
+                val decorBg = win.decorView.background
+                win.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+                onDispose {
+                    win.setBackgroundDrawable(decorBg)
+                }
+            } else {
+                onDispose { }
+            }
+        }
     }
 
     DisposableEffect(act, fullOn, settingsState.playback.autoRotateFullscreen, isPortraitVideo) {
@@ -177,15 +190,14 @@ fun VideoScreen(
         val expandedPlayerW = expandedContentW * 0.54f
         val expandedPlayerH = (maxHeight - statusTop - (playerTopPad * 2)).coerceAtLeast(0.dp)
 
-        Crossfade(targetState = fullOn) { targetFullOn ->
         when {
-            !hostExpanded || targetFullOn -> {
+            !hostExpanded || fullOn -> {
                 Box(modifier = Modifier.fillMaxSize()) {
                     VideoPlayerPane(
                         modifier = Modifier.fillMaxSize(),
                         viewModel = viewModel,
                         videoTitle = videoState.detail?.title,
-                        isFull = targetFullOn,
+                        isFull = fullOn,
                         onToggleFull = { isFull = !isFull },
                         onBackClick = handleBack,
                         onGoHome = onGoHome
@@ -281,7 +293,6 @@ fun VideoScreen(
                     )
                 }
             }
-        }
         }
     }
 
