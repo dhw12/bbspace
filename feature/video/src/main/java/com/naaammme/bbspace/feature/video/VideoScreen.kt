@@ -3,7 +3,6 @@ package com.naaammme.bbspace.feature.video
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
-import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -155,7 +154,7 @@ fun VideoScreen(
         DisposableEffect(win, fullOn) {
             if (fullOn) {
                 val decorBg = win.decorView.background
-                win.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+                win.setBackgroundDrawable(ColorDrawable(android.graphics.Color.BLACK))
                 onDispose {
                     win.setBackgroundDrawable(decorBg)
                 }
