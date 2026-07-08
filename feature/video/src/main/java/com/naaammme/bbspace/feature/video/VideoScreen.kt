@@ -3,7 +3,6 @@ package com.naaammme.bbspace.feature.video
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
-import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -148,18 +147,6 @@ fun VideoScreen(
                 ctrl.isAppearanceLightStatusBars = restoreLightSystemBars
                 ctrl.isAppearanceLightNavigationBars = restoreLightSystemBars
                 ctrl.show(WindowInsetsCompat.Type.systemBars())
-            }
-        }
-
-        DisposableEffect(win, fullOn) {
-            if (fullOn) {
-                val decorBg = win.decorView.background
-                win.setBackgroundDrawable(ColorDrawable(android.graphics.Color.BLACK))
-                onDispose {
-                    win.setBackgroundDrawable(decorBg)
-                }
-            } else {
-                onDispose { }
             }
         }
     }
