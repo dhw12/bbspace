@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,7 +79,7 @@ fun HomeScreen(
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
     val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
     val scope = rememberCoroutineScope()
-    var lastScrollTrigger by remember { mutableLongStateOf(-1L) }
+    var lastScrollTrigger by rememberSaveable { mutableLongStateOf(-1L) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshPageAction()

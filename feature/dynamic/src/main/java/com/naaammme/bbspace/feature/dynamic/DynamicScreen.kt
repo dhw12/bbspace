@@ -16,6 +16,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +42,7 @@ fun DynamicScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
-    var lastScrollTrigger by remember { mutableLongStateOf(-1L) }
+    var lastScrollTrigger by rememberSaveable { mutableLongStateOf(-1L) }
     val shouldLoadMore by remember(
         state.items.size,
         state.canLoadMore,

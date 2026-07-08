@@ -553,6 +553,10 @@ private fun TopLevelFloatingNavigation(
         }
     val lastHomeTapTime = remember { mutableStateOf(0L) }
     val lastDynamicTapTime = remember { mutableStateOf(0L) }
+    LaunchedEffect(currentTab) {
+        lastHomeTapTime.value = 0L
+        lastDynamicTapTime.value = 0L
+    }
     val tabs: @Composable () -> Unit = {
         TopLevelRoute.entries.forEach { tab ->
             TopLevelFloatingNavigationItem(
@@ -577,11 +581,8 @@ private fun TopLevelFloatingNavigation(
                             else -> {}
                         }
                     } else {
-                        when (tab) {
-                            TopLevelRoute.HOME -> lastHomeTapTime.value = 0L
-                            TopLevelRoute.DYNAMIC -> lastDynamicTapTime.value = 0L
-                            else -> {}
-                        }
+                        lastHomeTapTime.value = 0L
+                        lastDynamicTapTime.value = 0L
                     }
                     onTabChange(tab)
                 }

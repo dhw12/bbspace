@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +72,7 @@ fun HomeVideoPage(
     val context = LocalContext.current
     val gridState = rememberLazyStaggeredGridState()
     var wasRefreshing by remember { mutableStateOf(false) }
-    var lastScrollTrigger by remember { mutableStateOf(-1L) }
+    var lastScrollTrigger by rememberSaveable { mutableStateOf(-1L) }
     LaunchedEffect(toastMessage, context) {
         if (toastMessage.isNotEmpty()) {
             Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
