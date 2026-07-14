@@ -222,13 +222,14 @@ class FeedRepository @Inject constructor(
         } else {
             null
         }
+        val isDynamic = cardGoto == "dynamic"
         val cid = player?.optLong("cid")?.takeIf { it > 0L } ?: VideoTargetTool.cid(uri)
         val seasonId = player?.optLong("season_id")
             ?.takeIf { it > 0L }
             ?: VideoTargetTool.arg(uri, "season_id")?.toLongOrNull()
         val pugvEpId = if (isPugv) VideoTargetTool.epId(uri) else null
         val pgcEpId = if (isPgc) param.toLongOrNull() ?: VideoTargetTool.epId(uri) else null
-        val target = if (isLive) {
+        val target = if (isLive || isDynamic) {
             null
         } else {
             val src = VideoTargetTool.feed(
@@ -289,7 +290,6 @@ class FeedRepository @Inject constructor(
         } else {
             null
         }
-
         return FeedItem(
             cardType = card.optString("card_type").ifBlank { obj.optString("card_type") },
             cardGoto = cardGoto,

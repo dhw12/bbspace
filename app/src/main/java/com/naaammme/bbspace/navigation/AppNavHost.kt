@@ -477,6 +477,7 @@ private fun MainTabsScaffold(
                             onOpenVideo = onNavigateToVideo,
                             onOpenSpace = onNavigateToSpace,
                             onOpenLive = onNavigateToLive,
+                            onOpenDynamic = onNavigateToDynamicDetail,
                             onOpenArticle = onNavigateToArticle,
                             onOpenListenItem = onNavigateToListenDetail
                         )
