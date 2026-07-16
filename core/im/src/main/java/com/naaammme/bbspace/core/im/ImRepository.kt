@@ -144,14 +144,14 @@ class ImRepository @Inject constructor(
                     .setReceiverId(talkerId)
                     .setCliMsgId(cliMsgId)
                     .setMsgType(ImMsgType.TEXT)
-                    .setContent(buildTextContent(text))
+                    .setContent("""{"content":"$text"}""")
                     .setNewFaceVersion(1)
                     .build()
             )
             .setCookie("")
             .setCookie2("")
             .setErrorCode(0)
-            .setDevId(imDevId(authProvider.mid))
+            .setDevId(getDeviceId(authProvider.mid))
             .build()
         val reply = grpcClient.call(
             endpoint = SEND_MSG_ENDPOINT,
@@ -198,7 +198,7 @@ class ImRepository @Inject constructor(
             .setSessionType(sessionType)
             .setSize(size)
             .setOrder(order)
-            .setDevId(imDevId(authProvider.mid))
+            .setDevId(getDeviceId(authProvider.mid, isFetch = true))
             .apply {
                 beginSeqNo?.let(::setBeginSeqno)
                 endSeqNo?.let(::setEndSeqno)
@@ -291,7 +291,7 @@ class ImRepository @Inject constructor(
     private fun Msg.parseContent(): ImMessageContent {
         if (content.isBlank()) return ImMessageContent("")
         return when (msgType) {
-            ImMsgType.TEXT -> ImMessageContent(content.readJsonString("content"))
+            ImMsgType.TEXT -> ImMessageContent(JSONObject(content).optString("content"))
             ImMsgType.IMAGE -> content.readImageContent()
             in ImMsgType.SHARE_TYPES -> content.readVideoCardContent()
             ImMsgType.NOTICE,
@@ -300,65 +300,23 @@ class ImRepository @Inject constructor(
         }
     }
 
-    private fun String.readJsonString(field: String): String {
-        JsonReader(StringReader(this)).use { reader ->
-            reader.beginObject()
-            while (reader.hasNext()) {
-                if (reader.nextName() == field) return reader.nextString()
-                reader.skipValue()
-            }
-            reader.endObject()
-        }
-        return ""
-    }
-
     private fun String.readImageContent(): ImMessageContent {
-        var imageUrl: String? = null
-        var imageWidth = 0
-        var imageHeight = 0
-        JsonReader(StringReader(this)).use { reader ->
-            reader.beginObject()
-            while (reader.hasNext()) {
-                when (reader.nextName()) {
-                    "url" -> imageUrl = reader.nextString()
-                    "width" -> imageWidth = reader.nextInt()
-                    "height" -> imageHeight = reader.nextInt()
-                    else -> reader.skipValue()
-                }
-            }
-            reader.endObject()
-        }
+        val obj = JSONObject(this)
         return ImMessageContent(
             text = "",
-            imageUrl = imageUrl?.takeIf(String::isNotBlank),
-            imageWidth = imageWidth,
-            imageHeight = imageHeight
+            imageUrl = obj.optString("url").takeIf(String::isNotBlank),
+            imageWidth = obj.optInt("width"),
+            imageHeight = obj.optInt("height")
         )
     }
 
     private fun String.readVideoCardContent(): ImMessageContent {
-        var title = ""
-        var coverUrl: String? = null
-        var viewCount = 0L
-        var shareAid = 0L
-        JsonReader(StringReader(this)).use { reader ->
-            reader.beginObject()
-            while (reader.hasNext()) {
-                when (reader.nextName()) {
-                    "title" -> title = reader.nextString()
-                    "cover" -> coverUrl = reader.nextString().takeIf(String::isNotBlank).httpsImageUrlOrNull()
-                    "view" -> viewCount = reader.nextLong()
-                    "rid" -> shareAid = reader.nextLong()
-                    else -> reader.skipValue()
-                }
-            }
-            reader.endObject()
-        }
+        val obj = JSONObject(this)
         return ImMessageContent(
-            text = title,
-            shareCoverUrl = coverUrl,
-            shareViewCount = viewCount,
-            shareAid = shareAid
+            text = obj.optString("title"),
+            shareCoverUrl = obj.optString("cover").takeIf(String::isNotBlank)?.httpsImageUrlOrNull(),
+            shareViewCount = obj.optLong("view"),
+            shareAid = obj.optLong("rid")
         )
     }
 
@@ -417,16 +375,17 @@ class ImRepository @Inject constructor(
         )
     }
 
-    private fun buildTextContent(text: String): String {
-        return JSONObject()
-            .put("content", text)
-            .toString()
-    }
-
-    private fun imDevId(mid: Long): String {
+    /**
+     * B 站服务端在 SyncFetchSessionMsgs 时，会自动过滤掉同 dev_id 发出的消息（默认客户端已有本地记录）。
+     * 本项目无本地消息数据库，为避免自己刚发的消息被过滤，必须隔离发送和拉取的设备 ID：
+     * - 发送消息：使用主设备 ID
+     * - 拉取消息：使用独立的伪造设备 ID，伪装成多端拉取。
+     */
+    private fun getDeviceId(mid: Long, isFetch: Boolean = false): String {
         val prefs = context.getSharedPreferences("IMFieldsCache$mid", Context.MODE_PRIVATE)
-        return prefs.getString("key_device_id_v2", null) ?: UUID.randomUUID().toString().also {
-            prefs.edit { putString("key_device_id_v2", it) }
+        val key = if (isFetch) "key_fetch_device_id_v2" else "key_device_id_v2"
+        return prefs.getString(key, null) ?: UUID.randomUUID().toString().also {
+            prefs.edit { putString(key, it) }
         }
     }
 
