@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,7 +51,6 @@ import com.naaammme.bbspace.feature.bbspace.playback.PlaybackHistoryPane
 import com.naaammme.bbspace.feature.bbspace.playback.PlaybackHistoryViewModel
 import com.naaammme.bbspace.feature.bbspace.publishedrecord.PublishedRecordPane
 import com.naaammme.bbspace.feature.bbspace.publishedrecord.PublishedRecordViewModel
-import com.naaammme.bbspace.feature.bbspace.relation.RelationCheckPane
 import com.naaammme.bbspace.feature.comment.CommentPanel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -159,7 +157,6 @@ fun BbSpaceScreen(
                                 BbSpacePage.HOME -> "bb空间"
                                 BbSpacePage.PLAYBACK_HISTORY -> "播放历史(${playbackHistoryState.items.size})"
                                 BbSpacePage.PUBLISHED_RECORD -> "我发布的(${publishedRecordState.totalCount})"
-                                BbSpacePage.RELATION_CHECK -> "查询关系"
                                 BbSpacePage.COMMENT_SEARCH -> "查评论"
                                 else -> ""
                             }
@@ -212,7 +209,6 @@ fun BbSpaceScreen(
                             .padding(padding),
                         onOpenPlaybackHistory = { pushPage(BbSpacePage.PLAYBACK_HISTORY) },
                         onOpenPublishedRecord = { pushPage(BbSpacePage.PUBLISHED_RECORD) },
-                        onOpenRelationCheck = { pushPage(BbSpacePage.RELATION_CHECK) },
                         onOpenCommentSearch = { pushPage(BbSpacePage.COMMENT_SEARCH) }
                     )
                 }
@@ -247,14 +243,6 @@ fun BbSpaceScreen(
                         onDismissDetail = handleBack,
                     )
                 }
-                BbSpacePage.RELATION_CHECK -> {
-                    RelationCheckPane(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(horizontal = 16.dp)
-                    )
-                }
                 BbSpacePage.COMMENT_SEARCH -> {
                     CommentSearchPane(
                         onOpenCommentDetail = openCommentDetail,
@@ -274,7 +262,6 @@ private fun BbSpaceHomePane(
     modifier: Modifier = Modifier,
     onOpenPlaybackHistory: () -> Unit,
     onOpenPublishedRecord: () -> Unit,
-    onOpenRelationCheck: () -> Unit,
     onOpenCommentSearch: () -> Unit
 ) {
     Column(
@@ -294,13 +281,6 @@ private fun BbSpaceHomePane(
             icon = Icons.Default.DateRange,
             modifier = Modifier.fillMaxWidth(),
             onClick = onOpenPublishedRecord
-        )
-        BbSpaceEntryCard(
-            title = "查询关系",
-            subtitle = "输入两个 UID 查询拉黑和关注关系",
-            icon = Icons.Default.Person,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onOpenRelationCheck
         )
         BbSpaceEntryCard(
             title = "查评论",
@@ -364,6 +344,5 @@ private enum class BbSpacePage {
     PLAYBACK_HISTORY,
     PUBLISHED_RECORD,
     COMMENT_DETAIL,
-    RELATION_CHECK,
     COMMENT_SEARCH
 }
