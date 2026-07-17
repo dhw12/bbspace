@@ -50,6 +50,7 @@ internal sealed interface CommentReplyAction {
     data class Reply(val reply: CommentReply) : CommentReplyAction
     data class OpenReplies(val reply: CommentReply) : CommentReplyAction
     data class OpenUser(val user: CommentUser) : CommentReplyAction
+    data class OpenOriginalContent(val reply: CommentReply) : CommentReplyAction
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -255,7 +256,8 @@ private fun ReplyBody(
                     canDelete = isSelf,
                     onCheck = { onAction(CommentReplyAction.Check(reply.rpid)) },
                     onTranslate = { onAction(CommentReplyAction.Translate(reply.rpid)) },
-                    onDelete = { onAction(CommentReplyAction.Delete(reply)) }
+                    onDelete = { onAction(CommentReplyAction.Delete(reply)) },
+                    onOpenOriginal = { onAction(CommentReplyAction.OpenOriginalContent(reply)) }
                 )
             }
         }
@@ -301,7 +303,8 @@ private fun ReplyMenuButton(
     canDelete: Boolean,
     onCheck: () -> Unit,
     onTranslate: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onOpenOriginal: () -> Unit
 ) {
     var show by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -326,6 +329,13 @@ private fun ReplyMenuButton(
                     }
                 )
             }
+            DropdownMenuItem(
+                text = { Text("前往原内容") },
+                onClick = {
+                    show = false
+                    onOpenOriginal()
+                }
+            )
             DropdownMenuItem(
                 text = { Text("评论翻译") },
                 onClick = {

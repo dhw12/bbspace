@@ -26,9 +26,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,8 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.designsystem.component.CollapsingTopBarScaffold
-import com.naaammme.bbspace.core.model.CommentSubjectTool
-import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_COMMENT
 import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_LIVE_DANMAKU
 import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_VIDEO_DANMAKU
 import com.naaammme.bbspace.core.model.LiveRoute
@@ -75,13 +74,28 @@ fun BbSpaceScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val exportJson = rememberExportJson()
-    var page by rememberSaveable { mutableStateOf(BbSpacePage.HOME) }
+    val saveableStateHolder = rememberSaveableStateHolder()
+    var backStack by rememberSaveable { mutableStateOf(listOf(BbSpacePage.HOME)) }
+    val page = backStack.last()
     var selectedCommentRecord by remember { mutableStateOf<PublishedRecord?>(null) }
-    val openPublishedRecordTarget: (PublishedRecord) -> Unit = { record ->
-        record.targetId.takeIf { it > 0L }?.let { targetId ->
-            when (record.kind) {
-                PUBLISHED_RECORD_KIND_COMMENT -> {
-                    if (record.targetType == CommentSubjectTool.TYPE_VIDEO) {
+    val pushPage: (BbSpacePage) -> Unit = remember {
+        { newPage ->
+            if (backStack.last() != newPage) {
+                backStack = backStack + newPage
+            }
+        }
+    }
+    val openCommentDetail: (PublishedRecord) -> Unit = remember {
+        { record ->
+            selectedCommentRecord = record
+            pushPage(BbSpacePage.COMMENT_DETAIL)
+        }
+    }
+    val openPublishedRecordTarget: (PublishedRecord) -> Unit = remember(onOpenVideoDetail, onOpenLiveDetail) {
+        { record ->
+            record.targetId.takeIf { it > 0L }?.let { targetId ->
+                when (record.kind) {
+                    PUBLISHED_RECORD_KIND_VIDEO_DANMAKU -> {
                         onOpenVideoDetail(
                             VideoTarget.Ugc(
                                 aid = targetId,
@@ -89,34 +103,23 @@ fun BbSpaceScreen(
                                 src = VideoTargetTool.history()
                             )
                         )
-                    } else {
-                        onOpenDynamicDetail(targetId.toString())
                     }
-                }
-                PUBLISHED_RECORD_KIND_VIDEO_DANMAKU -> {
-                    onOpenVideoDetail(
-                        VideoTarget.Ugc(
-                            aid = targetId,
-                            cid = 0L,
-                            src = VideoTargetTool.history()
-                        )
-                    )
-                }
-                PUBLISHED_RECORD_KIND_LIVE_DANMAKU -> {
-                    onOpenLiveDetail(LiveRoute(roomId = targetId))
+                    PUBLISHED_RECORD_KIND_LIVE_DANMAKU -> {
+                        onOpenLiveDetail(LiveRoute(roomId = targetId))
+                    }
                 }
             }
         }
     }
-    val handleBack = {
-        when (page) {
-            BbSpacePage.HOME -> onBack()
-            BbSpacePage.COMMENT_DETAIL -> {
-                page = BbSpacePage.PUBLISHED_RECORD
+    val handleBack: () -> Unit = remember(onBack) {
+        {
+            if (backStack.last() == BbSpacePage.COMMENT_DETAIL) {
                 selectedCommentRecord = null
             }
-            else -> {
-                page = BbSpacePage.HOME
+            if (backStack.size > 1) {
+                backStack = backStack.dropLast(1)
+            } else {
+                onBack()
             }
         }
     }
@@ -156,9 +159,9 @@ fun BbSpaceScreen(
                                 BbSpacePage.HOME -> "bb空间"
                                 BbSpacePage.PLAYBACK_HISTORY -> "播放历史(${playbackHistoryState.items.size})"
                                 BbSpacePage.PUBLISHED_RECORD -> "我发布的(${publishedRecordState.totalCount})"
-                                BbSpacePage.COMMENT_DETAIL -> "评论详情"
                                 BbSpacePage.RELATION_CHECK -> "查询关系"
                                 BbSpacePage.COMMENT_SEARCH -> "查评论"
+                                else -> ""
                             }
                         )
                     },
@@ -200,64 +203,67 @@ fun BbSpaceScreen(
             }
         }
     ) { padding ->
-        when (page) {
-            BbSpacePage.HOME -> {
-                BbSpaceHomePane(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    onOpenPlaybackHistory = { page = BbSpacePage.PLAYBACK_HISTORY },
-                    onOpenPublishedRecord = { page = BbSpacePage.PUBLISHED_RECORD },
-                    onOpenRelationCheck = { page = BbSpacePage.RELATION_CHECK },
-                    onOpenCommentSearch = { page = BbSpacePage.COMMENT_SEARCH }
-                )
-            }
-            BbSpacePage.PLAYBACK_HISTORY -> {
-                PlaybackHistoryPane(
-                    vm = playbackHistoryVm,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(horizontal = 16.dp)
-                )
-            }
-            BbSpacePage.PUBLISHED_RECORD -> {
-                PublishedRecordPane(
-                    vm = publishedRecordVm,
-                    onOpenCommentDetail = { record ->
-                        selectedCommentRecord = record
-                        page = BbSpacePage.COMMENT_DETAIL
-                    },
-                    onOpenTarget = openPublishedRecordTarget,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(horizontal = 16.dp)
-                )
-            }
-            BbSpacePage.COMMENT_DETAIL -> {
-                CommentPanel(
-                    subject = null,
-                    detailRecord = selectedCommentRecord,
-                    onOpenSpace = onOpenSpace,
-                    onDismissDetail = handleBack,
-                )
-            }
-            BbSpacePage.RELATION_CHECK -> {
-                RelationCheckPane(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(horizontal = 16.dp)
-                )
-            }
-            BbSpacePage.COMMENT_SEARCH -> {
-                CommentSearchPane(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(horizontal = 16.dp)
-                )
+        saveableStateHolder.SaveableStateProvider(page.name) {
+            when (page) {
+                BbSpacePage.HOME -> {
+                    BbSpaceHomePane(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding),
+                        onOpenPlaybackHistory = { pushPage(BbSpacePage.PLAYBACK_HISTORY) },
+                        onOpenPublishedRecord = { pushPage(BbSpacePage.PUBLISHED_RECORD) },
+                        onOpenRelationCheck = { pushPage(BbSpacePage.RELATION_CHECK) },
+                        onOpenCommentSearch = { pushPage(BbSpacePage.COMMENT_SEARCH) }
+                    )
+                }
+                BbSpacePage.PLAYBACK_HISTORY -> {
+                    PlaybackHistoryPane(
+                        vm = playbackHistoryVm,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(horizontal = 16.dp)
+                    )
+                }
+                BbSpacePage.PUBLISHED_RECORD -> {
+                    PublishedRecordPane(
+                        vm = publishedRecordVm,
+                        onOpenCommentDetail = openCommentDetail,
+                        onOpenTarget = openPublishedRecordTarget,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(horizontal = 16.dp)
+                    )
+                }
+                BbSpacePage.COMMENT_DETAIL -> {
+                    CommentPanel(
+                        subject = null,
+                        detailRecord = selectedCommentRecord,
+                        onOpenSpace = onOpenSpace,
+                        onOpenVideoDetail = onOpenVideoDetail,
+                        onOpenDynamicDetail = onOpenDynamicDetail,
+                        onOpenLiveDetail = onOpenLiveDetail,
+                        onDismissDetail = handleBack,
+                    )
+                }
+                BbSpacePage.RELATION_CHECK -> {
+                    RelationCheckPane(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(horizontal = 16.dp)
+                    )
+                }
+                BbSpacePage.COMMENT_SEARCH -> {
+                    CommentSearchPane(
+                        onOpenCommentDetail = openCommentDetail,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(horizontal = 16.dp)
+                    )
+                }
             }
         }
     }

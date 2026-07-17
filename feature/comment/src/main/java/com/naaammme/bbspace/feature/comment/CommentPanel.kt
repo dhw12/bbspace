@@ -57,7 +57,13 @@ import com.naaammme.bbspace.core.model.CommentSubjectTool
 import com.naaammme.bbspace.core.model.CommentSort
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.CommentUser
+import com.naaammme.bbspace.core.model.LiveRoute
+import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_COMMENT
+import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_LIVE_DANMAKU
+import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_VIDEO_DANMAKU
 import com.naaammme.bbspace.core.model.SpaceRoute
+import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.feature.comment.component.CommentCard
 import com.naaammme.bbspace.feature.comment.component.CommentReplyAction
 import com.naaammme.bbspace.feature.comment.editor.CommentEditorFab
@@ -75,6 +81,9 @@ fun CommentPanel(
     isActive: Boolean = true,
     detailRecord: PublishedRecord? = null,
     onOpenSpace: (SpaceRoute) -> Unit = {},
+    onOpenVideoDetail: (VideoTarget) -> Unit = {},
+    onOpenDynamicDetail: (String) -> Unit = {},
+    onOpenLiveDetail: (LiveRoute) -> Unit = {},
     onDismissDetail: () -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
     threadListState: LazyListState = rememberLazyListState(),
@@ -86,18 +95,18 @@ fun CommentPanel(
         if (isActive) {
             if (detailRecord != null) {
                 viewModel.bindDetail(detailRecord)
-            } else {
+            } else if (subject != null) {
                 viewModel.bind(subject)
             }
         }
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isDetailMode = detailRecord != null
+    val isDetailMode = detailRecord != null || (subject == null && uiState.threadPane != null)
     val layoutDirection = LocalLayoutDirection.current
     val replyThread = uiState.threadPane
     val isInitLoading = !isDetailMode && subject != null && uiState.loading && uiState.items.isEmpty()
     val context = LocalContext.current
-    val appCtx = remember(context) { context.applicationContext }
+    val appCtx = context.applicationContext
     val scope = rememberCoroutineScope()
     val listContentPadding = PaddingValues(
         start = contentPadding.calculateStartPadding(layoutDirection),
@@ -162,7 +171,10 @@ fun CommentPanel(
     val onReplyAction: (CommentReplyAction) -> Unit = remember(
         routeSubject,
         detailRecord?.key,
-        onOpenSpace
+        onOpenSpace,
+        onOpenLiveDetail,
+        onOpenVideoDetail,
+        onOpenDynamicDetail
     ) {
         { action ->
             when (action) {
@@ -173,6 +185,23 @@ fun CommentPanel(
                 is CommentReplyAction.OpenReplies -> viewModel.openReplyThread(action.reply)
                 is CommentReplyAction.OpenUser -> {
                     action.user.toSpaceRoute(routeSubject)?.let(onOpenSpace)
+                }
+                is CommentReplyAction.OpenOriginalContent -> {
+                    val oid = detailRecord?.targetId ?: routeSubject?.oid ?: 0L
+                    val type = detailRecord?.targetType ?: routeSubject?.type ?: 0
+                    val kind = detailRecord?.kind
+                    if (oid > 0L) {
+                        when {
+                            kind == PUBLISHED_RECORD_KIND_LIVE_DANMAKU -> {
+                                onOpenLiveDetail(LiveRoute(roomId = oid))
+                            }
+                            kind == PUBLISHED_RECORD_KIND_VIDEO_DANMAKU ||
+                            (kind == PUBLISHED_RECORD_KIND_COMMENT || kind == null) && type == CommentSubjectTool.TYPE_VIDEO -> {
+                                onOpenVideoDetail(VideoTarget.Ugc(aid = oid, cid = 0L, src = VideoTargetTool.history()))
+                            }
+                            else -> onOpenDynamicDetail(oid.toString())
+                        }
+                    }
                 }
             }
         }

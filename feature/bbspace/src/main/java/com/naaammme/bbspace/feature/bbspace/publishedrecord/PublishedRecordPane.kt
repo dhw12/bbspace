@@ -248,8 +248,10 @@ private fun PublishedRecordCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = { onOpenTarget(item) }) {
-                    Text("打开")
+                if (item.kind != PUBLISHED_RECORD_KIND_COMMENT) {
+                    TextButton(onClick = { onOpenTarget(item) }) {
+                        Text("打开")
+                    }
                 }
                 TextButton(onClick = onDelete) {
                     Text("删除")
