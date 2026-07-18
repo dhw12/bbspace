@@ -83,3 +83,8 @@ data class ImMessage(
     val noticeCoverUrl: String? = null,
     val noticeDetailText: String? = null
 )
+
+enum class MsgFeedFilter(val index: Int) {
+    ALL(0),
+    FOLLOWING(1)
+}

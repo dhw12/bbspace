@@ -57,8 +57,10 @@ import com.naaammme.bbspace.core.model.ImSessionItem
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
+import androidx.compose.runtime.CompositionLocalProvider
 import com.naaammme.bbspace.core.model.VideoSrc
 import com.naaammme.bbspace.core.model.VideoTarget
+
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.core.model.WebLinkTarget
 import com.naaammme.bbspace.feature.dynamic.DynamicScreen
@@ -86,7 +88,9 @@ import com.naaammme.bbspace.feature.history.navigation.watchLaterScreen
 import com.naaammme.bbspace.feature.home.HomeScreen
 import com.naaammme.bbspace.feature.im.ImScreen
 import com.naaammme.bbspace.feature.im.navigation.imConversationScreen
+import com.naaammme.bbspace.feature.im.navigation.imMsgFeedScreen
 import com.naaammme.bbspace.feature.im.navigation.navigateToImConversation
+import com.naaammme.bbspace.feature.im.navigation.navigateToMsgFeed
 import com.naaammme.bbspace.feature.listen.navigation.listenDetailScreen
 import com.naaammme.bbspace.feature.listen.navigation.navigateToListenDetail
 import com.naaammme.bbspace.feature.live.LiveViewModel
@@ -269,6 +273,7 @@ fun AppNavHost(
                     onNavigateToArticle = openArticle,
                     onNavigateToDynamicDetail = rootNavController::navigateToDynamicDetail,
                     onNavigateToListenDetail = openListenDetail,
+                    onNavigateToMsgFeed = { rootNavController.navigateToMsgFeed() },
                     onNavigateToImConversation = { item ->
                         rootNavController.navigateToImConversation(item)
                     }
@@ -391,20 +396,16 @@ fun AppNavHost(
 
             imConversationScreen(
                 onBack = { rootNavController.popBackStack() },
-                onOpenSpace = { mid ->
-                    rootNavController.navigateToSpace(SpaceRoute(mid = mid))
-                },
-                onOpenVideo = { aid ->
-                    val target = VideoTarget.Ugc(
-                        aid = aid,
-                        cid = 0L,
-                        src = VideoSrc(
-                            from = VideoTargetTool.FROM_DEFAULT,
-                            fromSpmid = VideoTargetTool.FROM_SPMID_DEFAULT
-                        )
-                    )
-                    openVideo(target)
-                }
+                onOpenSpace = rootNavController::navigateToSpace,
+                onOpenVideo = openVideo
+            )
+
+            imMsgFeedScreen(
+                onBack = { rootNavController.popBackStack() },
+                onOpenSpace = rootNavController::navigateToSpace,
+                onOpenVideoDetail = openVideo,
+                onOpenDynamicDetail = rootNavController::navigateToDynamicDetail,
+                onOpenLiveDetail = openLive
             )
         }
 
@@ -449,6 +450,7 @@ private fun MainTabsScaffold(
     onNavigateToArticle: (String, Int) -> Unit,
     onNavigateToDynamicDetail: (String) -> Unit,
     onNavigateToListenDetail: (Long, Int, Long, String, String, String) -> Unit,
+    onNavigateToMsgFeed: () -> Unit,
     onNavigateToImConversation: (ImSessionItem) -> Unit
 ) {
     val saveableStateHolder = rememberSaveableStateHolder()
@@ -488,7 +490,8 @@ private fun MainTabsScaffold(
                             onOpenDynamic = onNavigateToDynamicDetail
                         )
                         TopLevelRoute.MESSAGE -> ImScreen(
-                            onOpenConversation = onNavigateToImConversation
+                            onOpenConversation = onNavigateToImConversation,
+                            onOpenMsgFeed = onNavigateToMsgFeed
                         )
                         TopLevelRoute.PROFILE -> UserScreen(
                             onNavigateToAccount = onNavigateToAccount,

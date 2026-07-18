@@ -1,7 +1,6 @@
 package com.naaammme.bbspace.core.im
 
 import android.content.Context
-import android.util.JsonReader
 import androidx.core.content.edit
 import com.bapis.bilibili.app.im.v1.MsgSummary
 import com.bapis.bilibili.app.im.v1.Offset
@@ -26,6 +25,15 @@ import com.bapis.bilibili.im.interfaces.v1.RspSessionMsg
 import com.bapis.bilibili.im.type.Msg
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
+import com.bapis.bilibili.im.gateway.interfaces.v1.Cursor
+import com.bapis.bilibili.im.gateway.interfaces.v1.MsgFeedFilterType
+import com.bapis.bilibili.im.gateway.interfaces.v1.MsgListReq
+import com.bapis.bilibili.im.gateway.interfaces.v1.MsgListRsp
+import com.bapis.bilibili.im.gateway.interfaces.v1.MsgTabType
+import com.naaammme.bbspace.core.model.User
+import com.naaammme.bbspace.core.model.im.MsgFeedCursor
+import com.naaammme.bbspace.core.model.im.MsgFeedItem
+import com.naaammme.bbspace.core.model.im.MsgFeedPage
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
 import com.naaammme.bbspace.core.model.ImConversationPage
@@ -44,7 +52,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.StringReader
 import java.util.Random
 import java.util.UUID
 
@@ -183,6 +190,84 @@ class ImRepository @Inject constructor(
                 .toByteArray(),
             parser = com.bapis.bilibili.im.interfaces.v1.DummyRsp.parser()
         )
+    }
+
+    suspend fun fetchMsgFeedList(
+        filterType: com.naaammme.bbspace.core.model.MsgFeedFilter = com.naaammme.bbspace.core.model.MsgFeedFilter.ALL,
+        cursor: MsgFeedCursor? = null,
+        pageSize: Long = 20
+    ): MsgFeedPage {
+        val mid = authProvider.mid
+        require(mid > 0L) { "请先登录" }
+        val req = MsgListReq.newBuilder()
+            .setTabType(MsgTabType.ReceiveReply)
+            .setFilterType(
+                when (filterType) {
+                    com.naaammme.bbspace.core.model.MsgFeedFilter.ALL -> MsgFeedFilterType.MsgFeed_All
+                    com.naaammme.bbspace.core.model.MsgFeedFilter.FOLLOWING -> MsgFeedFilterType.MsgFeed_Following
+                }
+            )
+            .setPagesize(pageSize)
+        
+        cursor?.let {
+            req.cursor = Cursor.newBuilder()
+                .setId(it.id)
+                .setTime(it.time)
+                .setReplymsgid(it.replymsgid)
+                .setIsEnd(it.isEnd)
+                .build()
+        }
+
+        val reply = grpcClient.call(
+            endpoint = MSG_FEED_LIST_ENDPOINT,
+            requestBytes = req.build().toByteArray(),
+            parser = MsgListRsp.parser()
+        )
+        return withContext(Dispatchers.Default) {
+            val mappedCards = reply.msgCardsList.mapNotNull { card ->
+                val type = card.msgType.name
+                val id = card.msgId
+                val time = card.msgTime
+                val item = card.msgItem
+                if (item.hasReplyCard()) {
+                    val replyCard = item.replyCard
+                    val msg = replyCard.replyMsg
+                    val biz = replyCard.replyBiz
+                    MsgFeedItem(
+                        msgId = id,
+                        msgTime = time,
+                        msgType = type,
+                        users = msg.usersList.map { u ->
+                            User(
+                                mid = u.mid,
+                                name = u.nickname,
+                                avatar = u.avatar.httpsImageUrlOrNull() ?: ""
+                            )
+                        },
+                        coverImage = msg.coverImage.httpsImageUrlOrNull(),
+                        subjectId = android.net.Uri.parse(msg.nativeUri).lastPathSegment?.toLongOrNull() ?: 0L,
+                        rootId = biz.rootId,
+                        sourceId = biz.sourceId,
+                        businessId = msg.businessId,
+                        sourceContent = biz.sourceContent,
+                        rootReplyContent = biz.rootReplyContent,
+                        targetReplyContent = biz.targetReplyContent
+                    )
+                } else null
+            }
+            MsgFeedPage(
+                cursor = if (reply.hasCursor()) {
+                    val c = reply.cursor
+                    MsgFeedCursor(
+                        id = c.id,
+                        time = c.time,
+                        replymsgid = c.replymsgid,
+                        isEnd = c.isEnd
+                    )
+                } else null,
+                msgCards = mappedCards
+            )
+        }
     }
 
     private suspend fun fetchSessionMsgs(
@@ -582,6 +667,7 @@ class ImRepository @Inject constructor(
         const val FETCH_SESSION_MSGS_ENDPOINT = "bilibili.im.interface.v1.ImInterface/SyncFetchSessionMsgs"
         const val SEND_MSG_ENDPOINT = "bilibili.im.interface.v1.ImInterface/SendMsg"
         const val UPDATE_ACK_ENDPOINT = "bilibili.im.interface.v1.ImInterface/UpdateAck"
+        const val MSG_FEED_LIST_ENDPOINT = "bilibili.im.gateway.interface.v1.ImGatewayApi/MsgFeedMsgList"
         const val MAX_UNREAD_COUNT = 99
         const val DEFAULT_PAGE_SIZE = 20
         const val ORDER_DESC = 0

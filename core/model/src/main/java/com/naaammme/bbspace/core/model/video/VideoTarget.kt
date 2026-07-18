@@ -116,7 +116,7 @@ object VideoTargetTool {
     const val FROM_SEARCH = "3"
     const val FROM_RELATE = "2"
     const val FROM_DYNAMIC = "6"
-    const val FROM_DEFAULT = "60"
+    const val FROM_DEFAULT = "6" //60
     const val FROM_SPMID_FEED = "tm.recommend.0.0"
     const val FROM_SPMID_HISTORY = "main.my-history.0.0"
     const val FROM_SPMID_WATCH_LATER = "main.later-watch.0.0"
@@ -134,6 +134,18 @@ object VideoTargetTool {
         return VideoSrc(
             from = FROM_FEED,
             fromSpmid = FROM_SPMID_FEED,
+            trackId = trackId.blankToNull(),
+            reportFlowData = reportFlowData.blankToNull()
+        )
+    }
+
+    fun default(
+        trackId: String? = null,
+        reportFlowData: String? = null
+    ): VideoSrc {
+        return VideoSrc(
+            from = FROM_DEFAULT,
+            fromSpmid = FROM_SPMID_DEFAULT,
             trackId = trackId.blankToNull(),
             reportFlowData = reportFlowData.blankToNull()
         )

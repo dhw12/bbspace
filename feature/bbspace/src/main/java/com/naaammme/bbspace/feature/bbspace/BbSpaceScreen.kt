@@ -45,6 +45,7 @@ import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.PublishedRecord
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoSrc
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.feature.bbspace.commentsearch.CommentSearchPane
 import com.naaammme.bbspace.feature.bbspace.playback.PlaybackHistoryPane
@@ -98,7 +99,7 @@ fun BbSpaceScreen(
                             VideoTarget.Ugc(
                                 aid = targetId,
                                 cid = 0L,
-                                src = VideoTargetTool.history()
+                                src = VideoTargetTool.default()
                             )
                         )
                     }

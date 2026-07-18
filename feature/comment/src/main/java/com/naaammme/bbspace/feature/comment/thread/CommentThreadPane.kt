@@ -105,6 +105,10 @@ private fun CommentThreadContent(
             if (i >= 0) 2 + i else -1
         }
         if (targetIndex >= 0) {
+            kotlinx.coroutines.delay(500)
+            if (targetIndex > 3) {
+                listState.scrollToItem(targetIndex - 3)
+            }
             listState.animateScrollToItem(targetIndex)
         }
     }

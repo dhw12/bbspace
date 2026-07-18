@@ -63,6 +63,7 @@ import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_LIVE_DANMAKU
 import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_VIDEO_DANMAKU
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoSrc
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.feature.comment.component.CommentCard
 import com.naaammme.bbspace.feature.comment.component.CommentReplyAction
@@ -197,7 +198,13 @@ fun CommentPanel(
                             }
                             kind == PUBLISHED_RECORD_KIND_VIDEO_DANMAKU ||
                             (kind == PUBLISHED_RECORD_KIND_COMMENT || kind == null) && type == CommentSubjectTool.TYPE_VIDEO -> {
-                                onOpenVideoDetail(VideoTarget.Ugc(aid = oid, cid = 0L, src = VideoTargetTool.history()))
+                                onOpenVideoDetail(
+                                    VideoTarget.Ugc(
+                                        aid = oid,
+                                        cid = 0L,
+                                        src = VideoTargetTool.default()
+                                    )
+                                )
                             }
                             else -> onOpenDynamicDetail(oid.toString())
                         }
