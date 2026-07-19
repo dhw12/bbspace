@@ -63,6 +63,7 @@ fun HomeVideoPage(
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onOpenLive: (LiveRoute) -> Unit,
+    onOpenDynamic: (String) -> Unit,
     onDislike: (FeedItem, ThreePointReason) -> Unit,
     onCancelDislike: (FeedItem) -> Unit,
     onToastShown: () -> Unit
@@ -104,8 +105,12 @@ fun HomeVideoPage(
             onDislike = onDislike,
             onCancelDislike = onCancelDislike,
             onClick = {
-                item.liveRoute?.let(onOpenLive)
-                    ?: item.target?.let(onOpenVideo)
+                if (item.cardGoto == "dynamic") {
+                    onOpenDynamic(item.param)
+                } else {
+                    item.liveRoute?.let(onOpenLive)
+                        ?: item.target?.let(onOpenVideo)
+                }
             }
         )
     }
@@ -121,7 +126,8 @@ private fun FeedCard(
     onClick: () -> Unit
 ) {
     val isDisliked = dislikedReason != null
-    val canOpen = !isDisliked && (item.target != null || item.liveRoute != null)
+    val isDynamic = item.cardGoto == "dynamic"
+    val canOpen = !isDisliked && (item.target != null || item.liveRoute != null || isDynamic)
     Card(
         onClick = onClick,
         enabled = canOpen,

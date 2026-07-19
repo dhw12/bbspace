@@ -16,6 +16,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +40,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @Composable
 fun ImScreen(
     onOpenConversation: (ImSessionItem) -> Unit,
+    onOpenMsgFeed: () -> Unit = {},
     vm: ImViewModel = hiltViewModel()
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
@@ -43,7 +48,14 @@ fun ImScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            TopAppBar(title = { Text("消息") })
+            TopAppBar(
+                title = { Text("消息") },
+                actions = {
+                    IconButton(onClick = onOpenMsgFeed) {
+                        Icon(Icons.Default.Notifications, contentDescription = "通知评论")
+                    }
+                }
+            )
         }
     ) { padding ->
         BiliPullToRefreshBox(
@@ -69,7 +81,6 @@ fun ImScreen(
                         onSelect = { index -> state.tabs.getOrNull(index)?.let(vm::selectTab) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
                     )
                     when {
                         state.isLoading -> {

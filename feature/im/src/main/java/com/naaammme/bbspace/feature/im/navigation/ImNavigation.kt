@@ -8,6 +8,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.naaammme.bbspace.core.model.ImSessionItem
 import com.naaammme.bbspace.feature.im.conversation.ImConversationScreen
+import com.naaammme.bbspace.feature.im.feed.MsgFeedScreen
+import com.naaammme.bbspace.core.model.LiveRoute
+import com.naaammme.bbspace.core.model.SpaceRoute
+import com.naaammme.bbspace.core.model.VideoTarget
 
 const val IM_ROUTE = "im"
 
@@ -17,6 +21,8 @@ private const val TITLE_ARG = "title"
 private const val AVATAR_ARG = "avatar"
 private const val IM_CONVERSATION_ROUTE =
     "im/conversation/{$TALKER_ID_ARG}/{$SESSION_TYPE_ARG}?$TITLE_ARG={$TITLE_ARG}&$AVATAR_ARG={$AVATAR_ARG}"
+
+const val IM_MSG_FEED_ROUTE = "im/msg_feed"
 
 fun NavController.navigateToImConversation(
     item: ImSessionItem
@@ -30,8 +36,8 @@ fun NavController.navigateToImConversation(
 
 fun NavGraphBuilder.imConversationScreen(
     onBack: () -> Unit,
-    onOpenSpace: ((Long) -> Unit)? = null,
-    onOpenVideo: ((Long) -> Unit)? = null
+    onOpenSpace: ((SpaceRoute) -> Unit)? = null,
+    onOpenVideo: ((VideoTarget) -> Unit)? = null
 ) {
     composable(
         route = IM_CONVERSATION_ROUTE,
@@ -52,6 +58,28 @@ fun NavGraphBuilder.imConversationScreen(
             onBack = onBack,
             onOpenSpace = onOpenSpace,
             onOpenVideo = onOpenVideo
+        )
+    }
+}
+
+fun NavController.navigateToMsgFeed() {
+    navigate(IM_MSG_FEED_ROUTE)
+}
+
+fun NavGraphBuilder.imMsgFeedScreen(
+    onBack: () -> Unit,
+    onOpenSpace: (SpaceRoute) -> Unit = {},
+    onOpenVideoDetail: (VideoTarget) -> Unit = {},
+    onOpenDynamicDetail: (String) -> Unit = {},
+    onOpenLiveDetail: (LiveRoute) -> Unit = {}
+) {
+    composable(route = IM_MSG_FEED_ROUTE) {
+        MsgFeedScreen(
+            onBack = onBack,
+            onOpenSpace = onOpenSpace,
+            onOpenVideoDetail = onOpenVideoDetail,
+            onOpenDynamicDetail = onOpenDynamicDetail,
+            onOpenLiveDetail = onOpenLiveDetail
         )
     }
 }

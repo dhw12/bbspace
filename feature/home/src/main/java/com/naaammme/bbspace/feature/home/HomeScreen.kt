@@ -66,6 +66,7 @@ fun HomeScreen(
     onOpenVideo: (VideoTarget) -> Unit = {},
     onOpenSpace: (SpaceRoute) -> Unit = {},
     onOpenLive: (LiveRoute) -> Unit = {},
+    onOpenDynamic: (String) -> Unit = {},
     onOpenArticle: (String, Int) -> Unit = { _, _ -> },
     onOpenListenItem: (Long, Int, Long, String, String, String) -> Unit = { _, _, _, _, _, _ -> },
     viewModel: HomeViewModel = hiltViewModel()
@@ -133,6 +134,7 @@ fun HomeScreen(
                     onOpenVideo = onOpenVideo,
                     onOpenSpace = onOpenSpace,
                     onOpenLive = onOpenLive,
+                    onOpenDynamic = onOpenDynamic,
                     onDislike = viewModel::submitDislike,
                     onCancelDislike = viewModel::cancelDislike,
                     onToastShown = viewModel::consumeToast
@@ -236,7 +238,7 @@ private fun HomeTopBar(
             tabs = homeTabs,
             selectedIndex = selectedIndex,
             onSelect = onSelectTab,
-            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 0.dp, bottom = 3.dp)
+            modifier = Modifier
         )
     }
 }
