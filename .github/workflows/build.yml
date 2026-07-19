@@ -48,70 +48,36 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Prepare Android signing
-        id: signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          set -euo pipefail
-
-          missing=()
           for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS; do
-            if [ -z "${!key:-}" ]; then
-              missing+=("$key")
+            if [ -z "${!key}" ]; then
+              echo "Missing required secret: $key" >&2
+              exit 1
             fi
           done
 
-          if [ ${#missing[@]} -eq 0 ]; then
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
-            KEY_PASSWORD="${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          KEY_PASSWORD="${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}"
 
-            keytool -list \
-              -keystore "$RUNNER_TEMP/release.keystore" \
-              -storepass "$ANDROID_KEYSTORE_PASSWORD" \
-              -alias "$ANDROID_KEY_ALIAS" \
-              -keypass "$KEY_PASSWORD" >/dev/null
+          keytool -list \
+            -keystore "$RUNNER_TEMP/release.keystore" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -keypass "$KEY_PASSWORD" >/dev/null
 
-            {
-              echo "SIGNING_STORE_FILE=$RUNNER_TEMP/release.keystore"
-              echo "SIGNING_STORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
-              echo "SIGNING_KEY_ALIAS=$ANDROID_KEY_ALIAS"
-              echo "SIGNING_KEY_PASSWORD=$KEY_PASSWORD"
-            } >> "$GITHUB_ENV"
-
-            echo "release_key=true" >> "$GITHUB_OUTPUT"
-          elif [ ${#missing[@]} -eq 3 ] && [ -z "${ANDROID_KEY_PASSWORD:-}" ]; then
-            CI_KEYSTORE="$RUNNER_TEMP/ci-release.keystore"
-            CI_SIGNING_PASSWORD="ci-release-password"
-            CI_KEY_ALIAS="bbspace-ci"
-
-            keytool -genkeypair \
-              -keystore "$CI_KEYSTORE" \
-              -storepass "$CI_SIGNING_PASSWORD" \
-              -keypass "$CI_SIGNING_PASSWORD" \
-              -alias "$CI_KEY_ALIAS" \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=bbspace CI, OU=CI, O=bbspace, L=CI, S=CI, C=US" >/dev/null
-
-            {
-              echo "SIGNING_STORE_FILE=$CI_KEYSTORE"
-              echo "SIGNING_STORE_PASSWORD=$CI_SIGNING_PASSWORD"
-              echo "SIGNING_KEY_ALIAS=$CI_KEY_ALIAS"
-              echo "SIGNING_KEY_PASSWORD=$CI_SIGNING_PASSWORD"
-            } >> "$GITHUB_ENV"
-
-            echo "release_key=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Missing required signing secret(s): ${missing[*]}" >&2
-            echo "Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, and ANDROID_KEY_ALIAS together, or leave all Android signing secrets unset for CI-only builds." >&2
-            exit 1
-          fi
+          echo "SIGNING_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Build release APK
+        env:
+          SIGNING_STORE_FILE: ${{ runner.temp }}/release.keystore
+          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ env.SIGNING_KEY_PASSWORD }}
         run: |
           ./gradlew assembleRelease \
             -PversionName=${{ steps.ver.outputs.name }} \
@@ -124,14 +90,14 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') && steps.signing.outputs.release_key == 'true'
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/*.apk
           body_path: .github/release-notes.md
 
       - name: Create GitHub Release (manual)
-        if: github.event_name == 'workflow_dispatch' && steps.signing.outputs.release_key == 'true'
+        if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.name }}

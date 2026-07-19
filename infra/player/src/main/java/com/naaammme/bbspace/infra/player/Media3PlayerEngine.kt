@@ -73,7 +73,6 @@ class Media3PlayerEngine @Inject constructor(
     private var lastEventsPlaybackState = Player.STATE_IDLE
     private var lastEventsIsPlaying = false
     private var progressJob: Job? = null
-    private var looping = false
 
     private val playerListener = object : Player.Listener {
         override fun onPositionDiscontinuity(
@@ -81,7 +80,7 @@ class Media3PlayerEngine @Inject constructor(
             newPosition: Player.PositionInfo,
             reason: Int
         ) {
-            if (reason.isSeekDiscontinuity() || reason.isLoopResetDiscontinuity(oldPosition, newPosition)) {
+            if (reason.isSeekDiscontinuity()) {
                 updatePlaybackState { it.copy(seekEventSeq = it.seekEventSeq + 1L) }
             }
             updatePlaybackProgress()
@@ -216,13 +215,6 @@ class Media3PlayerEngine @Inject constructor(
         updatePlaybackState()
     }
 
-    override fun setLooping(looping: Boolean) {
-        this.looping = looping
-        val player = ensurePlayer()
-        player.repeatMode = if (looping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-        updatePlaybackState()
-    }
-
     override fun seekTo(positionMs: Long) {
         val player = exoPlayer ?: return
         player.seekTo(positionMs.coerceAtLeast(0L))
@@ -287,7 +279,6 @@ class Media3PlayerEngine @Inject constructor(
                     true
                 )
                 setHandleAudioBecomingNoisy(true)
-                repeatMode = if (looping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                 addListener(playerListener)
                 addAnalyticsListener(analyticsListener)
             }
@@ -421,7 +412,6 @@ class Media3PlayerEngine @Inject constructor(
                     playWhenReady = player?.playWhenReady ?: false,
                     playbackState = (player?.playbackState ?: Player.STATE_IDLE).toPlaybackState(),
                     speed = player?.playbackParameters?.speed ?: 1f,
-                    isLooping = player?.repeatMode == Player.REPEAT_MODE_ONE,
                     videoWidth = player?.videoSize?.width ?: 0,
                     videoHeight = player?.videoSize?.height ?: 0,
                     firstFrameSeq = firstFrameSeq,
@@ -492,18 +482,7 @@ class Media3PlayerEngine @Inject constructor(
             this == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT
     }
 
-    private fun Int.isLoopResetDiscontinuity(
-        oldPosition: Player.PositionInfo,
-        newPosition: Player.PositionInfo
-    ): Boolean {
-        return looping &&
-            this == Player.DISCONTINUITY_REASON_AUTO_TRANSITION &&
-            oldPosition.positionMs > newPosition.positionMs &&
-            newPosition.positionMs <= LOOP_RESET_POSITION_THRESHOLD_MS
-    }
-
     private companion object {
         const val TAG = "Media3Player"
-        const val LOOP_RESET_POSITION_THRESHOLD_MS = 1_500L
     }
 }

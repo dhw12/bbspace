@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import com.naaammme.bbspace.core.model.PublishedRecord
+import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_COMMENT
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
@@ -50,7 +52,8 @@ data class CommentSearchItem(
     val message: String,
     val title: String? = null,
     val metaLine: String,
-    val timeText: String
+    val timeText: String,
+    val record: PublishedRecord? = null
 )
 
 @HiltViewModel
@@ -156,7 +159,7 @@ class CommentSearchViewModel @Inject constructor(
 
         reqJob = viewModelScope.launch {
             val page = try {
-                fetchComments(query = query, pageNum = pageNum)
+                fetchAicuComments(query = query, pageNum = pageNum)
             } catch (err: CancellationException) {
                 throw err
             } catch (err: Throwable) {
@@ -206,10 +209,6 @@ class CommentSearchViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchComments(
-        query: CommentSearchQuery,
-        pageNum: Int
-    ): CommentSearchPage = fetchAicuComments(query, pageNum)
 
     private fun executeRequest(
         url: HttpUrl,
@@ -255,6 +254,7 @@ class CommentSearchViewModel @Inject constructor(
                 for (i in 0 until replies.length()) {
                     val item = replies.optJSONObject(i) ?: continue
                     val dyn = item.optJSONObject("dyn")
+                    val parent = item.optJSONObject("parent")
                     val rpid = item.optString("rpid")
                     val timeSec = item.optLong("time")
                     add(
@@ -270,7 +270,23 @@ class CommentSearchViewModel @Inject constructor(
                             ),
                             timeText = timeSec.takeIf { it > 0L }
                                 ?.let { localFormatter.format(Date(it * 1000L)) }
-                                .orEmpty()
+                                .orEmpty(),
+                            record = if (dyn != null && dyn.optLong("oid") > 0L) {
+                                PublishedRecord(
+                                    key = "aicu:${rpid.ifBlank { "$pageNum:$i" }}",
+                                    kind = PUBLISHED_RECORD_KIND_COMMENT,
+                                    itemId = rpid.toLongOrNull() ?: 0L,
+                                    targetId = dyn.optLong("oid"),
+                                    targetType = dyn.optInt("type").toLong(),
+                                    senderMid = query.uid,
+                                    senderName = "",
+                                    senderAvatar = "",
+                                    content = item.optString("message").replace('\u00A0', ' ').trim(),
+                                    ctime = timeSec,
+                                    rootId = parent?.optLong("rootid") ?: 0L,
+                                    parentId = parent?.optLong("parentid") ?: 0L
+                                )
+                            } else null
                         )
                     )
                 }

@@ -394,50 +394,6 @@ class CommentViewModel @Inject constructor(
         }
     }
 
-    fun toggleLikeReply(reply: CommentReply) {
-        val state = _uiState.value
-        val subject = state.subject ?: return
-        if (state.currentMid <= 0L) {
-            _msg.tryEmit("请先登录")
-            return
-        }
-        if (reply.rpid in state.busyReplyIds) return
-        _uiState.update {
-            it.copy(busyReplyIds = it.busyReplyIds + reply.rpid)
-        }
-        viewModelScope.launch {
-            val result = runCatching {
-                repo.likeReply(subject, reply.rpid, !reply.liked)
-            }
-            if (_uiState.value.subject != subject) return@launch
-            _uiState.update {
-                it.copy(busyReplyIds = it.busyReplyIds - reply.rpid)
-            }
-            result.fold(
-                onSuccess = {
-                    _uiState.update { cur ->
-                        val updatedReply = reply.copy(
-                            liked = !reply.liked,
-                            likeCount = if (reply.liked) reply.likeCount - 1L else reply.likeCount + 1L
-                        )
-                        cur.copy(
-                            items = updateLikedReply(cur.items, updatedReply),
-                            threadPane = cur.threadPane?.let { thread ->
-                                thread.copy(
-                                    root = if (thread.root.rpid == reply.rpid) updatedReply else thread.root,
-                                    items = updateLikedReply(thread.items, updatedReply)
-                                )
-                            }
-                        )
-                    }
-                },
-                onFailure = { err ->
-                    _msg.tryEmit(err.message ?: "操作失败")
-                }
-            )
-        }
-    }
-
     fun openEditor() {
         val state = _uiState.value
         if (state.subject == null) return
@@ -776,15 +732,6 @@ class CommentViewModel @Inject constructor(
             }
         }
         return items.values.toList()
-    }
-
-    private fun updateLikedReply(
-        items: List<CommentReply>,
-        updated: CommentReply
-    ): List<CommentReply> {
-        return items.map { reply ->
-            if (reply.rpid == updated.rpid) updated else reply
-        }
     }
 
     private fun updateTranslatedReplies(

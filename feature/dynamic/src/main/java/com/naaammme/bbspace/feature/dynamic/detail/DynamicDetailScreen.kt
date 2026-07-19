@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -34,14 +33,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.naaammme.bbspace.core.common.log.Logger
-import com.naaammme.bbspace.core.common.media.ImageSaver
 import com.naaammme.bbspace.core.designsystem.component.AvatarImage
 import com.naaammme.bbspace.core.designsystem.component.PreviewImage
 import com.naaammme.bbspace.core.designsystem.component.PreviewImageGrid
@@ -132,11 +129,7 @@ fun DynamicDetailScreen(
                                 .weight(1f)
                                 .fillMaxHeight()
                         ) {
-                            detailContentItems(
-                                detail = detail,
-                                isLiking = state.isLiking,
-                                onToggleLike = viewModel::toggleLike
-                            )
+                            detailContentItems(detail)
                         }
                         CommentPanel(
                             subject = commentSubject,
@@ -162,11 +155,7 @@ fun DynamicDetailScreen(
                             vertical = 12.dp
                         ),
                         header = {
-                            DetailContent(
-                                detail = detail,
-                                isLiking = state.isLiking,
-                                onToggleLike = viewModel::toggleLike
-                            )
+                            DetailContent(detail)
                         }
                     )
                 } else {
@@ -176,11 +165,7 @@ fun DynamicDetailScreen(
                             .padding(padding)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        DetailContent(
-                            detail = detail,
-                            isLiking = state.isLiking,
-                            onToggleLike = viewModel::toggleLike
-                        )
+                        DetailContent(detail)
                     }
                 }
             }
@@ -189,11 +174,7 @@ fun DynamicDetailScreen(
 }
 
 @Composable
-private fun DetailContent(
-    detail: DynamicDetail,
-    isLiking: Boolean,
-    onToggleLike: () -> Unit
-) {
+private fun DetailContent(detail: DynamicDetail) {
     DynamicDetailHeader(
         author = detail.author,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -202,11 +183,7 @@ private fun DetailContent(
         DynamicDetailParagraphItem(paragraph)
     }
     detail.stats?.let { stats ->
-        DynamicDetailStats(
-            stats = stats,
-            isLiking = isLiking,
-            onToggleLike = onToggleLike
-        )
+        DynamicDetailStats(stats)
     }
 }
 
@@ -279,43 +256,14 @@ private fun DynamicDetailImageGrid(images: List<DynamicImage>, modifier: Modifie
             )
         }
     }
-    val context = LocalContext.current
-    val appCtx = remember(context) { context.applicationContext }
-    val scope = rememberCoroutineScope()
-    val onSaveImage: (PreviewImage) -> Unit = { image ->
-        scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching { ImageSaver.saveUrl(appCtx, image.url) }
-            }
-            result
-                .onSuccess {
-                    Toast.makeText(context, "已保存到相册", Toast.LENGTH_SHORT).show()
-                }
-                .onFailure { err ->
-                    Logger.e(DYNAMIC_DETAIL_TAG, err as? Exception) {
-                        "save dynamic detail image failed url=${image.url}"
-                    }
-                    Toast.makeText(
-                        context,
-                        err.message ?: "保存图片失败",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-        }
-    }
     PreviewImageGrid(
         images = previewImages,
-        modifier = modifier,
-        onSaveImage = onSaveImage
+        modifier = modifier
     )
 }
 
 @Composable
-private fun DynamicDetailStats(
-    stats: DynamicStats,
-    isLiking: Boolean,
-    onToggleLike: () -> Unit
-) {
+private fun DynamicDetailStats(stats: DynamicStats) {
     val text = remember(stats) {
         buildString {
             if (stats.repost > 0) append("转发 ${stats.repost}")
@@ -323,40 +271,23 @@ private fun DynamicDetailStats(
                 if (isNotEmpty()) append("  ")
                 append("评论 ${stats.reply}")
             }
+            if (stats.like > 0) {
+                if (isNotEmpty()) append("  ")
+                append("点赞 ${stats.like}")
+            }
         }
     }
-    Row(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (text.isNotEmpty()) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    if (text.isNotEmpty()) {
         Text(
-            text = if (stats.liked) "已点赞 ${stats.like}" else "点赞 ${stats.like}",
+            text = text,
             style = MaterialTheme.typography.bodySmall,
-            color = if (stats.liked) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier
-                .alpha(if (isLiking) 0.6f else 1f)
-                .clickable(enabled = !isLiking) { onToggleLike() }
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         )
     }
 }
 
-private fun LazyListScope.detailContentItems(
-    detail: DynamicDetail,
-    isLiking: Boolean,
-    onToggleLike: () -> Unit
-) {
+private fun LazyListScope.detailContentItems(detail: DynamicDetail) {
     item(key = "detail_author", contentType = "author") {
         DynamicDetailHeader(
             author = detail.author,
@@ -374,11 +305,7 @@ private fun LazyListScope.detailContentItems(
 
     detail.stats?.let { stats ->
         item(key = "detail_stats", contentType = "stats") {
-            DynamicDetailStats(
-                stats = stats,
-                isLiking = isLiking,
-                onToggleLike = onToggleLike
-            )
+            DynamicDetailStats(stats)
         }
     }
 }

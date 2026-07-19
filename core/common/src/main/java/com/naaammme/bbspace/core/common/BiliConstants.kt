@@ -47,7 +47,6 @@ object BiliConstants {
     // Base URLs
     const val BASE_URL_APP = "https://app.bilibili.com"
     const val BASE_URL_API = "https://api.bilibili.com"
-    const val BASE_URL_VC_API = "https://api.vc.bilibili.com"
     const val BASE_URL_LIVE_API = "https://api.live.bilibili.com"
     const val BASE_URL_PASSPORT = "https://passport.bilibili.com"
 

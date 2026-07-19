@@ -1,11 +1,8 @@
 package com.naaammme.bbspace.feature.video.detail
 
 import android.text.format.DateFormat
-import android.widget.Toast
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,7 +47,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,8 +71,6 @@ import com.naaammme.bbspace.core.model.VideoSeason
 import com.naaammme.bbspace.core.model.VideoSeasonEpisode
 import com.naaammme.bbspace.core.model.VideoStat
 import com.naaammme.bbspace.feature.comment.CommentPanel
-import com.naaammme.bbspace.feature.video.VideoActionUiState
-import com.naaammme.bbspace.feature.video.VideoUserAction
 import com.naaammme.bbspace.feature.video.formatDuration
 import kotlinx.coroutines.launch
 @OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -88,15 +82,10 @@ internal fun VideoDetailPage(
     detailLoading: Boolean,
     detailError: String?,
     commentSubject: CommentSubject?,
-    videoActionState: VideoActionUiState,
     contentHorizontalPad: Dp,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
-    onLikeClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    onFavoriteLongClick: () -> Unit,
-    onDismissActionMessage: () -> Unit,
     onOpenEpisode: (VideoTarget) -> Unit,
     onSwitchPage: (Long) -> Unit
 ) {
@@ -138,7 +127,6 @@ internal fun VideoDetailPage(
                 ids = ids,
                 detailLoading = detailLoading,
                 detailError = detailError,
-                videoActionState = videoActionState,
                 horizontalPad = contentHorizontalPad,
                 infoListState = detailListState,
                 descOn = descOn,
@@ -158,11 +146,7 @@ internal fun VideoDetailPage(
                 },
                 onOpenVideo = onOpenVideo,
                 onOpenSpace = onOpenSpace,
-                onDownloadClick = onDownloadClick,
-                onLikeClick = onLikeClick,
-                onFavoriteClick = onFavoriteClick,
-                onFavoriteLongClick = onFavoriteLongClick,
-                onDismissActionMessage = onDismissActionMessage
+                onDownloadClick = onDownloadClick
             )
 
             else -> {
@@ -225,7 +209,6 @@ private fun DetailPageContent(
     ids: ResolvedVideoIds,
     detailLoading: Boolean,
     detailError: String?,
-    videoActionState: VideoActionUiState,
     horizontalPad: Dp,
     infoListState: LazyListState,
     descOn: Boolean,
@@ -237,11 +220,7 @@ private fun DetailPageContent(
     onOpenComments: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit,
-    onLikeClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    onFavoriteLongClick: () -> Unit,
-    onDismissActionMessage: () -> Unit
+    onDownloadClick: () -> Unit
 ) {
     val itemMod = remember(horizontalPad) {
         if (horizontalPad > 0.dp) Modifier.padding(horizontal = horizontalPad) else Modifier
@@ -261,7 +240,6 @@ private fun DetailPageContent(
             ids = ids,
             detailLoading = detailLoading,
             detailError = detailError,
-            videoActionState = videoActionState,
             itemMod = itemMod,
             descOn = descOn,
             tagOn = tagOn,
@@ -272,10 +250,6 @@ private fun DetailPageContent(
             onOpenVideo = onOpenVideo,
             onOpenSpace = onOpenSpace,
             onDownloadClick = onDownloadClick,
-            onLikeClick = onLikeClick,
-            onFavoriteClick = onFavoriteClick,
-            onFavoriteLongClick = onFavoriteLongClick,
-            onDismissActionMessage = onDismissActionMessage,
             onOpenComments = onOpenComments
         )
     }
@@ -286,7 +260,6 @@ private fun LazyListScope.detailItems(
     ids: ResolvedVideoIds,
     detailLoading: Boolean,
     detailError: String?,
-    videoActionState: VideoActionUiState,
     itemMod: Modifier,
     descOn: Boolean,
     tagOn: Boolean,
@@ -297,10 +270,6 @@ private fun LazyListScope.detailItems(
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
-    onLikeClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    onFavoriteLongClick: () -> Unit,
-    onDismissActionMessage: () -> Unit,
     onOpenComments: () -> Unit
 ) {
     val curCid = ids.cid.takeIf { it > 0L }
@@ -342,17 +311,12 @@ private fun LazyListScope.detailItems(
                 VideoSummarySection(
                     detail = detail,
                     ids = ids,
-                    videoActionState = videoActionState,
                     descOn = descOn,
                     tagOn = tagOn,
                     onToggleDesc = onToggleDesc,
                     onToggleTag = onToggleTag,
                     onOpenSpace = onOpenSpace,
                     onDownloadClick = onDownloadClick,
-                    onLikeClick = onLikeClick,
-                    onFavoriteClick = onFavoriteClick,
-                    onFavoriteLongClick = onFavoriteLongClick,
-                    onDismissActionMessage = onDismissActionMessage,
                     onOpenComments = onOpenComments,
                     modifier = itemMod
                 )
@@ -420,7 +384,6 @@ private fun LazyListScope.detailItems(
 private fun VideoSummarySection(
     detail: VideoDetail,
     ids: ResolvedVideoIds,
-    videoActionState: VideoActionUiState,
     modifier: Modifier = Modifier,
     descOn: Boolean,
     tagOn: Boolean,
@@ -428,10 +391,6 @@ private fun VideoSummarySection(
     onToggleTag: () -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onDownloadClick: () -> Unit,
-    onLikeClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    onFavoriteLongClick: () -> Unit,
-    onDismissActionMessage: () -> Unit,
     onOpenComments: () -> Unit
 ) {
     val spaceRoute = detail.toSpaceRouteOrNull(ids.aid.takeIf { it > 0L })
@@ -458,12 +417,7 @@ private fun VideoSummarySection(
         )
         ActionCapsule(
             stat = detail.stat,
-            videoActionState = videoActionState,
-            onLikeClick = onLikeClick,
-            onFavoriteClick = onFavoriteClick,
-            onFavoriteLongClick = onFavoriteLongClick,
-            onDownloadClick = onDownloadClick,
-            onDismissActionMessage = onDismissActionMessage
+            onDownloadClick = onDownloadClick
         )
     }
 }
@@ -610,23 +564,9 @@ private fun InfoCapsule(
 @Composable
 private fun ActionCapsule(
     stat: VideoStat?,
-    videoActionState: VideoActionUiState,
     modifier: Modifier = Modifier,
-    onLikeClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    onFavoriteLongClick: () -> Unit,
-    onDownloadClick: () -> Unit,
-    onDismissActionMessage: () -> Unit
+    onDownloadClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val actionMessage = videoActionState.message
-    LaunchedEffect(actionMessage) {
-        if (!actionMessage.isNullOrBlank()) {
-            Toast.makeText(context, actionMessage, Toast.LENGTH_SHORT).show()
-            onDismissActionMessage()
-        }
-    }
-
     CapsuleCard(modifier = modifier) {
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -634,23 +574,9 @@ private fun ActionCapsule(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             stat?.let {
-                ActionChip(
-                    label = if (videoActionState.liked) "已点赞" else "点赞",
-                    value = adjustedActionValue(it.like, videoActionState.likeDelta),
-                    enabled = videoActionState.pending != VideoUserAction.LIKE,
-                    onClick = onLikeClick
-                )
-                ActionChip(
-                    label = "投币",
-                    value = it.coin
-                )
-                ActionChip(
-                    label = if (videoActionState.favorited) "已收藏" else "收藏",
-                    value = adjustedActionValue(it.fav, videoActionState.favoriteDelta),
-                    enabled = videoActionState.pending != VideoUserAction.FAVORITE,
-                    onClick = onFavoriteClick,
-                    onLongClick = onFavoriteLongClick
-                )
+                ActionChip("点赞", it.like)
+                ActionChip("投币", it.coin)
+                ActionChip("收藏", it.fav)
                 ActionChip("分享", it.share)
             }
             ActionChip(
@@ -659,13 +585,6 @@ private fun ActionCapsule(
             )
         }
     }
-}
-
-private fun adjustedActionValue(value: String, delta: Int): String {
-    if (delta == 0) return value
-    val normalized = value.replace(",", "")
-    val numericValue = normalized.toLongOrNull() ?: return value
-    return (numericValue + delta).coerceAtLeast(0L).toString()
 }
 
 @Composable
@@ -749,40 +668,24 @@ private fun ToggleChip(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ActionChip(
     label: String,
     value: String? = null,
-    enabled: Boolean = true,
-    onClick: (() -> Unit)? = null,
-    onLongClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null
 ) {
-    val clickModifier = when {
-        onLongClick != null && enabled -> Modifier.combinedClickable(
-            onClick = onClick ?: {},
-            onLongClick = onLongClick
-        )
-        onClick != null && enabled -> Modifier.clickable(onClick = onClick)
-        else -> Modifier
-    }
-    val contentColor = if (enabled) {
-        MaterialTheme.colorScheme.onSecondaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
     Surface(
-        modifier = clickModifier,
-        color = if (enabled) {
-            MaterialTheme.colorScheme.secondaryContainer
+        modifier = if (onClick != null) {
+            Modifier.clickable(onClick = onClick)
         } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest
+            Modifier
         },
+        color = MaterialTheme.colorScheme.secondaryContainer,
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Row(
             modifier = Modifier
-                .defaultMinSize(minHeight = 36.dp)
+                .defaultMinSize(minWidth = 76.dp, minHeight = 36.dp)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -794,13 +697,13 @@ private fun ActionChip(
                 } else {
                     MaterialTheme.typography.labelMedium
                 },
-                color = contentColor
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
             value?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.titleSmall,
-                    color = contentColor
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
         }

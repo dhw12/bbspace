@@ -25,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.naaammme.bbspace.core.designsystem.component.AvatarImage
@@ -50,8 +49,6 @@ fun DynamicFeed(
     loadMoreError: String?,
     onRetryRefresh: () -> Unit,
     onRetryLoadMore: () -> Unit,
-    onToggleLike: (DynamicItem) -> Unit,
-    likingDynamicIds: Set<String>,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onOpenLive: (LiveRoute) -> Unit,
@@ -92,9 +89,7 @@ fun DynamicFeed(
                 onOpenVideo = onOpenVideo,
                 onOpenSpace = onOpenSpace,
                 onOpenLive = onOpenLive,
-                onOpenDynamic = onOpenDynamic,
-                onToggleLike = onToggleLike,
-                isLiking = item.id in likingDynamicIds
+                onOpenDynamic = onOpenDynamic
             )
         }
 
@@ -150,9 +145,7 @@ private fun DynamicCard(
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onOpenLive: (LiveRoute) -> Unit,
-    onOpenDynamic: (String) -> Unit,
-    onToggleLike: (DynamicItem) -> Unit,
-    isLiking: Boolean
+    onOpenDynamic: (String) -> Unit
 ) {
     val liveRoute = item.liveRoute
     val videoTarget = item.videoTarget
@@ -171,21 +164,14 @@ private fun DynamicCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        DynamicCardContent(
-            item = item,
-            onOpenSpace = onOpenSpace,
-            onToggleLike = onToggleLike,
-            isLiking = isLiking
-        )
+        DynamicCardContent(item = item, onOpenSpace = onOpenSpace)
     }
 }
 
 @Composable
 private fun DynamicCardContent(
     item: DynamicItem,
-    onOpenSpace: (SpaceRoute) -> Unit,
-    onToggleLike: (DynamicItem) -> Unit,
-    isLiking: Boolean
+    onOpenSpace: (SpaceRoute) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -195,50 +181,13 @@ private fun DynamicCardContent(
     ) {
         DynamicHeader(item = item, onOpenSpace = onOpenSpace)
         DynamicBodyContent(item = item)
-        item.stats?.let {
-            DynamicStatsRow(
-                item = item,
-                isLiking = isLiking,
-                onToggleLike = onToggleLike
+        item.stats?.let { stats ->
+            Text(
+                text = "转发 ${stats.repost}  评论 ${stats.reply}  点赞 ${stats.like}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-@Composable
-private fun DynamicStatsRow(
-    item: DynamicItem,
-    isLiking: Boolean,
-    onToggleLike: (DynamicItem) -> Unit
-) {
-    val stats = item.stats ?: return
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "转发 ${stats.repost}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "评论 ${stats.reply}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = if (stats.liked) "已点赞 ${stats.like}" else "点赞 ${stats.like}",
-            style = MaterialTheme.typography.bodySmall,
-            color = if (stats.liked) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier
-                .alpha(if (isLiking) 0.6f else 1f)
-                .clickable(enabled = !isLiking) { onToggleLike(item) }
-        )
     }
 }
 

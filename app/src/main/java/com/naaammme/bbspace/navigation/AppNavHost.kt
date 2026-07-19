@@ -57,8 +57,10 @@ import com.naaammme.bbspace.core.model.ImSessionItem
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
+import androidx.compose.runtime.CompositionLocalProvider
 import com.naaammme.bbspace.core.model.VideoSrc
 import com.naaammme.bbspace.core.model.VideoTarget
+
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.core.model.WebLinkTarget
 import com.naaammme.bbspace.feature.dynamic.DynamicScreen
@@ -86,7 +88,9 @@ import com.naaammme.bbspace.feature.history.navigation.watchLaterScreen
 import com.naaammme.bbspace.feature.home.HomeScreen
 import com.naaammme.bbspace.feature.im.ImScreen
 import com.naaammme.bbspace.feature.im.navigation.imConversationScreen
+import com.naaammme.bbspace.feature.im.navigation.imMsgFeedScreen
 import com.naaammme.bbspace.feature.im.navigation.navigateToImConversation
+import com.naaammme.bbspace.feature.im.navigation.navigateToMsgFeed
 import com.naaammme.bbspace.feature.listen.navigation.listenDetailScreen
 import com.naaammme.bbspace.feature.listen.navigation.navigateToListenDetail
 import com.naaammme.bbspace.feature.live.LiveViewModel
@@ -269,6 +273,7 @@ fun AppNavHost(
                     onNavigateToArticle = openArticle,
                     onNavigateToDynamicDetail = rootNavController::navigateToDynamicDetail,
                     onNavigateToListenDetail = openListenDetail,
+                    onNavigateToMsgFeed = { rootNavController.navigateToMsgFeed() },
                     onNavigateToImConversation = { item ->
                         rootNavController.navigateToImConversation(item)
                     }
@@ -391,20 +396,16 @@ fun AppNavHost(
 
             imConversationScreen(
                 onBack = { rootNavController.popBackStack() },
-                onOpenSpace = { mid ->
-                    rootNavController.navigateToSpace(SpaceRoute(mid = mid))
-                },
-                onOpenVideo = { aid ->
-                    val target = VideoTarget.Ugc(
-                        aid = aid,
-                        cid = 0L,
-                        src = VideoSrc(
-                            from = VideoTargetTool.FROM_DEFAULT,
-                            fromSpmid = VideoTargetTool.FROM_SPMID_DEFAULT
-                        )
-                    )
-                    openVideo(target)
-                }
+                onOpenSpace = rootNavController::navigateToSpace,
+                onOpenVideo = openVideo
+            )
+
+            imMsgFeedScreen(
+                onBack = { rootNavController.popBackStack() },
+                onOpenSpace = rootNavController::navigateToSpace,
+                onOpenVideoDetail = openVideo,
+                onOpenDynamicDetail = rootNavController::navigateToDynamicDetail,
+                onOpenLiveDetail = openLive
             )
         }
 
@@ -449,6 +450,7 @@ private fun MainTabsScaffold(
     onNavigateToArticle: (String, Int) -> Unit,
     onNavigateToDynamicDetail: (String) -> Unit,
     onNavigateToListenDetail: (Long, Int, Long, String, String, String) -> Unit,
+    onNavigateToMsgFeed: () -> Unit,
     onNavigateToImConversation: (ImSessionItem) -> Unit
 ) {
     val saveableStateHolder = rememberSaveableStateHolder()
@@ -459,8 +461,6 @@ private fun MainTabsScaffold(
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val fixBottomBar by settingsViewModel.fixBottomBar.collectAsStateWithLifecycle()
     val navVisibilityController = rememberTopLevelNavVisibilityController(fixBottomBar)
-    var homeScrollToTopTrigger by remember { mutableStateOf(0L) }
-    var dynamicScrollToTopTrigger by remember { mutableStateOf(0L) }
 
     Box(
         modifier = Modifier
@@ -479,19 +479,19 @@ private fun MainTabsScaffold(
                             onOpenVideo = onNavigateToVideo,
                             onOpenSpace = onNavigateToSpace,
                             onOpenLive = onNavigateToLive,
+                            onOpenDynamic = onNavigateToDynamicDetail,
                             onOpenArticle = onNavigateToArticle,
-                            onOpenListenItem = onNavigateToListenDetail,
-                            scrollToTopTrigger = homeScrollToTopTrigger
+                            onOpenListenItem = onNavigateToListenDetail
                         )
                         TopLevelRoute.DYNAMIC -> DynamicScreen(
                             onOpenVideo = onNavigateToVideo,
                             onOpenSpace = onNavigateToSpace,
                             onOpenLive = onNavigateToLive,
-                            onOpenDynamic = onNavigateToDynamicDetail,
-                            scrollToTopTrigger = dynamicScrollToTopTrigger
+                            onOpenDynamic = onNavigateToDynamicDetail
                         )
                         TopLevelRoute.MESSAGE -> ImScreen(
-                            onOpenConversation = onNavigateToImConversation
+                            onOpenConversation = onNavigateToImConversation,
+                            onOpenMsgFeed = onNavigateToMsgFeed
                         )
                         TopLevelRoute.PROFILE -> UserScreen(
                             onNavigateToAccount = onNavigateToAccount,
@@ -519,9 +519,7 @@ private fun MainTabsScaffold(
             currentTab = currentTab,
             visibilityController = navVisibilityController,
             onTabChange = onTabChange,
-            onNavigateToSearch = onNavigateToSearch,
-            onDoubleTapHome = { homeScrollToTopTrigger++ },
-            onDoubleTapDynamic = { dynamicScrollToTopTrigger++ }
+            onNavigateToSearch = onNavigateToSearch
         )
     }
 }
@@ -532,9 +530,7 @@ private fun TopLevelFloatingNavigation(
     currentTab: TopLevelRoute,
     visibilityController: TopLevelNavVisibilityController,
     onTabChange: (TopLevelRoute) -> Unit,
-    onNavigateToSearch: () -> Unit,
-    onDoubleTapHome: () -> Unit = {},
-    onDoubleTapDynamic: () -> Unit = {}
+    onNavigateToSearch: () -> Unit
 ) {
     val toolbarShape = MaterialTheme.shapes.extraLarge
     val edgePaddingPx = with(LocalDensity.current) { topLevelNavEdgePadding.toPx() }
@@ -551,41 +547,12 @@ private fun TopLevelFloatingNavigation(
         .graphicsLayer {
             translationY = animatedOffsetPx
         }
-    val lastHomeTapTime = remember { mutableStateOf(0L) }
-    val lastDynamicTapTime = remember { mutableStateOf(0L) }
-    LaunchedEffect(currentTab) {
-        lastHomeTapTime.value = 0L
-        lastDynamicTapTime.value = 0L
-    }
     val tabs: @Composable () -> Unit = {
         TopLevelRoute.entries.forEach { tab ->
             TopLevelFloatingNavigationItem(
                 tab = tab,
                 selected = currentTab == tab,
-                onClick = {
-                    if (currentTab == tab) {
-                        val now = System.currentTimeMillis()
-                        when (tab) {
-                            TopLevelRoute.HOME -> {
-                                if (now - lastHomeTapTime.value < 400L) {
-                                    onDoubleTapHome()
-                                }
-                                lastHomeTapTime.value = now
-                            }
-                            TopLevelRoute.DYNAMIC -> {
-                                if (now - lastDynamicTapTime.value < 400L) {
-                                    onDoubleTapDynamic()
-                                }
-                                lastDynamicTapTime.value = now
-                            }
-                            else -> {}
-                        }
-                    } else {
-                        lastHomeTapTime.value = 0L
-                        lastDynamicTapTime.value = 0L
-                    }
-                    onTabChange(tab)
-                }
+                onClick = { onTabChange(tab) }
             )
         }
     }

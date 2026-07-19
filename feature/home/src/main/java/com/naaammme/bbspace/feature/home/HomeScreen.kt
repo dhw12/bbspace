@@ -28,12 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,25 +66,17 @@ fun HomeScreen(
     onOpenVideo: (VideoTarget) -> Unit = {},
     onOpenSpace: (SpaceRoute) -> Unit = {},
     onOpenLive: (LiveRoute) -> Unit = {},
+    onOpenDynamic: (String) -> Unit = {},
     onOpenArticle: (String, Int) -> Unit = { _, _ -> },
     onOpenListenItem: (Long, Int, Long, String, String, String) -> Unit = { _, _, _, _, _, _ -> },
-    scrollToTopTrigger: Long = 0L,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
-    val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
-    val scope = rememberCoroutineScope()
-    var lastScrollTrigger by rememberSaveable { mutableLongStateOf(-1L) }
-
     LaunchedEffect(Unit) {
         viewModel.refreshPageAction()
     }
-    LaunchedEffect(scrollToTopTrigger) {
-        if (scrollToTopTrigger > 0L && scrollToTopTrigger != lastScrollTrigger) {
-            lastScrollTrigger = scrollToTopTrigger
-            pagerState.animateScrollToPage(1)
-        }
-    }
+    val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
+    val scope = rememberCoroutineScope()
 
     state.interestChoose?.let { interestChoose ->
         InterestDialog(
@@ -147,10 +134,10 @@ fun HomeScreen(
                     onOpenVideo = onOpenVideo,
                     onOpenSpace = onOpenSpace,
                     onOpenLive = onOpenLive,
+                    onOpenDynamic = onOpenDynamic,
                     onDislike = viewModel::submitDislike,
                     onCancelDislike = viewModel::cancelDislike,
-                    onToastShown = viewModel::consumeToast,
-                    scrollToTopTrigger = scrollToTopTrigger
+                    onToastShown = viewModel::consumeToast
                 )
 
                 2 -> HomeLivePage(
@@ -251,7 +238,7 @@ private fun HomeTopBar(
             tabs = homeTabs,
             selectedIndex = selectedIndex,
             onSelect = onSelectTab,
-            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 0.dp, bottom = 3.dp)
+            modifier = Modifier
         )
     }
 }

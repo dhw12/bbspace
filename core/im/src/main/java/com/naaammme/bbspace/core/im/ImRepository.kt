@@ -1,7 +1,6 @@
 package com.naaammme.bbspace.core.im
 
 import android.content.Context
-import android.util.JsonReader
 import androidx.core.content.edit
 import com.bapis.bilibili.app.im.v1.MsgSummary
 import com.bapis.bilibili.app.im.v1.Offset
@@ -26,6 +25,15 @@ import com.bapis.bilibili.im.interfaces.v1.RspSessionMsg
 import com.bapis.bilibili.im.type.Msg
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
+import com.bapis.bilibili.im.gateway.interfaces.v1.Cursor
+import com.bapis.bilibili.im.gateway.interfaces.v1.MsgFeedFilterType
+import com.bapis.bilibili.im.gateway.interfaces.v1.MsgListReq
+import com.bapis.bilibili.im.gateway.interfaces.v1.MsgListRsp
+import com.bapis.bilibili.im.gateway.interfaces.v1.MsgTabType
+import com.naaammme.bbspace.core.model.User
+import com.naaammme.bbspace.core.model.im.MsgFeedCursor
+import com.naaammme.bbspace.core.model.im.MsgFeedItem
+import com.naaammme.bbspace.core.model.im.MsgFeedPage
 import com.naaammme.bbspace.core.common.AuthProvider
 import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
 import com.naaammme.bbspace.core.model.ImConversationPage
@@ -44,7 +52,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.StringReader
 import java.util.Random
 import java.util.UUID
 
@@ -144,14 +151,14 @@ class ImRepository @Inject constructor(
                     .setReceiverId(talkerId)
                     .setCliMsgId(cliMsgId)
                     .setMsgType(ImMsgType.TEXT)
-                    .setContent(buildTextContent(text))
+                    .setContent("""{"content":"$text"}""")
                     .setNewFaceVersion(1)
                     .build()
             )
             .setCookie("")
             .setCookie2("")
             .setErrorCode(0)
-            .setDevId(imDevId(authProvider.mid))
+            .setDevId(getDeviceId(authProvider.mid))
             .build()
         val reply = grpcClient.call(
             endpoint = SEND_MSG_ENDPOINT,
@@ -185,6 +192,84 @@ class ImRepository @Inject constructor(
         )
     }
 
+    suspend fun fetchMsgFeedList(
+        filterType: com.naaammme.bbspace.core.model.MsgFeedFilter = com.naaammme.bbspace.core.model.MsgFeedFilter.ALL,
+        cursor: MsgFeedCursor? = null,
+        pageSize: Long = 20
+    ): MsgFeedPage {
+        val mid = authProvider.mid
+        require(mid > 0L) { "请先登录" }
+        val req = MsgListReq.newBuilder()
+            .setTabType(MsgTabType.ReceiveReply)
+            .setFilterType(
+                when (filterType) {
+                    com.naaammme.bbspace.core.model.MsgFeedFilter.ALL -> MsgFeedFilterType.MsgFeed_All
+                    com.naaammme.bbspace.core.model.MsgFeedFilter.FOLLOWING -> MsgFeedFilterType.MsgFeed_Following
+                }
+            )
+            .setPagesize(pageSize)
+        
+        cursor?.let {
+            req.cursor = Cursor.newBuilder()
+                .setId(it.id)
+                .setTime(it.time)
+                .setReplymsgid(it.replymsgid)
+                .setIsEnd(it.isEnd)
+                .build()
+        }
+
+        val reply = grpcClient.call(
+            endpoint = MSG_FEED_LIST_ENDPOINT,
+            requestBytes = req.build().toByteArray(),
+            parser = MsgListRsp.parser()
+        )
+        return withContext(Dispatchers.Default) {
+            val mappedCards = reply.msgCardsList.mapNotNull { card ->
+                val type = card.msgType.name
+                val id = card.msgId
+                val time = card.msgTime
+                val item = card.msgItem
+                if (item.hasReplyCard()) {
+                    val replyCard = item.replyCard
+                    val msg = replyCard.replyMsg
+                    val biz = replyCard.replyBiz
+                    MsgFeedItem(
+                        msgId = id,
+                        msgTime = time,
+                        msgType = type,
+                        users = msg.usersList.map { u ->
+                            User(
+                                mid = u.mid,
+                                name = u.nickname,
+                                avatar = u.avatar.httpsImageUrlOrNull() ?: ""
+                            )
+                        },
+                        coverImage = msg.coverImage.httpsImageUrlOrNull(),
+                        subjectId = android.net.Uri.parse(msg.nativeUri).lastPathSegment?.toLongOrNull() ?: 0L,
+                        rootId = biz.rootId,
+                        sourceId = biz.sourceId,
+                        businessId = msg.businessId,
+                        sourceContent = biz.sourceContent,
+                        rootReplyContent = biz.rootReplyContent,
+                        targetReplyContent = biz.targetReplyContent
+                    )
+                } else null
+            }
+            MsgFeedPage(
+                cursor = if (reply.hasCursor()) {
+                    val c = reply.cursor
+                    MsgFeedCursor(
+                        id = c.id,
+                        time = c.time,
+                        replymsgid = c.replymsgid,
+                        isEnd = c.isEnd
+                    )
+                } else null,
+                msgCards = mappedCards
+            )
+        }
+    }
+
     private suspend fun fetchSessionMsgs(
         talkerId: Long,
         sessionType: Int,
@@ -198,7 +283,7 @@ class ImRepository @Inject constructor(
             .setSessionType(sessionType)
             .setSize(size)
             .setOrder(order)
-            .setDevId(imDevId(authProvider.mid))
+            .setDevId(getDeviceId(authProvider.mid, isFetch = true))
             .apply {
                 beginSeqNo?.let(::setBeginSeqno)
                 endSeqNo?.let(::setEndSeqno)
@@ -291,7 +376,7 @@ class ImRepository @Inject constructor(
     private fun Msg.parseContent(): ImMessageContent {
         if (content.isBlank()) return ImMessageContent("")
         return when (msgType) {
-            ImMsgType.TEXT -> ImMessageContent(content.readJsonString("content"))
+            ImMsgType.TEXT -> ImMessageContent(JSONObject(content).optString("content"))
             ImMsgType.IMAGE -> content.readImageContent()
             in ImMsgType.SHARE_TYPES -> content.readVideoCardContent()
             ImMsgType.NOTICE,
@@ -300,65 +385,23 @@ class ImRepository @Inject constructor(
         }
     }
 
-    private fun String.readJsonString(field: String): String {
-        JsonReader(StringReader(this)).use { reader ->
-            reader.beginObject()
-            while (reader.hasNext()) {
-                if (reader.nextName() == field) return reader.nextString()
-                reader.skipValue()
-            }
-            reader.endObject()
-        }
-        return ""
-    }
-
     private fun String.readImageContent(): ImMessageContent {
-        var imageUrl: String? = null
-        var imageWidth = 0
-        var imageHeight = 0
-        JsonReader(StringReader(this)).use { reader ->
-            reader.beginObject()
-            while (reader.hasNext()) {
-                when (reader.nextName()) {
-                    "url" -> imageUrl = reader.nextString()
-                    "width" -> imageWidth = reader.nextInt()
-                    "height" -> imageHeight = reader.nextInt()
-                    else -> reader.skipValue()
-                }
-            }
-            reader.endObject()
-        }
+        val obj = JSONObject(this)
         return ImMessageContent(
             text = "",
-            imageUrl = imageUrl?.takeIf(String::isNotBlank),
-            imageWidth = imageWidth,
-            imageHeight = imageHeight
+            imageUrl = obj.optString("url").takeIf(String::isNotBlank),
+            imageWidth = obj.optInt("width"),
+            imageHeight = obj.optInt("height")
         )
     }
 
     private fun String.readVideoCardContent(): ImMessageContent {
-        var title = ""
-        var coverUrl: String? = null
-        var viewCount = 0L
-        var shareAid = 0L
-        JsonReader(StringReader(this)).use { reader ->
-            reader.beginObject()
-            while (reader.hasNext()) {
-                when (reader.nextName()) {
-                    "title" -> title = reader.nextString()
-                    "cover" -> coverUrl = reader.nextString().takeIf(String::isNotBlank).httpsImageUrlOrNull()
-                    "view" -> viewCount = reader.nextLong()
-                    "rid" -> shareAid = reader.nextLong()
-                    else -> reader.skipValue()
-                }
-            }
-            reader.endObject()
-        }
+        val obj = JSONObject(this)
         return ImMessageContent(
-            text = title,
-            shareCoverUrl = coverUrl,
-            shareViewCount = viewCount,
-            shareAid = shareAid
+            text = obj.optString("title"),
+            shareCoverUrl = obj.optString("cover").takeIf(String::isNotBlank)?.httpsImageUrlOrNull(),
+            shareViewCount = obj.optLong("view"),
+            shareAid = obj.optLong("rid")
         )
     }
 
@@ -417,16 +460,17 @@ class ImRepository @Inject constructor(
         )
     }
 
-    private fun buildTextContent(text: String): String {
-        return JSONObject()
-            .put("content", text)
-            .toString()
-    }
-
-    private fun imDevId(mid: Long): String {
+    /**
+     * B 站服务端在 SyncFetchSessionMsgs 时，会自动过滤掉同 dev_id 发出的消息（默认客户端已有本地记录）。
+     * 本项目无本地消息数据库，为避免自己刚发的消息被过滤，必须隔离发送和拉取的设备 ID：
+     * - 发送消息：使用主设备 ID
+     * - 拉取消息：使用独立的伪造设备 ID，伪装成多端拉取。
+     */
+    private fun getDeviceId(mid: Long, isFetch: Boolean = false): String {
         val prefs = context.getSharedPreferences("IMFieldsCache$mid", Context.MODE_PRIVATE)
-        return prefs.getString("key_device_id_v2", null) ?: UUID.randomUUID().toString().also {
-            prefs.edit { putString("key_device_id_v2", it) }
+        val key = if (isFetch) "key_fetch_device_id_v2" else "key_device_id_v2"
+        return prefs.getString(key, null) ?: UUID.randomUUID().toString().also {
+            prefs.edit { putString(key, it) }
         }
     }
 
@@ -623,6 +667,7 @@ class ImRepository @Inject constructor(
         const val FETCH_SESSION_MSGS_ENDPOINT = "bilibili.im.interface.v1.ImInterface/SyncFetchSessionMsgs"
         const val SEND_MSG_ENDPOINT = "bilibili.im.interface.v1.ImInterface/SendMsg"
         const val UPDATE_ACK_ENDPOINT = "bilibili.im.interface.v1.ImInterface/UpdateAck"
+        const val MSG_FEED_LIST_ENDPOINT = "bilibili.im.gateway.interface.v1.ImGatewayApi/MsgFeedMsgList"
         const val MAX_UNREAD_COUNT = 99
         const val DEFAULT_PAGE_SIZE = 20
         const val ORDER_DESC = 0

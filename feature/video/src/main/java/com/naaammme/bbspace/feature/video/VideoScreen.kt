@@ -49,7 +49,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.media3.common.util.UnstableApi
-import com.naaammme.bbspace.core.model.FavoriteFolder
 import com.naaammme.bbspace.core.model.PlaybackSource
 import com.naaammme.bbspace.core.model.PlaybackStream
 import com.naaammme.bbspace.core.model.PlayerSettingsState
@@ -78,7 +77,6 @@ fun VideoScreen(
     hostExpanded: Boolean = true
 ) {
     val videoState by viewModel.videoState.collectAsStateWithLifecycle()
-    val videoActionState by viewModel.videoActionState.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val act = LocalActivity.current
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -220,15 +218,10 @@ fun VideoScreen(
                         detailLoading = videoState.detailLoading,
                         detailError = videoState.detailError,
                         commentSubject = viewModel.commentSubject,
-                        videoActionState = videoActionState,
                         contentHorizontalPad = 0.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
                         onDownloadClick = downloadClick,
-                        onLikeClick = viewModel::likeVideo,
-                        onFavoriteClick = viewModel::favoriteVideo,
-                        onFavoriteLongClick = viewModel::openFavoriteFolderPicker,
-                        onDismissActionMessage = viewModel::clearVideoActionMessage,
                         onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
                     )
@@ -265,29 +258,16 @@ fun VideoScreen(
                         detailLoading = videoState.detailLoading,
                         detailError = videoState.detailError,
                         commentSubject = viewModel.commentSubject,
-                        videoActionState = videoActionState,
                         contentHorizontalPad = 16.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
                         onDownloadClick = downloadClick,
-                        onLikeClick = viewModel::likeVideo,
-                        onFavoriteClick = viewModel::favoriteVideo,
-                        onFavoriteLongClick = viewModel::openFavoriteFolderPicker,
-                        onDismissActionMessage = viewModel::clearVideoActionMessage,
                         onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
                     )
                 }
             }
         }
-    }
-
-    if (hostExpanded && videoActionState.favoriteFolders != null) {
-        FavoriteFolderSheet(
-            folders = videoActionState.favoriteFolders.orEmpty(),
-            onDismiss = viewModel::dismissFavoriteFolderPicker,
-            onSelect = viewModel::favoriteVideoToFolder
-        )
     }
 
     if (hostExpanded && downloadSheetOn) {
@@ -315,57 +295,6 @@ fun VideoScreen(
                 onStartDownload(request)
             }
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FavoriteFolderSheet(
-    folders: List<FavoriteFolder>,
-    onDismiss: () -> Unit,
-    onSelect: (FavoriteFolder) -> Unit
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text("选择收藏夹", style = MaterialTheme.typography.titleLarge)
-            if (folders.isEmpty()) {
-                Text(
-                    text = "暂无可用收藏夹",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                folders.forEach { folder ->
-                    OutlinedButton(
-                        onClick = { onSelect(folder) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(folder.title, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                text = "${folder.mediaCount} 个内容",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

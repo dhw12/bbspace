@@ -30,7 +30,6 @@ import com.naaammme.bbspace.core.model.PlaybackRequest
 import com.naaammme.bbspace.core.model.PlaybackSource
 import com.naaammme.bbspace.core.model.PlaybackStream
 import com.naaammme.bbspace.core.model.PlayerSessionState
-import com.naaammme.bbspace.core.model.PlayerSettingsState
 import com.naaammme.bbspace.core.model.ResolvedVideoIds
 import com.naaammme.bbspace.core.model.StreamPlaybackSessionState
 import com.naaammme.bbspace.core.model.StreamPlaybackTarget
@@ -151,24 +150,13 @@ class StreamPlaybackSessionImpl @Inject constructor(
                 applyVideoSelection(state)
             }
         }
-        runtimeScope.launch {
-            playerSettings.state.map { it.playback.looping }.collect { looping ->
-                if (_currentTarget.value !is StreamPlaybackTarget.Video) return@collect
-                if (playerEngine.playbackState.value.isLooping == looping) return@collect
-                playerEngine.setLooping(looping)
-            }
-        }
     }
 
     // StreamPlaybackSession: lifecycle
     override suspend fun prepare() {
         prepMu.withLock {
-            val settings = withContext(Dispatchers.IO) { playerSettings.state.first() }
-            val config = buildPlayerConfig(settings)
-            withContext(Dispatchers.Main.immediate) {
-                playerEngine.updateConfig(config)
-                playerEngine.setLooping(settings.playback.looping)
-            }
+            val config = withContext(Dispatchers.IO) { buildPlayerConfig() }
+            withContext(Dispatchers.Main.immediate) { playerEngine.updateConfig(config) }
         }
     }
 
@@ -277,11 +265,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
     override fun setSpeed(speed: Float) {
         if (_currentTarget.value !is StreamPlaybackTarget.Video) return
         playerEngine.setSpeed(speed)
-    }
-
-    override fun setLooping(looping: Boolean) {
-        if (_currentTarget.value !is StreamPlaybackTarget.Video) return
-        playerEngine.setLooping(looping)
     }
 
     // StreamPlaybackSession
@@ -661,7 +644,8 @@ class StreamPlaybackSessionImpl @Inject constructor(
     }
 
     // vod: config & history
-    private fun buildPlayerConfig(settings: PlayerSettingsState): PlayerConfig {
+    private suspend fun buildPlayerConfig(): PlayerConfig {
+        val settings = playerSettings.state.first()
         val buffer = settings.buffer.profile
         val playback = settings.playback
         return PlayerConfig(
@@ -794,7 +778,6 @@ class StreamPlaybackSessionImpl @Inject constructor(
             playWhenReady = state.playWhenReady,
             playbackState = state.playbackState,
             speed = state.speed,
-            isLooping = state.isLooping,
             videoWidth = state.videoWidth,
             videoHeight = state.videoHeight,
             videoDecoderName = state.videoDecoderName,

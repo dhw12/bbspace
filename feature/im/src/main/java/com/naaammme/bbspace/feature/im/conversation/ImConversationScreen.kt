@@ -25,10 +25,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,6 +49,9 @@ import com.naaammme.bbspace.core.designsystem.component.CoverImage
 import com.naaammme.bbspace.core.designsystem.component.copyTextOnLongPress
 import com.naaammme.bbspace.core.model.ImMessage
 import com.naaammme.bbspace.core.model.ImMsgType
+import com.naaammme.bbspace.core.model.SpaceRoute
+import com.naaammme.bbspace.core.model.VideoTarget
+import com.naaammme.bbspace.core.model.VideoTargetTool
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -59,8 +60,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ImConversationScreen(
     onBack: () -> Unit,
-    onOpenSpace: ((Long) -> Unit)? = null,
-    onOpenVideo: ((Long) -> Unit)? = null,
+    onOpenSpace: ((SpaceRoute) -> Unit)? = null,
+    onOpenVideo: ((VideoTarget) -> Unit)? = null,
     vm: ImConversationViewModel = hiltViewModel()
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
@@ -92,10 +93,6 @@ fun ImConversationScreen(
         }
     }
 
-    CompositionLocalProvider(
-        LocalOnOpenSpace provides onOpenSpace,
-        LocalOnOpenVideo provides onOpenVideo
-    ) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -158,7 +155,9 @@ fun ImConversationScreen(
                             ImMessageBubble(
                                 item = item,
                                 avatar = state.avatar,
-                                title = state.title
+                                title = state.title,
+                                onOpenSpace = onOpenSpace,
+                                onOpenVideo = onOpenVideo
                             )
                         }
                     }
@@ -166,14 +165,15 @@ fun ImConversationScreen(
             }
         }
     }
-    }
 }
 
 @Composable
 private fun ImMessageBubble(
     item: ConversationMessageItem,
     avatar: String?,
-    title: String?
+    title: String?,
+    onOpenSpace: ((SpaceRoute) -> Unit)?,
+    onOpenVideo: ((VideoTarget) -> Unit)?
 ) {
     val message = item.message
     if (message.msgType == ImMsgType.SYSTEM_NOTICE) {
@@ -190,9 +190,8 @@ private fun ImMessageBubble(
         horizontalAlignment = if (message.isSelf) Alignment.End else Alignment.Start
     ) {
         if (message.isSelf) {
-            MessageContent(item = item)
+            MessageContent(item = item, onOpenVideo = onOpenVideo)
         } else {
-            val onOpenSpace = LocalOnOpenSpace.current
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.Bottom
@@ -202,7 +201,7 @@ private fun ImMessageBubble(
                         .size(32.dp)
                         .then(
                             if (item.showAvatar && onOpenSpace != null && message.senderUid > 0L) {
-                                Modifier.clickable { onOpenSpace(message.senderUid) }
+                                Modifier.clickable { onOpenSpace(SpaceRoute(mid = message.senderUid)) }
                             } else Modifier
                         )
                 ) {
@@ -215,7 +214,7 @@ private fun ImMessageBubble(
                         )
                     }
                 }
-                MessageContent(item = item)
+                MessageContent(item = item, onOpenVideo = onOpenVideo)
             }
         }
     }
@@ -223,10 +222,10 @@ private fun ImMessageBubble(
 
 @Composable
 private fun MessageContent(
-    item: ConversationMessageItem
+    item: ConversationMessageItem,
+    onOpenVideo: ((VideoTarget) -> Unit)?
 ) {
     val message = item.message
-    val onOpenVideo = LocalOnOpenVideo.current
     Column(
         horizontalAlignment = if (message.isSelf) Alignment.End else Alignment.Start
     ) {
@@ -316,7 +315,15 @@ private fun MessageContent(
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier
                         .widthIn(max = 220.dp)
-                        .then(if (clickable) Modifier.clickable { onOpenVideo(message.shareAid) } else Modifier)
+                        .then(if (clickable) Modifier.clickable {
+                            onOpenVideo!!(
+                                VideoTarget.Ugc(
+                                    aid = message.shareAid,
+                                    cid = 0L,
+                                    src = VideoTargetTool.default()
+                                )
+                            )
+                        } else Modifier)
                 ) {
                     val bodyColor = MaterialTheme.colorScheme.onSurface
                     val timeColor = bodyColor.copy(alpha = 0.58f)
@@ -542,8 +549,6 @@ private fun formatMessageTime(timestampSec: Long): String {
 
 private val MESSAGE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-private val LocalOnOpenSpace = compositionLocalOf<((Long) -> Unit)?> { null }
-private val LocalOnOpenVideo = compositionLocalOf<((Long) -> Unit)?> { null }
 
 private const val CONTENT_TYPE_SYSTEM_NOTICE = "system_notice"
 private const val CONTENT_TYPE_NOTICE = "notice"

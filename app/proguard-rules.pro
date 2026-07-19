@@ -6,8 +6,13 @@
     <fields>;
 }
 
-# Protobuf runtime (generated code calls protected methods like parseFrom/dynamicMethod)
--keep class com.google.protobuf.** { *; }
+# Keep only runtime entry points used by generated Lite messages and the app.
+-keep class com.google.protobuf.GeneratedMessageLite { *; }
+-keep class com.google.protobuf.ByteString { *; }
+-keep class com.google.protobuf.Parser { *; }
+-keep class com.google.protobuf.MessageLite { *; }
+-keep class com.google.protobuf.Any { *; }
+-keep class com.google.protobuf.Empty { *; }
 -dontwarn com.google.protobuf.**
 
 # OkHttp

@@ -26,6 +26,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":feature:comment"))
     implementation(project(":core:auth"))
     implementation(project(":core:im"))
     implementation(project(":core:model"))

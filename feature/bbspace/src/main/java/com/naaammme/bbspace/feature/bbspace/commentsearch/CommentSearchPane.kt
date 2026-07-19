@@ -33,12 +33,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.naaammme.bbspace.core.model.PublishedRecord
+import com.naaammme.bbspace.core.model.PUBLISHED_RECORD_KIND_COMMENT
 import com.naaammme.bbspace.core.designsystem.component.StateMessageCard
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CommentSearchPane(
     modifier: Modifier = Modifier,
+    onOpenCommentDetail: (PublishedRecord) -> Unit = {},
     vm: CommentSearchViewModel = hiltViewModel()
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
@@ -118,7 +121,13 @@ fun CommentSearchPane(
                 items = state.items,
                 key = { _, item -> item.id }
             ) { _, item ->
-                CommentSearchCard(item = item)
+                val record = item.record
+                CommentSearchCard(
+                    item = item,
+                    onClick = if (record != null) {
+                        { onOpenCommentDetail(record) }
+                    } else null
+                )
             }
         }
 
@@ -216,10 +225,13 @@ private fun CommentSearchHeaderCard(
 @Composable
 private fun CommentSearchBaseCard(
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(8.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
+        onClick = onClick ?: {},
+        enabled = onClick != null,
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -232,8 +244,11 @@ private fun CommentSearchBaseCard(
 }
 
 @Composable
-private fun CommentSearchCard(item: CommentSearchItem) {
-    CommentSearchBaseCard {
+private fun CommentSearchCard(
+    item: CommentSearchItem,
+    onClick: (() -> Unit)? = null
+) {
+    CommentSearchBaseCard(onClick = onClick) {
         item.title?.let { title ->
             Text(
                 text = title,

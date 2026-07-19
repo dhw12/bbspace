@@ -25,7 +25,6 @@ data class VideoPlaybackState(
     val playWhenReady: Boolean = false,
     val playbackState: PlaybackState = PlaybackState.Idle,
     val speed: Float = 1f,
-    val isLooping: Boolean = false,
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
     val videoDecoderName: String? = null,

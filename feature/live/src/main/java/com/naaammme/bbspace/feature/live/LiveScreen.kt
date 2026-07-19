@@ -50,7 +50,6 @@ fun LiveScreen(
     val roomPanel by viewModel.roomPanel.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
-    val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     val owner = LocalLifecycleOwner.current
     val act = LocalActivity.current
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -146,9 +145,6 @@ fun LiveScreen(
                 onRetry = viewModel::retry,
                 onSwitchQuality = viewModel::switchQuality,
                 settingsState = settingsState,
-                sleepTimerState = sleepTimerState,
-                onStartSleepTimer = viewModel::startSleepTimer,
-                onCancelSleepTimer = viewModel::cancelSleepTimer,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -187,9 +183,6 @@ fun LiveScreen(
                     onSwitchQuality = viewModel::switchQuality,
                     onSendDanmaku = viewModel::sendDanmaku,
                     settingsState = settingsState,
-                    sleepTimerState = sleepTimerState,
-                    onStartSleepTimer = viewModel::startSleepTimer,
-                    onCancelSleepTimer = viewModel::cancelSleepTimer,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)

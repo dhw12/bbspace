@@ -22,7 +22,6 @@ import com.naaammme.bbspace.core.model.LivePlaybackViewState
 import com.naaammme.bbspace.core.model.LiveRoomSessionState
 import com.naaammme.bbspace.core.model.LiveRoute
 import com.naaammme.bbspace.core.model.PlayerSettingsState
-import com.naaammme.bbspace.feature.live.SleepTimerState
 import com.naaammme.bbspace.feature.live.player.LivePlayerPane
 import kotlinx.coroutines.flow.StateFlow
 
@@ -42,9 +41,6 @@ internal fun LivePlaybackBody(
     onSwitchQuality: (Int) -> Unit,
     onSendDanmaku: suspend (String) -> Unit,
     settingsState: PlayerSettingsState,
-    sleepTimerState: SleepTimerState,
-    onStartSleepTimer: (Int) -> Unit,
-    onCancelSleepTimer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (isExpanded) {
@@ -71,9 +67,6 @@ internal fun LivePlaybackBody(
                     onRetry = onRetry,
                     onSwitchQuality = onSwitchQuality,
                     settingsState = settingsState,
-                    sleepTimerState = sleepTimerState,
-                    onStartSleepTimer = onStartSleepTimer,
-                    onCancelSleepTimer = onCancelSleepTimer,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -104,9 +97,6 @@ internal fun LivePlaybackBody(
                 onRetry = onRetry,
                 onSwitchQuality = onSwitchQuality,
                 settingsState = settingsState,
-                sleepTimerState = sleepTimerState,
-                onStartSleepTimer = onStartSleepTimer,
-                onCancelSleepTimer = onCancelSleepTimer,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(playerSpaceHeight)

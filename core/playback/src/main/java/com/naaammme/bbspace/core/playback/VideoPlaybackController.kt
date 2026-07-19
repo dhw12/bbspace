@@ -18,7 +18,6 @@ interface VideoPlaybackController {
     fun pause()
     fun seekTo(positionMs: Long)
     fun setSpeed(speed: Float)
-    fun setLooping(looping: Boolean)
     fun switchVideoQuality(quality: Int)
     fun switchVideoAudio(audioId: Int)
 }
