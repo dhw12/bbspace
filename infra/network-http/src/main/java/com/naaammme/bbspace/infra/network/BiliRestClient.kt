@@ -3,6 +3,7 @@ package com.naaammme.bbspace.infra.network
 import com.naaammme.bbspace.infra.crypto.AppSigner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -85,6 +86,39 @@ class BiliRestClient @Inject constructor(
         val signedBody = AppSigner.sign(params, profile.appKey, profile.appSec)
         val requestBody = signedBody.toRequestBody(null)
         return executeJson(Request.Builder().url(url).post(requestBody).withHeaders(profile).build())
+    }
+
+    /**
+     * 发送未签名的 GET 请求（Web API 模式，使用 Cookie 认证）
+     */
+    suspend fun get(
+        url: String,
+        params: Map<String, String>,
+        headers: Map<String, String>
+    ): JSONObject {
+        val queryString = params.entries.joinToString("&") { (k, v) ->
+            "${java.net.URLEncoder.encode(k, "UTF-8")}=${java.net.URLEncoder.encode(v, "UTF-8")}"
+        }
+        val fullUrl = if (queryString.isNotEmpty()) "$url?$queryString" else url
+        val requestBuilder = Request.Builder().url(fullUrl).get()
+        headers.forEach { (key, value) -> requestBuilder.addHeader(key, value) }
+        return executeJson(requestBuilder.build())
+    }
+
+    /**
+     * 发送未签名的 POST 请求（表单编码，Web API 模式，使用 Cookie 认证）
+     */
+    suspend fun postForm(
+        url: String,
+        params: Map<String, String>,
+        headers: Map<String, String>
+    ): JSONObject {
+        val formBody = FormBody.Builder().apply {
+            params.forEach { (key, value) -> add(key, value) }
+        }.build()
+        val requestBuilder = Request.Builder().url(url).post(formBody)
+        headers.forEach { (key, value) -> requestBuilder.addHeader(key, value) }
+        return executeJson(requestBuilder.build())
     }
 
     /**
