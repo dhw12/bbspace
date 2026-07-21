@@ -557,13 +557,23 @@ private fun TopLevelFloatingNavigation(
         }
     var lastRefreshableTab by remember { mutableStateOf<TopLevelRoute?>(null) }
     var lastRefreshableTabTapTime by remember { mutableStateOf(0L) }
+    var selectedTabForTap by remember { mutableStateOf(currentTab) }
+
+    LaunchedEffect(currentTab) {
+        if (selectedTabForTap != currentTab) {
+            selectedTabForTap = currentTab
+            lastRefreshableTab = null
+            lastRefreshableTabTapTime = 0L
+        }
+    }
+
     val tabs: @Composable () -> Unit = {
         TopLevelRoute.entries.forEach { tab ->
             TopLevelFloatingNavigationItem(
                 tab = tab,
                 selected = currentTab == tab,
                 onClick = {
-                    if (currentTab == tab && tab in refreshableTabs) {
+                    if (selectedTabForTap == tab && tab in refreshableTabs) {
                         val now = System.currentTimeMillis()
                         if (lastRefreshableTab == tab && now - lastRefreshableTabTapTime < 400L) {
                             when (tab) {
@@ -578,6 +588,7 @@ private fun TopLevelFloatingNavigation(
                         lastRefreshableTab = null
                         lastRefreshableTabTapTime = 0L
                     }
+                    selectedTabForTap = tab
                     onTabChange(tab)
                 }
             )
