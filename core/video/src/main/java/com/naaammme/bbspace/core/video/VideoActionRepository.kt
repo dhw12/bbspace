@@ -56,6 +56,11 @@ class VideoActionRepository @Inject constructor(
         }
     }
 
+    suspend fun isVideoFavorited(aid: Long): Boolean {
+        check(aid > 0L) { "视频参数无效" }
+        return fetchFavoriteFolderStates(aid).any { it.favorited }
+    }
+
     suspend fun favoriteVideoToFolder(aid: Long, fid: Long) {
         check(aid > 0L) { "视频参数无效" }
         check(fid > 0L) { "收藏夹参数无效" }

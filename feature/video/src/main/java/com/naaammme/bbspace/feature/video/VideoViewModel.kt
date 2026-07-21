@@ -59,6 +59,7 @@ class VideoViewModel @Inject constructor(
                 .collectLatest { (aid, detailLoading) ->
                     if (aid > 0L && !detailLoading) {
                         refreshLikeState(aid)
+                        refreshFavoriteState(aid)
                     }
                 }
         }
@@ -376,6 +377,18 @@ class VideoViewModel @Inject constructor(
                 val current = _videoActionState.value
                 if (current.pending == VideoUserAction.LIKE || current.likeDelta != 0) return@onSuccess
                 _videoActionState.value = current.copy(liked = liked)
+            }
+    }
+
+    private suspend fun refreshFavoriteState(aid: Long) {
+        runCatching { videoActionRepository.isVideoFavorited(aid) }
+            .onSuccess { favorited ->
+                if (videoState.value.ids.aid != aid) return@onSuccess
+                val current = _videoActionState.value
+                if (current.pending == VideoUserAction.FAVORITE || current.favoriteDelta != 0) {
+                    return@onSuccess
+                }
+                _videoActionState.value = current.copy(favorited = favorited)
             }
     }
 

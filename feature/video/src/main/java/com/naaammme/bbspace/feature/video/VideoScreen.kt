@@ -52,6 +52,7 @@ import androidx.media3.common.util.UnstableApi
 import com.naaammme.bbspace.core.model.PlaybackSource
 import com.naaammme.bbspace.core.model.PlaybackStream
 import com.naaammme.bbspace.core.model.PlayerSettingsState
+import com.naaammme.bbspace.core.model.FavoriteFolder
 import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoDownloadKind
@@ -77,6 +78,7 @@ fun VideoScreen(
     hostExpanded: Boolean = true
 ) {
     val videoState by viewModel.videoState.collectAsStateWithLifecycle()
+    val videoActionState by viewModel.videoActionState.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val act = LocalActivity.current
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
@@ -218,7 +220,7 @@ fun VideoScreen(
                         detailLoading = videoState.detailLoading,
                         detailError = videoState.detailError,
                         commentSubject = viewModel.commentSubject,
-                        videoActionState = viewModel.videoActionState.collectAsStateWithLifecycle().value,
+                        videoActionState = videoActionState,
                         contentHorizontalPad = 0.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
@@ -263,7 +265,7 @@ fun VideoScreen(
                         detailLoading = videoState.detailLoading,
                         detailError = videoState.detailError,
                         commentSubject = viewModel.commentSubject,
-                        videoActionState = viewModel.videoActionState.collectAsStateWithLifecycle().value,
+                        videoActionState = videoActionState,
                         contentHorizontalPad = 16.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
@@ -305,6 +307,54 @@ fun VideoScreen(
                 onStartDownload(request)
             }
         )
+    }
+
+    videoActionState.favoriteFolders?.let { folders ->
+        FavoriteFolderPickerSheet(
+            folders = folders,
+            onDismiss = viewModel::dismissFavoriteFolderPicker,
+            onSelect = viewModel::favoriteVideoToFolder
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FavoriteFolderPickerSheet(
+    folders: List<FavoriteFolder>,
+    onDismiss: () -> Unit,
+    onSelect: (FavoriteFolder) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text("选择收藏夹", style = MaterialTheme.typography.titleLarge)
+            folders.forEach { folder ->
+                OutlinedButton(
+                    onClick = { onSelect(folder) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(folder.title)
+                        folder.attrDesc?.takeIf(String::isNotBlank)?.let { description ->
+                            Text(
+                                text = description,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -476,4 +526,3 @@ internal fun getQualityName(
         ?: "画质"
     return label.substringBefore(' ').ifBlank { label }
 }
-
