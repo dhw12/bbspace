@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.naaammme.bbspace.core.common.log.Logger
 import com.naaammme.bbspace.core.dynamic.DynamicRepository
+import com.naaammme.bbspace.core.model.DynamicStats
 import com.naaammme.bbspace.feature.dynamic.navigation.DYNAMIC_DETAIL_OPUS_ID_ARG
 import com.naaammme.bbspace.feature.dynamic.navigation.DYNAMIC_DETAIL_OPUS_TYPE_ARG
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,7 +47,11 @@ class DynamicDetailViewModel @Inject constructor(
             try {
                 val detail = repo.fetchOpusDetail(opusId, opusType)
                 _uiState.update {
-                    it.copy(detail = detail, isLoading = false, errorMessage = null)
+                    it.copy(
+                        detail = detail.copy(id = detail.id.ifBlank { opusId }),
+                        isLoading = false,
+                        errorMessage = null
+                    )
                 }
             } catch (e: Exception) {
                 Logger.e(TAG, e) { "加载动态详情失败" }
@@ -55,6 +60,50 @@ class DynamicDetailViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun toggleLike() {
+        val detail = _uiState.value.detail ?: return
+        val stats = detail.stats ?: return
+        val dynamicId = detail.id.ifBlank { opusId }
+        if (dynamicId.isBlank() || _uiState.value.isLiking) return
+        val liked = !stats.liked
+        val nextStats = stats.toggled(liked)
+        _uiState.update {
+            it.copy(
+                detail = detail.copy(stats = nextStats),
+                isLiking = true,
+                errorMessage = null
+            )
+        }
+        viewModelScope.launch {
+            runCatching { repo.likeDynamic(dynamicId, liked) }
+                .onSuccess {
+                    _uiState.update { cur ->
+                        val current = cur.detail ?: return@update cur.copy(isLiking = false)
+                        cur.copy(detail = current.copy(stats = nextStats), isLiking = false)
+                    }
+                }
+                .onFailure { err ->
+                    Logger.e(TAG, err) { "动态详情点赞失败 dynamicId=$dynamicId" }
+                    _uiState.update {
+                        it.copy(
+                            detail = detail.copy(stats = stats),
+                            isLiking = false,
+                            errorMessage = err.message ?: "动态点赞失败"
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun DynamicStats.toggled(liked: Boolean): DynamicStats {
+        val nextLike = when {
+            liked && !this.liked -> like + 1
+            !liked && this.liked -> (like - 1).coerceAtLeast(0L)
+            else -> like
+        }
+        return copy(like = nextLike, liked = liked)
     }
 
     private companion object {

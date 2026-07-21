@@ -182,6 +182,7 @@ fun CommentPanel(
                 is CommentReplyAction.Check -> viewModel.checkReply(action.rpid)
                 is CommentReplyAction.Translate -> viewModel.translateReply(action.rpid)
                 is CommentReplyAction.Delete -> viewModel.deleteReply(action.reply)
+                is CommentReplyAction.Like -> viewModel.toggleLikeReply(action.reply)
                 is CommentReplyAction.Reply -> viewModel.replyTo(action.reply)
                 is CommentReplyAction.OpenReplies -> viewModel.openReplyThread(action.reply)
                 is CommentReplyAction.OpenUser -> {

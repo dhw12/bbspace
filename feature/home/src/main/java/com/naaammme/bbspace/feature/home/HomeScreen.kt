@@ -69,14 +69,21 @@ fun HomeScreen(
     onOpenDynamic: (String) -> Unit = {},
     onOpenArticle: (String, Int) -> Unit = { _, _ -> },
     onOpenListenItem: (Long, Int, Long, String, String, String) -> Unit = { _, _, _, _, _, _ -> },
+    scrollToTopTrigger: Long = 0L,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
+    val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(Unit) {
         viewModel.refreshPageAction()
     }
-    val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(scrollToTopTrigger) {
+        if (scrollToTopTrigger > 0L) {
+            pagerState.animateScrollToPage(1)
+        }
+    }
 
     state.interestChoose?.let { interestChoose ->
         InterestDialog(
@@ -137,7 +144,8 @@ fun HomeScreen(
                     onOpenDynamic = onOpenDynamic,
                     onDislike = viewModel::submitDislike,
                     onCancelDislike = viewModel::cancelDislike,
-                    onToastShown = viewModel::consumeToast
+                    onToastShown = viewModel::consumeToast,
+                    scrollToTopTrigger = scrollToTopTrigger
                 )
 
                 2 -> HomeLivePage(

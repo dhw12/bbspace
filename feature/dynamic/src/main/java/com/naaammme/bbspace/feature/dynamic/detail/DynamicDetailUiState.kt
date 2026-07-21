@@ -7,5 +7,6 @@ import com.naaammme.bbspace.core.model.DynamicDetail
 data class DynamicDetailUiState(
     val detail: DynamicDetail? = null,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isLiking: Boolean = false
 )

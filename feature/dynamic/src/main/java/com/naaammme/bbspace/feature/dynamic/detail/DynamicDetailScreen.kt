@@ -129,7 +129,11 @@ fun DynamicDetailScreen(
                                 .weight(1f)
                                 .fillMaxHeight()
                         ) {
-                            detailContentItems(detail)
+                            detailContentItems(
+                                detail = detail,
+                                isLiking = state.isLiking,
+                                onToggleLike = viewModel::toggleLike
+                            )
                         }
                         CommentPanel(
                             subject = commentSubject,
@@ -155,17 +159,25 @@ fun DynamicDetailScreen(
                             vertical = 12.dp
                         ),
                         header = {
-                            DetailContent(detail)
+                            DetailContent(
+                                detail = detail,
+                                isLiking = state.isLiking,
+                                onToggleLike = viewModel::toggleLike
+                            )
                         }
                     )
                 } else {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(padding)
-                            .verticalScroll(rememberScrollState())
+                        .padding(padding)
+                        .verticalScroll(rememberScrollState())
                     ) {
-                        DetailContent(detail)
+                        DetailContent(
+                            detail = detail,
+                            isLiking = state.isLiking,
+                            onToggleLike = viewModel::toggleLike
+                        )
                     }
                 }
             }
@@ -174,7 +186,11 @@ fun DynamicDetailScreen(
 }
 
 @Composable
-private fun DetailContent(detail: DynamicDetail) {
+private fun DetailContent(
+    detail: DynamicDetail,
+    isLiking: Boolean,
+    onToggleLike: () -> Unit
+) {
     DynamicDetailHeader(
         author = detail.author,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -183,7 +199,11 @@ private fun DetailContent(detail: DynamicDetail) {
         DynamicDetailParagraphItem(paragraph)
     }
     detail.stats?.let { stats ->
-        DynamicDetailStats(stats)
+        DynamicDetailStats(
+            stats = stats,
+            isLiking = isLiking,
+            onToggleLike = onToggleLike
+        )
     }
 }
 
@@ -263,7 +283,11 @@ private fun DynamicDetailImageGrid(images: List<DynamicImage>, modifier: Modifie
 }
 
 @Composable
-private fun DynamicDetailStats(stats: DynamicStats) {
+private fun DynamicDetailStats(
+    stats: DynamicStats,
+    isLiking: Boolean,
+    onToggleLike: () -> Unit
+) {
     val text = remember(stats) {
         buildString {
             if (stats.repost > 0) append("转发 ${stats.repost}")
@@ -278,16 +302,35 @@ private fun DynamicDetailStats(stats: DynamicStats) {
         }
     }
     if (text.isNotEmpty()) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = if (stats.liked) "已点赞" else "点赞",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (stats.liked) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.clickable(enabled = !isLiking) { onToggleLike() }
+            )
+        }
     }
 }
 
-private fun LazyListScope.detailContentItems(detail: DynamicDetail) {
+private fun LazyListScope.detailContentItems(
+    detail: DynamicDetail,
+    isLiking: Boolean,
+    onToggleLike: () -> Unit
+) {
     item(key = "detail_author", contentType = "author") {
         DynamicDetailHeader(
             author = detail.author,
@@ -305,7 +348,11 @@ private fun LazyListScope.detailContentItems(detail: DynamicDetail) {
 
     detail.stats?.let { stats ->
         item(key = "detail_stats", contentType = "stats") {
-            DynamicDetailStats(stats)
+            DynamicDetailStats(
+                stats = stats,
+                isLiking = isLiking,
+                onToggleLike = onToggleLike
+            )
         }
     }
 }

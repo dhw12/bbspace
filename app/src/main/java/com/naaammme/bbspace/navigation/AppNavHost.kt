@@ -461,6 +461,7 @@ private fun MainTabsScaffold(
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val fixBottomBar by settingsViewModel.fixBottomBar.collectAsStateWithLifecycle()
     val navVisibilityController = rememberTopLevelNavVisibilityController(fixBottomBar)
+    var homeScrollToTopTrigger by remember { mutableStateOf(0L) }
 
     Box(
         modifier = Modifier
@@ -481,7 +482,8 @@ private fun MainTabsScaffold(
                             onOpenLive = onNavigateToLive,
                             onOpenDynamic = onNavigateToDynamicDetail,
                             onOpenArticle = onNavigateToArticle,
-                            onOpenListenItem = onNavigateToListenDetail
+                            onOpenListenItem = onNavigateToListenDetail,
+                            scrollToTopTrigger = homeScrollToTopTrigger
                         )
                         TopLevelRoute.DYNAMIC -> DynamicScreen(
                             onOpenVideo = onNavigateToVideo,
@@ -519,7 +521,8 @@ private fun MainTabsScaffold(
             currentTab = currentTab,
             visibilityController = navVisibilityController,
             onTabChange = onTabChange,
-            onNavigateToSearch = onNavigateToSearch
+            onNavigateToSearch = onNavigateToSearch,
+            onDoubleTapHome = { homeScrollToTopTrigger++ }
         )
     }
 }
@@ -530,7 +533,8 @@ private fun TopLevelFloatingNavigation(
     currentTab: TopLevelRoute,
     visibilityController: TopLevelNavVisibilityController,
     onTabChange: (TopLevelRoute) -> Unit,
-    onNavigateToSearch: () -> Unit
+    onNavigateToSearch: () -> Unit,
+    onDoubleTapHome: () -> Unit = {}
 ) {
     val toolbarShape = MaterialTheme.shapes.extraLarge
     val edgePaddingPx = with(LocalDensity.current) { topLevelNavEdgePadding.toPx() }
@@ -547,12 +551,22 @@ private fun TopLevelFloatingNavigation(
         .graphicsLayer {
             translationY = animatedOffsetPx
         }
+    var lastHomeTapTime by remember { mutableStateOf(0L) }
     val tabs: @Composable () -> Unit = {
         TopLevelRoute.entries.forEach { tab ->
             TopLevelFloatingNavigationItem(
                 tab = tab,
                 selected = currentTab == tab,
-                onClick = { onTabChange(tab) }
+                onClick = {
+                    if (tab == TopLevelRoute.HOME && currentTab == tab) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastHomeTapTime < 400L) {
+                            onDoubleTapHome()
+                        }
+                        lastHomeTapTime = now
+                    }
+                    onTabChange(tab)
+                }
             )
         }
     }
