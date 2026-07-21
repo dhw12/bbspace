@@ -34,6 +34,7 @@ fun DynamicScreen(
     onOpenSpace: (SpaceRoute) -> Unit,
     onOpenLive: (LiveRoute) -> Unit,
     onOpenDynamic: (String) -> Unit,
+    scrollToTopTrigger: Long = 0L,
     viewModel: DynamicViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -57,6 +58,12 @@ fun DynamicScreen(
 
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) viewModel.loadMore()
+    }
+    LaunchedEffect(scrollToTopTrigger) {
+        if (scrollToTopTrigger > 0L) {
+            listState.scrollToItem(0)
+            viewModel.refresh()
+        }
     }
 
     Scaffold(
