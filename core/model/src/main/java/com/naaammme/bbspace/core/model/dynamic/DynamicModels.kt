@@ -72,7 +72,8 @@ data class DynamicAuthor(
 data class DynamicStats(
     val repost: Long,
     val reply: Long,
-    val like: Long
+    val like: Long,
+    val liked: Boolean = false
 )
 
 sealed interface DynamicBody {
@@ -143,6 +144,7 @@ data class DynamicImage(
 
 @Immutable
 data class DynamicDetail(
+    val id: String,
     val author: DynamicDetailAuthor,
     val paragraphs: List<DynamicDetailParagraph>,
     val stats: DynamicStats?,

@@ -23,6 +23,8 @@ import com.bapis.bilibili.app.dynamic.v2.OpusDetailReq
 import com.bapis.bilibili.app.dynamic.v2.OpusDetailResp
 import com.bapis.bilibili.app.dynamic.v2.Refresh
 import com.naaammme.bbspace.core.common.media.httpsImageUrlOrNull
+import com.naaammme.bbspace.core.auth.AuthStore
+import com.naaammme.bbspace.core.common.BiliConstants
 import com.naaammme.bbspace.core.model.DynamicAuthor
 import com.naaammme.bbspace.core.model.DynamicBody
 import com.naaammme.bbspace.core.model.DynamicCursor
@@ -43,6 +45,7 @@ import com.naaammme.bbspace.core.model.SpaceRoute
 import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.VideoTargetTool
 import com.naaammme.bbspace.infra.grpc.BiliGrpcClient
+import com.naaammme.bbspace.infra.network.BiliRestClient
 import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,7 +55,9 @@ import org.json.JSONObject
 
 @Singleton
 class DynamicRepository @Inject constructor(
-    private val grpcClient: BiliGrpcClient
+    private val grpcClient: BiliGrpcClient,
+    private val restClient: BiliRestClient,
+    private val authStore: AuthStore
 ) {
 
     suspend fun fetchAll(
@@ -89,6 +94,26 @@ class DynamicRepository @Inject constructor(
         return withContext(Dispatchers.Default) {
             mapDetail(reply.opusItem)
         }
+    }
+
+    suspend fun likeDynamic(dynamicId: String, liked: Boolean) {
+        check(dynamicId.isNotBlank()) { "动态参数无效" }
+        val credential = authStore.getSavedCredential() ?: error("请先登录")
+        val csrf = credential.cookies.firstOrNull { it.name == "bili_jct" }?.value
+            ?: error("登录凭证缺少 csrf，请重新登录")
+        restClient.postForm(
+            url = "${BiliConstants.BASE_URL_API}$DYNAMIC_LIKE_ENDPOINT",
+            params = mapOf(
+                "dynamic_id" to dynamicId,
+                "up" to if (liked) "1" else "2",
+                "csrf" to csrf
+            ),
+            headers = mapOf(
+                "cookie" to credential.cookies.joinToString("; ") { "${it.name}=${it.value}" },
+                "origin" to "https://www.bilibili.com",
+                "referer" to "https://www.bilibili.com/"
+            )
+        )
     }
 
     suspend fun fetchSpace(
@@ -189,13 +214,15 @@ class DynamicRepository @Inject constructor(
                 DynamicStats(
                     repost = s.repost,
                     reply = s.reply,
-                    like = s.like
+                    like = s.like,
+                    liked = s.likeInfo.isLike
                 )
             } else null
         }
 
         val reply = opus.extend.reply
         return DynamicDetail(
+            id = opus.opusId.toString(),
             author = author,
             paragraphs = paragraphs,
             stats = stats,
@@ -366,7 +393,8 @@ class DynamicRepository @Inject constructor(
         return DynamicStats(
             repost = stat.repost,
             reply = stat.reply,
-            like = stat.like
+            like = stat.like,
+            liked = stat.likeInfo.isLike
         )
     }
 
@@ -728,6 +756,7 @@ class DynamicRepository @Inject constructor(
         const val ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynAll"
         const val OPUS_DETAIL_ENDPOINT = "bilibili.app.dynamic.v2.Opus/OpusDetail"
         const val SPACE_ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynSpace"
+        const val DYNAMIC_LIKE_ENDPOINT = "/dynamic_like/v1/dynamic_like/thumb"
         const val DEFAULT_QN = 80L
         const val DEFAULT_FNVER = 0L
         const val DEFAULT_FNVAL = 272L
