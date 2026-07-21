@@ -3,6 +3,7 @@ package com.naaammme.bbspace.navigation
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,10 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -555,41 +557,20 @@ private fun TopLevelFloatingNavigation(
         .graphicsLayer {
             translationY = animatedOffsetPx
         }
-    var lastRefreshableTab by remember { mutableStateOf<TopLevelRoute?>(null) }
-    var lastRefreshableTabTapTime by remember { mutableStateOf(0L) }
-    var selectedTabForTap by remember { mutableStateOf(currentTab) }
-
-    LaunchedEffect(currentTab) {
-        if (selectedTabForTap != currentTab) {
-            selectedTabForTap = currentTab
-            lastRefreshableTab = null
-            lastRefreshableTabTapTime = 0L
-        }
-    }
-
     val tabs: @Composable () -> Unit = {
         TopLevelRoute.entries.forEach { tab ->
             TopLevelFloatingNavigationItem(
                 tab = tab,
                 selected = currentTab == tab,
-                onClick = {
-                    if (selectedTabForTap == tab && tab in refreshableTabs) {
-                        val now = System.currentTimeMillis()
-                        if (lastRefreshableTab == tab && now - lastRefreshableTabTapTime < 400L) {
-                            when (tab) {
-                                TopLevelRoute.HOME -> onDoubleTapHome()
-                                TopLevelRoute.DYNAMIC -> onDoubleTapDynamic()
-                                else -> Unit
-                            }
-                        }
-                        lastRefreshableTab = tab
-                        lastRefreshableTabTapTime = now
-                    } else {
-                        lastRefreshableTab = null
-                        lastRefreshableTabTapTime = 0L
+                onClick = { onTabChange(tab) },
+                onDoubleClick = if (currentTab == tab && tab in refreshableTabs) {
+                    when (tab) {
+                        TopLevelRoute.HOME -> onDoubleTapHome
+                        TopLevelRoute.DYNAMIC -> onDoubleTapDynamic
+                        else -> null
                     }
-                    selectedTabForTap = tab
-                    onTabChange(tab)
+                } else {
+                    null
                 }
             )
         }
@@ -630,13 +611,29 @@ private val refreshableTabs = setOf(TopLevelRoute.HOME, TopLevelRoute.DYNAMIC)
 private fun TopLevelFloatingNavigationItem(
     tab: TopLevelRoute,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDoubleClick: (() -> Unit)?
 ) {
     if (selected) {
-        FilledIconButton(onClick = onClick) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.extraLarge
+                )
+                .pointerInput(tab, onDoubleClick) {
+                    detectTapGestures(
+                        onTap = { onClick() },
+                        onDoubleTap = { onDoubleClick?.invoke() }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
             Icon(
                 imageVector = tab.icon,
-                contentDescription = tab.label
+                contentDescription = tab.label,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer
             )
         }
     } else {
