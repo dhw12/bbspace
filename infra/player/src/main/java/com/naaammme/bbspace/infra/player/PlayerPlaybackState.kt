@@ -6,6 +6,7 @@ data class PlayerPlaybackState(
     val isPlaying: Boolean = false,
     val playWhenReady: Boolean = false,
     val playbackState: PlaybackState = PlaybackState.Idle,
+    val isLooping: Boolean = false,
     val speed: Float = 1f,
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,

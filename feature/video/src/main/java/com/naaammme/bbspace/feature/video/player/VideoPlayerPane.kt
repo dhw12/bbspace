@@ -113,6 +113,7 @@ internal fun VideoPlayerPane(
     val state by viewModel.videoState.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
+    val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     var activeDialog by remember { mutableStateOf<PlayerDialog?>(null) }
     var showPlaybackSheet by remember { mutableStateOf(false) }
     var showCtrl by remember { mutableStateOf(false) }
@@ -509,6 +510,10 @@ private fun VideoPlayerOverlay(
                             next
                         }
                     },
+                    onSwipeUp = {
+                        onShowCtrlChange(true)
+                        onToggleFull()
+                    },
                     onDragStart = { dragType ->
                         when (dragType) {
                             DragType.Brightness -> {
@@ -556,7 +561,6 @@ private fun VideoPlayerOverlay(
                 viewModel = viewModel,
                 state = state,
                 player = player,
-                isFull = isFull,
                 dragMs = { dragMs },
                 gestureSeekMs = gestureState.dragSeekPosMs,
                 onDragMsChange = { dragMs = it },
@@ -564,6 +568,7 @@ private fun VideoPlayerOverlay(
                 onShowA = onShowA,
                 onShowQ = onShowQ,
                 onShowSp = onShowSp,
+                onShowTimer = onShowTimer,
                 onToggleFull = onToggleFull,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -578,7 +583,6 @@ private fun PlayerCtrlBarHost(
     viewModel: VideoViewModel,
     state: VideoPlaybackState,
     player: Player?,
-    isFull: Boolean,
     dragMs: () -> Long?,
     gestureSeekMs: Long?,
     onDragMsChange: (Long?) -> Unit,
@@ -586,6 +590,7 @@ private fun PlayerCtrlBarHost(
     onShowA: () -> Unit,
     onShowQ: () -> Unit,
     onShowSp: () -> Unit,
+    onShowTimer: () -> Unit,
     onToggleFull: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -609,7 +614,14 @@ private fun PlayerCtrlBarHost(
         audioText = state.currentAudio?.let { getAudioName(it.id, short = true) } ?: "音频",
         qualityText = getQualityName(state.playbackSource, state.currentStream),
         speedText = formatSpeed(state.speed),
-        fullText = if (isFull) "还原" else "全屏",
+        loopText = if (state.isLooping) "循环" else "单次",
+        timerText = if (sleepTimerState.isActive) {
+            formatDuration(sleepTimerState.remainingMs)
+        } else {
+            "定时"
+        },
+        timerOn = sleepTimerState.isActive,
+        fullText = "全屏",
         sliderVal = sliderVal,
         sliderOn = durationMs > 0L,
         audioOn = (state.playbackSource?.audios?.size ?: 0) > 1,
@@ -618,6 +630,8 @@ private fun PlayerCtrlBarHost(
         onAudioClick = onShowA,
         onQualityClick = onShowQ,
         onSpeedClick = onShowSp,
+        onLoopClick = viewModel::toggleLooping,
+        onTimerClick = onShowTimer,
         onFullClick = onToggleFull,
         onSeekChange = { frac ->
             onShowCtrlChange(true)
@@ -639,6 +653,9 @@ private fun PlayerCtrlBar(
     audioText: String,
     qualityText: String,
     speedText: String,
+    loopText: String,
+    timerText: String,
+    timerOn: Boolean,
     fullText: String,
     sliderVal: Float,
     sliderOn: Boolean,
@@ -648,6 +665,8 @@ private fun PlayerCtrlBar(
     onAudioClick: () -> Unit,
     onQualityClick: () -> Unit,
     onSpeedClick: () -> Unit,
+    onLoopClick: () -> Unit,
+    onTimerClick: () -> Unit,
     onFullClick: () -> Unit,
     onSeekChange: (Float) -> Unit,
     onSeekDone: () -> Unit,
@@ -724,6 +743,18 @@ private fun PlayerCtrlBar(
                     text = speedText,
                     on = true,
                     onClick = onSpeedClick,
+                    modifier = Modifier.weight(1f)
+                )
+                CtrlBtn(
+                    text = loopText,
+                    on = true,
+                    onClick = onLoopClick,
+                    modifier = Modifier.weight(1f)
+                )
+                CtrlBtn(
+                    text = timerText,
+                    on = true,
+                    onClick = onTimerClick,
                     modifier = Modifier.weight(1f)
                 )
                 CtrlBtn(
@@ -900,4 +931,3 @@ private fun readPlayerTopMetaText(
         ?.takeIf { it in 0..100 }
     return if (battery != null) "$time  ${battery}%" else time
 }
-

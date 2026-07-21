@@ -101,6 +101,7 @@ data class PlayerPlaybackPrefs(
     val preferSoftwareDecode: Boolean = false,
     val decoderFallback: Boolean = true,
     val autoRotateFullscreen: Boolean = false,
+    val looping: Boolean = false,
     val gestureSpeed: Float = 2f,
     val videoCdnMode: VideoCdnMode = VideoCdnMode.Backup2
 )

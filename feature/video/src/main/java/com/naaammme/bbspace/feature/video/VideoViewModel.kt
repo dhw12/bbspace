@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import com.naaammme.bbspace.core.settings.AppSettings
 import com.naaammme.bbspace.core.playback.VideoPlaybackController
+import com.naaammme.bbspace.core.video.VideoActionRepository
+import com.naaammme.bbspace.core.model.FavoriteFolder
 import com.naaammme.bbspace.core.model.CommentSubject
 import com.naaammme.bbspace.core.model.CommentSubjectTool
 import com.naaammme.bbspace.core.model.DanmakuConfig
@@ -20,22 +22,47 @@ import com.naaammme.bbspace.core.model.VideoTarget
 import com.naaammme.bbspace.core.model.isSameEntry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class VideoViewModel @Inject constructor(
     private val playbackController: VideoPlaybackController,
-    private val playerSettings: AppSettings
+    private val playerSettings: AppSettings,
+    private val videoActionRepository: VideoActionRepository
 ) : ViewModel() {
 
     private val _targetStack = MutableStateFlow<List<VideoTarget>>(emptyList())
+    private val _videoActionState = MutableStateFlow(VideoActionUiState())
+    private val _sleepTimerState = MutableStateFlow(SleepTimerState())
 
     val player: StateFlow<Player?> = playbackController.player
     val videoState: StateFlow<VideoPlaybackState> = playbackController.videoState
     val playbackProgress: StateFlow<PlaybackProgress> = playbackController.playbackProgress
+    internal val videoActionState: StateFlow<VideoActionUiState> = _videoActionState
+    internal val sleepTimerState: StateFlow<SleepTimerState> = _sleepTimerState
     val settingsState = playerSettings.state
+
+    private var sleepTimerJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            videoState
+                .map { it.ids.aid to it.detailLoading }
+                .distinctUntilChanged()
+                .collectLatest { (aid, detailLoading) ->
+                    if (aid > 0L && !detailLoading) {
+                        refreshLikeState(aid)
+                    }
+                }
+        }
+    }
 
     val commentSubject: CommentSubject?
         get() {
@@ -48,6 +75,7 @@ class VideoViewModel @Inject constructor(
 
     fun openRoot(target: VideoTarget) {
         _targetStack.value = listOf(target)
+        resetVideoActions()
         playbackController.openVideo(target)
     }
 
@@ -59,6 +87,7 @@ class VideoViewModel @Inject constructor(
             current.isSameEntry(target) -> _targetStack.value.dropLast(1) + target
             else -> _targetStack.value + target
         }
+        resetVideoActions()
         playbackController.openVideo(target)
     }
 
@@ -68,6 +97,7 @@ class VideoViewModel @Inject constructor(
         val nextStack = stack.dropLast(1)
         val nextTarget = nextStack.last()
         _targetStack.value = nextStack
+        resetVideoActions()
         playbackController.openVideo(nextTarget)
         return true
     }
@@ -100,6 +130,120 @@ class VideoViewModel @Inject constructor(
 
     fun setSpeed(speed: Float) {
         playbackController.setSpeed(speed)
+    }
+
+    fun toggleLooping() {
+        val looping = !videoState.value.isLooping
+        playbackController.setLooping(looping)
+        viewModelScope.launch {
+            playerSettings.setLooping(looping)
+        }
+    }
+
+    fun startSleepTimer(minutes: Int) {
+        sleepTimerJob?.cancel()
+        val totalMs = minutes.coerceAtLeast(1) * 60_000L
+        _sleepTimerState.value = SleepTimerState(remainingMs = totalMs, isActive = true)
+        sleepTimerJob = viewModelScope.launch {
+            var remaining = totalMs
+            while (remaining > 0) {
+                delay(1_000)
+                remaining -= 1_000
+                _sleepTimerState.value = SleepTimerState(
+                    remainingMs = remaining.coerceAtLeast(0L),
+                    isActive = true
+                )
+            }
+            playbackController.pause()
+            _sleepTimerState.value = SleepTimerState()
+        }
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _sleepTimerState.value = SleepTimerState()
+    }
+
+    fun likeVideo() {
+        if (_videoActionState.value.liked) return
+        runVideoAction(VideoUserAction.LIKE) { aid ->
+            videoActionRepository.likeVideo(aid)
+            _videoActionState.value = _videoActionState.value.copy(
+                liked = true,
+                likeDelta = _videoActionState.value.likeDelta + 1,
+                pending = null,
+                message = "已点赞"
+            )
+        }
+    }
+
+    fun favoriteVideo() {
+        runVideoAction(VideoUserAction.FAVORITE) { aid ->
+            val previousFavorited = _videoActionState.value.favorited
+            val favorited = videoActionRepository.toggleFavoriteVideo(aid)
+            val favoriteDelta = when {
+                favorited && !previousFavorited -> 1
+                !favorited && previousFavorited -> -1
+                else -> 0
+            }
+            _videoActionState.value = _videoActionState.value.copy(
+                favorited = favorited,
+                favoriteDelta = _videoActionState.value.favoriteDelta + favoriteDelta,
+                pending = null,
+                message = if (favorited) "已收藏" else "已取消收藏"
+            )
+        }
+    }
+
+    fun openFavoriteFolderPicker() {
+        if (_videoActionState.value.pending != null) return
+        val aid = videoState.value.ids.aid
+        viewModelScope.launch {
+            _videoActionState.value = _videoActionState.value.copy(
+                pending = VideoUserAction.FAVORITE,
+                message = null
+            )
+            runCatching { videoActionRepository.fetchFavoriteFolders(aid) }
+                .onSuccess { folders ->
+                    _videoActionState.value = _videoActionState.value.copy(
+                        pending = null,
+                        favoriteFolders = folders,
+                        message = if (folders.isEmpty()) "暂无可用收藏夹" else null
+                    )
+                }
+                .onFailure { error ->
+                    _videoActionState.value = _videoActionState.value.copy(
+                        pending = null,
+                        message = error.message ?: "加载收藏夹失败"
+                    )
+                }
+        }
+    }
+
+    fun favoriteVideoToFolder(folder: FavoriteFolder) {
+        runVideoAction(VideoUserAction.FAVORITE) { aid ->
+            videoActionRepository.favoriteVideoToFolder(aid, folder.fid)
+            _videoActionState.value = _videoActionState.value.copy(
+                favorited = true,
+                favoriteDelta = if (_videoActionState.value.favorited) {
+                    _videoActionState.value.favoriteDelta
+                } else {
+                    _videoActionState.value.favoriteDelta + 1
+                },
+                pending = null,
+                favoriteFolders = null,
+                message = "已收藏到 ${folder.title}"
+            )
+        }
+    }
+
+    fun dismissFavoriteFolderPicker() {
+        _videoActionState.value = _videoActionState.value.copy(favoriteFolders = null)
+    }
+
+    fun clearVideoActionMessage() {
+        _videoActionState.value = _videoActionState.value.copy(message = null)
     }
 
     fun updateBackgroundPlayback(enabled: Boolean) {
@@ -224,4 +368,61 @@ class VideoViewModel @Inject constructor(
     private fun currentTarget(): VideoTarget? {
         return _targetStack.value.lastOrNull()
     }
+
+    private suspend fun refreshLikeState(aid: Long) {
+        runCatching { videoActionRepository.isVideoLiked(aid) }
+            .onSuccess { liked ->
+                if (videoState.value.ids.aid != aid) return@onSuccess
+                val current = _videoActionState.value
+                if (current.pending == VideoUserAction.LIKE || current.likeDelta != 0) return@onSuccess
+                _videoActionState.value = current.copy(liked = liked)
+            }
+    }
+
+    private fun runVideoAction(
+        action: VideoUserAction,
+        block: suspend (Long) -> Unit
+    ) {
+        if (_videoActionState.value.pending != null) return
+        val aid = videoState.value.ids.aid
+        viewModelScope.launch {
+            _videoActionState.value = _videoActionState.value.copy(
+                pending = action,
+                favoriteFolders = null,
+                message = null
+            )
+            runCatching { block(aid) }
+                .onFailure { error ->
+                    _videoActionState.value = _videoActionState.value.copy(
+                        pending = null,
+                        message = error.message ?: "操作失败"
+                    )
+                }
+        }
+    }
+
+    private fun resetVideoActions() {
+        _videoActionState.value = VideoActionUiState()
+        cancelSleepTimer()
+    }
 }
+
+internal data class VideoActionUiState(
+    val liked: Boolean = false,
+    val favorited: Boolean = false,
+    val likeDelta: Int = 0,
+    val favoriteDelta: Int = 0,
+    val pending: VideoUserAction? = null,
+    val favoriteFolders: List<FavoriteFolder>? = null,
+    val message: String? = null
+)
+
+internal enum class VideoUserAction {
+    LIKE,
+    FAVORITE
+}
+
+internal data class SleepTimerState(
+    val remainingMs: Long = 0L,
+    val isActive: Boolean = false
+)

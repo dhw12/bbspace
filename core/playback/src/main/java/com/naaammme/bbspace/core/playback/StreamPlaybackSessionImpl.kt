@@ -150,6 +150,11 @@ class StreamPlaybackSessionImpl @Inject constructor(
                 applyVideoSelection(state)
             }
         }
+        runtimeScope.launch {
+            playerSettings.state.map { it.playback.looping }.collect { looping ->
+                playerEngine.setLooping(looping)
+            }
+        }
     }
 
     // StreamPlaybackSession: lifecycle
@@ -659,7 +664,8 @@ class StreamPlaybackSessionImpl @Inject constructor(
             } else {
                 DecoderMode.Hard
             },
-            decoderFallback = playback.decoderFallback
+            decoderFallback = playback.decoderFallback,
+            looping = playback.looping
         )
     }
 
@@ -777,6 +783,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
             isPlaying = state.isPlaying,
             playWhenReady = state.playWhenReady,
             playbackState = state.playbackState,
+            isLooping = state.isLooping,
             speed = state.speed,
             videoWidth = state.videoWidth,
             videoHeight = state.videoHeight,

@@ -209,6 +209,12 @@ class Media3PlayerEngine @Inject constructor(
         player.pause()
     }
 
+    override fun setLooping(looping: Boolean) {
+        val player = ensurePlayer()
+        player.repeatMode = if (looping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        updatePlaybackState()
+    }
+
     override fun setSpeed(speed: Float) {
         val player = ensurePlayer()
         player.playbackParameters = PlaybackParameters(speed.coerceIn(0.25f, 3f))
@@ -279,6 +285,7 @@ class Media3PlayerEngine @Inject constructor(
                     true
                 )
                 setHandleAudioBecomingNoisy(true)
+                repeatMode = if (config.looping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                 addListener(playerListener)
                 addAnalyticsListener(analyticsListener)
             }
@@ -411,6 +418,7 @@ class Media3PlayerEngine @Inject constructor(
                     isPlaying = player?.isPlaying ?: false,
                     playWhenReady = player?.playWhenReady ?: false,
                     playbackState = (player?.playbackState ?: Player.STATE_IDLE).toPlaybackState(),
+                    isLooping = player?.repeatMode == Player.REPEAT_MODE_ONE,
                     speed = player?.playbackParameters?.speed ?: 1f,
                     videoWidth = player?.videoSize?.width ?: 0,
                     videoHeight = player?.videoSize?.height ?: 0,

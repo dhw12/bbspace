@@ -17,7 +17,8 @@ data class PlayerConfig(
     val rebufferMs: Int = 500,
     val backBufferMs: Int = 2_000,
     val decoderMode: DecoderMode = DecoderMode.Hard,
-    val decoderFallback: Boolean = true
+    val decoderFallback: Boolean = true,
+    val looping: Boolean = false
 )
 
 interface PlayerEngine {
@@ -35,6 +36,7 @@ interface PlayerEngine {
     )
     fun play()
     fun pause()
+    fun setLooping(looping: Boolean)
     fun setSpeed(speed: Float)
     fun seekTo(positionMs: Long)
     fun setMediaMetadata(metadata: MediaMetadata)

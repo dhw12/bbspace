@@ -218,10 +218,15 @@ fun VideoScreen(
                         detailLoading = videoState.detailLoading,
                         detailError = videoState.detailError,
                         commentSubject = viewModel.commentSubject,
+                        videoActionState = viewModel.videoActionState.collectAsStateWithLifecycle().value,
                         contentHorizontalPad = 0.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
                         onDownloadClick = downloadClick,
+                        onLikeClick = viewModel::likeVideo,
+                        onFavoriteClick = viewModel::favoriteVideo,
+                        onFavoriteLongClick = viewModel::openFavoriteFolderPicker,
+                        onDismissActionMessage = viewModel::clearVideoActionMessage,
                         onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
                     )
@@ -258,10 +263,15 @@ fun VideoScreen(
                         detailLoading = videoState.detailLoading,
                         detailError = videoState.detailError,
                         commentSubject = viewModel.commentSubject,
+                        videoActionState = viewModel.videoActionState.collectAsStateWithLifecycle().value,
                         contentHorizontalPad = 16.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
                         onDownloadClick = downloadClick,
+                        onLikeClick = viewModel::likeVideo,
+                        onFavoriteClick = viewModel::favoriteVideo,
+                        onFavoriteLongClick = viewModel::openFavoriteFolderPicker,
+                        onDismissActionMessage = viewModel::clearVideoActionMessage,
                         onOpenEpisode = switchEpisode,
                         onSwitchPage = switchPage
                     )
@@ -466,5 +476,4 @@ internal fun getQualityName(
         ?: "画质"
     return label.substringBefore(' ').ifBlank { label }
 }
-
 
