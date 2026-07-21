@@ -152,7 +152,7 @@ class StreamPlaybackSessionImpl @Inject constructor(
         }
         runtimeScope.launch {
             playerSettings.state.map { it.playback.looping }.collect { looping ->
-                playerEngine.setLooping(looping)
+                setLooping(looping)
             }
         }
     }
@@ -265,6 +265,11 @@ class StreamPlaybackSessionImpl @Inject constructor(
         if (_currentTarget.value !is StreamPlaybackTarget.Video) return
         playerEngine.seekTo(positionMs)
         danmakuSession.seekTo(positionMs)
+    }
+
+    override fun setLooping(looping: Boolean) {
+        if (_currentTarget.value !is StreamPlaybackTarget.Video) return
+        playerEngine.setLooping(looping)
     }
 
     override fun setSpeed(speed: Float) {
