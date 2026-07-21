@@ -761,7 +761,7 @@ private fun ActionChip(
     ) {
         Row(
             modifier = Modifier
-                .defaultMinSize(minWidth = 76.dp, minHeight = 36.dp)
+                .defaultMinSize(minHeight = 36.dp)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
