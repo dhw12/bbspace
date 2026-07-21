@@ -53,6 +53,8 @@ fun DynamicFeed(
     onOpenSpace: (SpaceRoute) -> Unit,
     onOpenLive: (LiveRoute) -> Unit,
     onOpenDynamic: (String) -> Unit,
+    onToggleLike: (String) -> Unit,
+    likingDynamicIds: Set<String>,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -89,7 +91,9 @@ fun DynamicFeed(
                 onOpenVideo = onOpenVideo,
                 onOpenSpace = onOpenSpace,
                 onOpenLive = onOpenLive,
-                onOpenDynamic = onOpenDynamic
+                onOpenDynamic = onOpenDynamic,
+                onToggleLike = onToggleLike,
+                isLiking = item.id in likingDynamicIds
             )
         }
 
@@ -145,7 +149,9 @@ private fun DynamicCard(
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
     onOpenLive: (LiveRoute) -> Unit,
-    onOpenDynamic: (String) -> Unit
+    onOpenDynamic: (String) -> Unit,
+    onToggleLike: (String) -> Unit,
+    isLiking: Boolean
 ) {
     val liveRoute = item.liveRoute
     val videoTarget = item.videoTarget
@@ -164,14 +170,21 @@ private fun DynamicCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        DynamicCardContent(item = item, onOpenSpace = onOpenSpace)
+        DynamicCardContent(
+            item = item,
+            onOpenSpace = onOpenSpace,
+            onToggleLike = onToggleLike,
+            isLiking = isLiking
+        )
     }
 }
 
 @Composable
 private fun DynamicCardContent(
     item: DynamicItem,
-    onOpenSpace: (SpaceRoute) -> Unit
+    onOpenSpace: (SpaceRoute) -> Unit,
+    onToggleLike: (String) -> Unit,
+    isLiking: Boolean
 ) {
     Column(
         modifier = Modifier
@@ -182,11 +195,27 @@ private fun DynamicCardContent(
         DynamicHeader(item = item, onOpenSpace = onOpenSpace)
         DynamicBodyContent(item = item)
         item.stats?.let { stats ->
-            Text(
-                text = "转发 ${stats.repost}  评论 ${stats.reply}  点赞 ${stats.like}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "转发 ${stats.repost}  评论 ${stats.reply}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = if (stats.liked) "已点赞 ${stats.like}" else "点赞 ${stats.like}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (stats.liked) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.clickable(enabled = !isLiking) { onToggleLike(item.id) }
+                )
+            }
         }
     }
 }
@@ -421,4 +450,3 @@ private fun DynamicImage.displayAspectRatio(): Float {
         1f
     }
 }
-

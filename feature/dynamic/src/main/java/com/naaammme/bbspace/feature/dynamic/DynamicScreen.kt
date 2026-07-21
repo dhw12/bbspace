@@ -127,6 +127,8 @@ fun DynamicScreen(
                         onOpenSpace = onOpenSpace,
                         onOpenLive = onOpenLive,
                         onOpenDynamic = onOpenDynamic,
+                        onToggleLike = viewModel::toggleLike,
+                        likingDynamicIds = state.likingDynamicIds,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

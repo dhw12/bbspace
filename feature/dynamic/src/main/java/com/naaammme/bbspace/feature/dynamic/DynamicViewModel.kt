@@ -8,6 +8,7 @@ import com.naaammme.bbspace.core.dynamic.DynamicRepository
 import com.naaammme.bbspace.core.model.DynamicCursor
 import com.naaammme.bbspace.core.model.DynamicItem
 import com.naaammme.bbspace.core.model.DynamicRefresh
+import com.naaammme.bbspace.core.model.DynamicStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,6 +82,40 @@ class DynamicViewModel @Inject constructor(
         }
     }
 
+    fun toggleLike(dynamicId: String) {
+        val state = _uiState.value
+        val item = state.items.firstOrNull { it.id == dynamicId } ?: return
+        val stats = item.stats ?: return
+        if (dynamicId in state.likingDynamicIds) return
+
+        val nextStats = stats.toggled(liked = !stats.liked)
+        _uiState.update {
+            it.copy(
+                items = it.items.replaceStats(dynamicId, nextStats),
+                likingDynamicIds = it.likingDynamicIds + dynamicId,
+                errorMessage = null
+            )
+        }
+        viewModelScope.launch {
+            runCatching { repo.likeDynamic(dynamicId, nextStats.liked) }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(likingDynamicIds = it.likingDynamicIds - dynamicId)
+                    }
+                }
+                .onFailure { error ->
+                    Logger.e(TAG, error) { "动态列表点赞失败 dynamicId=$dynamicId" }
+                    _uiState.update {
+                        it.copy(
+                            items = it.items.replaceStats(dynamicId, stats),
+                            likingDynamicIds = it.likingDynamicIds - dynamicId,
+                            errorMessage = error.message ?: "动态点赞失败"
+                        )
+                    }
+                }
+        }
+    }
+
     private suspend fun load(
         refresh: DynamicRefresh,
         reset: Boolean
@@ -145,6 +180,22 @@ class DynamicViewModel @Inject constructor(
                 if (seen.add(item.id)) add(item)
             }
         }
+    }
+
+    private fun List<DynamicItem>.replaceStats(
+        dynamicId: String,
+        stats: DynamicStats
+    ): List<DynamicItem> = map { item ->
+        if (item.id == dynamicId) item.copy(stats = stats) else item
+    }
+
+    private fun DynamicStats.toggled(liked: Boolean): DynamicStats {
+        val nextLike = when {
+            liked && !this.liked -> like + 1
+            !liked && this.liked -> (like - 1).coerceAtLeast(0L)
+            else -> like
+        }
+        return copy(like = nextLike, liked = liked)
     }
 
     private companion object {
