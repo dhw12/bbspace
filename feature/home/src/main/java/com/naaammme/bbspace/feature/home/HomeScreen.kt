@@ -28,7 +28,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,13 +79,17 @@ fun HomeScreen(
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
     val pagerState = rememberPagerState(initialPage = homeDefaultPage, pageCount = { homeTabs.size })
     val scope = rememberCoroutineScope()
+    var handledScrollToTopTrigger by rememberSaveable {
+        mutableLongStateOf(scrollToTopTrigger)
+    }
 
     LaunchedEffect(Unit) {
         viewModel.refreshPageAction()
     }
     LaunchedEffect(scrollToTopTrigger) {
-        if (scrollToTopTrigger > 0L) {
+        if (scrollToTopTrigger > handledScrollToTopTrigger) {
             pagerState.animateScrollToPage(1)
+            handledScrollToTopTrigger = scrollToTopTrigger
         }
     }
 

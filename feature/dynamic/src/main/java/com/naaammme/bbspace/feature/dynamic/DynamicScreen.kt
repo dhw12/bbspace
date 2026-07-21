@@ -14,7 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -39,6 +42,9 @@ fun DynamicScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var handledScrollToTopTrigger by rememberSaveable {
+        mutableLongStateOf(scrollToTopTrigger)
+    }
     val shouldLoadMore by remember(
         state.items.size,
         state.canLoadMore,
@@ -60,9 +66,10 @@ fun DynamicScreen(
         if (shouldLoadMore) viewModel.loadMore()
     }
     LaunchedEffect(scrollToTopTrigger) {
-        if (scrollToTopTrigger > 0L) {
+        if (scrollToTopTrigger > handledScrollToTopTrigger) {
             listState.scrollToItem(0)
             viewModel.refresh()
+            handledScrollToTopTrigger = scrollToTopTrigger
         }
     }
 

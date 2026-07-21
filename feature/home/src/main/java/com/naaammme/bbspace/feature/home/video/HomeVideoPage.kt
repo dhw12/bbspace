@@ -30,8 +30,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +74,9 @@ fun HomeVideoPage(
     val context = LocalContext.current
     val gridState = rememberLazyStaggeredGridState()
     var wasRefreshing by remember { mutableStateOf(false) }
+    var handledScrollToTopTrigger by rememberSaveable {
+        mutableLongStateOf(scrollToTopTrigger)
+    }
     LaunchedEffect(toastMessage, context) {
         if (toastMessage.isNotEmpty()) {
             Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
@@ -85,9 +90,10 @@ fun HomeVideoPage(
         wasRefreshing = isRefreshing
     }
     LaunchedEffect(scrollToTopTrigger) {
-        if (scrollToTopTrigger > 0L) {
+        if (scrollToTopTrigger > handledScrollToTopTrigger) {
             gridState.scrollToItem(0)
             onRefresh()
+            handledScrollToTopTrigger = scrollToTopTrigger
         }
     }
     AdaptiveMediaGrid(
