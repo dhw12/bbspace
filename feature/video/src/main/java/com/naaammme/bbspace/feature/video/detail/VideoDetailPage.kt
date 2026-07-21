@@ -646,7 +646,7 @@ private fun formatActionValue(value: String, delta: Int = 0): String {
     val tenthsOfTenThousands = (adjustedValue + 500L) / 1_000L
     val whole = tenthsOfTenThousands / 10L
     val decimal = tenthsOfTenThousands % 10L
-    return if (decimal == 0L) "$whole万" else "$whole.$decimal万"
+    return if (decimal == 0L) "${whole}万" else "${whole}.${decimal}万"
 }
 
 @Composable
