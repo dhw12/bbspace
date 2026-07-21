@@ -25,6 +25,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 
@@ -89,7 +90,8 @@ internal enum class PlayerVideoResizeMode {
 private enum class PlayerDialog {
     Quality,
     Audio,
-    Speed
+    Speed,
+    Timer
 }
 
 internal val LocalVideoResizeModeState = compositionLocalOf<MutableState<PlayerVideoResizeMode>> {
@@ -116,6 +118,7 @@ internal fun VideoPlayerPane(
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     var activeDialog by remember { mutableStateOf<PlayerDialog?>(null) }
+    var customTimerMinutes by rememberSaveable { mutableStateOf("") }
     var showPlaybackSheet by remember { mutableStateOf(false) }
     var showCtrl by remember { mutableStateOf(false) }
     val videoResizeMode = rememberSaveable { mutableStateOf(PlayerVideoResizeMode.Fit) }
@@ -238,11 +241,8 @@ internal fun VideoPlayerPane(
                     activeDialog = PlayerDialog.Speed
                 },
                 onShowTimer = {
-                    if (sleepTimerState.isActive) {
-                        viewModel.cancelSleepTimer()
-                    } else {
-                        viewModel.startSleepTimer(30)
-                    }
+                    showCtrl = true
+                    activeDialog = PlayerDialog.Timer
                 },
                 onToggleFull = {
                     showCtrl = true
@@ -390,6 +390,24 @@ internal fun VideoPlayerPane(
                 onDismiss = { activeDialog = null },
                 onSelect = { speed ->
                     viewModel.setSpeed(speed)
+                    activeDialog = null
+                }
+            )
+        }
+
+        if (activeDialog == PlayerDialog.Timer) {
+            SleepTimerDialog(
+                remainingMs = sleepTimerState.remainingMs,
+                isActive = sleepTimerState.isActive,
+                customMinutes = customTimerMinutes,
+                onCustomMinutesChange = { customTimerMinutes = it.filter(Char::isDigit) },
+                onDismiss = { activeDialog = null },
+                onStart = { minutes ->
+                    viewModel.startSleepTimer(minutes)
+                    activeDialog = null
+                },
+                onCancelTimer = {
+                    viewModel.cancelSleepTimer()
                     activeDialog = null
                 }
             )
@@ -578,7 +596,6 @@ private fun VideoPlayerOverlay(
                 onShowQ = onShowQ,
                 onShowSp = onShowSp,
                 onShowTimer = onShowTimer,
-                onToggleFull = onToggleFull,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 6.dp, vertical = 4.dp)
@@ -600,7 +617,6 @@ private fun PlayerCtrlBarHost(
     onShowQ: () -> Unit,
     onShowSp: () -> Unit,
     onShowTimer: () -> Unit,
-    onToggleFull: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
@@ -619,7 +635,6 @@ private fun PlayerCtrlBarHost(
     }
 
     PlayerCtrlBar(
-        playText = if (state.isPlaying) "暂停" else "播放",
         timeText = formatPlaybackTime(barMs, durationMs),
         audioText = state.currentAudio?.let { getAudioName(it.id, short = true) } ?: "音频",
         qualityText = getQualityName(state.playbackSource, state.currentStream),
@@ -630,19 +645,15 @@ private fun PlayerCtrlBarHost(
         } else {
             "定时"
         },
-        timerOn = sleepTimerState.isActive,
-        fullText = "全屏",
         sliderVal = sliderVal,
         sliderOn = durationMs > 0L,
         audioOn = (state.playbackSource?.audios?.size ?: 0) > 1,
         qualityOn = (state.playbackSource?.qualityOptions?.size ?: 0) > 1,
-        onTogglePlay = viewModel::togglePlayPause,
         onAudioClick = onShowA,
         onQualityClick = onShowQ,
         onSpeedClick = onShowSp,
         onLoopClick = viewModel::toggleLooping,
         onTimerClick = onShowTimer,
-        onFullClick = onToggleFull,
         onSeekChange = { frac ->
             onShowCtrlChange(true)
             onDragMsChange((durationMs * frac).toLong())
@@ -658,26 +669,21 @@ private fun PlayerCtrlBarHost(
 
 @Composable
 private fun PlayerCtrlBar(
-    playText: String,
     timeText: String,
     audioText: String,
     qualityText: String,
     speedText: String,
     loopText: String,
     timerText: String,
-    timerOn: Boolean,
-    fullText: String,
     sliderVal: Float,
     sliderOn: Boolean,
     audioOn: Boolean,
     qualityOn: Boolean,
-    onTogglePlay: () -> Unit,
     onAudioClick: () -> Unit,
     onQualityClick: () -> Unit,
     onSpeedClick: () -> Unit,
     onLoopClick: () -> Unit,
     onTimerClick: () -> Unit,
-    onFullClick: () -> Unit,
     onSeekChange: (Float) -> Unit,
     onSeekDone: () -> Unit,
     modifier: Modifier = Modifier
@@ -725,12 +731,6 @@ private fun PlayerCtrlBar(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CtrlBtn(
-                    text = playText,
-                    on = true,
-                    onClick = onTogglePlay,
-                    modifier = Modifier.weight(1f)
-                )
                 Text(
                     text = timeText,
                     color = Color.White,
@@ -767,15 +767,73 @@ private fun PlayerCtrlBar(
                     onClick = onTimerClick,
                     modifier = Modifier.weight(1f)
                 )
-                CtrlBtn(
-                    text = fullText,
-                    on = true,
-                    onClick = onFullClick,
-                    modifier = Modifier.weight(1f)
-                )
             }
         }
     }
+}
+
+@Composable
+private fun SleepTimerDialog(
+    remainingMs: Long,
+    isActive: Boolean,
+    customMinutes: String,
+    onCustomMinutesChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onStart: (Int) -> Unit,
+    onCancelTimer: () -> Unit
+) {
+    val parsedMinutes = customMinutes.toIntOrNull()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("定时停止") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isActive) {
+                    Text("剩余 ${formatDuration(remainingMs)}")
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { onStart(10) }) {
+                        Text("10 分钟")
+                    }
+                    TextButton(onClick = { onStart(20) }) {
+                        Text("20 分钟")
+                    }
+                }
+                OutlinedTextField(
+                    value = customMinutes,
+                    onValueChange = onCustomMinutesChange,
+                    label = { Text("自定义分钟") },
+                    singleLine = true,
+                    isError = customMinutes.isNotEmpty() && parsedMinutes == null,
+                    supportingText = {
+                        if (customMinutes.isNotEmpty() && parsedMinutes == null) {
+                            Text("请输入有效分钟数")
+                        }
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = parsedMinutes != null && parsedMinutes > 0,
+                onClick = { onStart(parsedMinutes ?: return@TextButton) }
+            ) {
+                Text("开始定时")
+            }
+        },
+        dismissButton = {
+            Row {
+                if (isActive) {
+                    TextButton(onClick = onCancelTimer) {
+                        Text("取消定时")
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("关闭")
+                }
+            }
+        }
+    )
 }
 
 @Composable
