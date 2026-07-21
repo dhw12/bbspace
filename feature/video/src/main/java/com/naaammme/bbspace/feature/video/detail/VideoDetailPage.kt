@@ -620,28 +620,33 @@ private fun ActionCapsule(
             stat?.let {
                 ActionChip(
                     label = if (videoActionState.liked) "已点赞" else "点赞",
-                    value = adjustedActionValue(it.like, videoActionState.likeDelta),
+                    value = formatActionValue(it.like, videoActionState.likeDelta),
                     enabled = videoActionState.pending != VideoUserAction.LIKE,
                     onClick = onLikeClick
                 )
-                ActionChip("投币", it.coin)
+                ActionChip("投币", formatActionValue(it.coin))
                 ActionChip(
                     label = if (videoActionState.favorited) "取消收藏" else "收藏",
-                    value = adjustedActionValue(it.fav, videoActionState.favoriteDelta),
+                    value = formatActionValue(it.fav, videoActionState.favoriteDelta),
                     enabled = videoActionState.pending != VideoUserAction.FAVORITE,
                     onClick = onFavoriteClick,
                     onLongClick = onFavoriteLongClick
                 )
-                ActionChip("分享", it.share)
+                ActionChip("分享", formatActionValue(it.share))
             }
         }
     }
 }
 
-private fun adjustedActionValue(value: String, delta: Int): String {
-    if (delta == 0) return value
+private fun formatActionValue(value: String, delta: Int = 0): String {
     val numericValue = value.replace(",", "").toLongOrNull() ?: return value
-    return (numericValue + delta).coerceAtLeast(0L).toString()
+    val adjustedValue = (numericValue + delta).coerceAtLeast(0L)
+    if (adjustedValue < 10_000L) return adjustedValue.toString()
+
+    val tenthsOfTenThousands = (adjustedValue + 500L) / 1_000L
+    val whole = tenthsOfTenThousands / 10L
+    val decimal = tenthsOfTenThousands % 10L
+    return if (decimal == 0L) "$whole万" else "$whole.$decimal万"
 }
 
 @Composable
