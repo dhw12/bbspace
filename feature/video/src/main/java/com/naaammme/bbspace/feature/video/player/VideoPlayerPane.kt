@@ -70,6 +70,7 @@ import com.naaammme.bbspace.core.model.QualityOption
 import com.naaammme.bbspace.core.model.VideoPlaybackState
 import com.naaammme.bbspace.feature.video.detail.QualityOptionItem
 import com.naaammme.bbspace.feature.video.VideoViewModel
+import com.naaammme.bbspace.feature.video.formatDuration
 import com.naaammme.bbspace.feature.video.formatPlaybackTime
 import com.naaammme.bbspace.feature.video.formatSpeed
 import com.naaammme.bbspace.feature.video.getAudioName
@@ -235,6 +236,13 @@ internal fun VideoPlayerPane(
                 onShowSp = {
                     showCtrl = true
                     activeDialog = PlayerDialog.Speed
+                },
+                onShowTimer = {
+                    if (sleepTimerState.isActive) {
+                        viewModel.cancelSleepTimer()
+                    } else {
+                        viewModel.startSleepTimer(30)
+                    }
                 },
                 onToggleFull = {
                     showCtrl = true
@@ -436,6 +444,7 @@ private fun VideoPlayerOverlay(
     onShowA: () -> Unit,
     onShowQ: () -> Unit,
     onShowSp: () -> Unit,
+    onShowTimer: () -> Unit,
     onToggleFull: () -> Unit
 ) {
     val context = LocalContext.current
@@ -594,6 +603,7 @@ private fun PlayerCtrlBarHost(
     onToggleFull: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     val progress by viewModel.playbackProgress.collectAsStateWithLifecycle()
     val durationMs = player?.duration
         ?.takeIf { it > 0L }

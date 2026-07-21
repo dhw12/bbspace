@@ -222,6 +222,7 @@ private fun DetailPageContent(
     ids: ResolvedVideoIds,
     detailLoading: Boolean,
     detailError: String?,
+    videoActionState: VideoActionUiState,
     horizontalPad: Dp,
     infoListState: LazyListState,
     descOn: Boolean,
@@ -233,7 +234,11 @@ private fun DetailPageContent(
     onOpenComments: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit
+    onDownloadClick: () -> Unit,
+    onLikeClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onFavoriteLongClick: () -> Unit,
+    onDismissActionMessage: () -> Unit
 ) {
     val itemMod = remember(horizontalPad) {
         if (horizontalPad > 0.dp) Modifier.padding(horizontal = horizontalPad) else Modifier
@@ -264,6 +269,10 @@ private fun DetailPageContent(
             onOpenVideo = onOpenVideo,
             onOpenSpace = onOpenSpace,
             onDownloadClick = onDownloadClick,
+            onLikeClick = onLikeClick,
+            onFavoriteClick = onFavoriteClick,
+            onFavoriteLongClick = onFavoriteLongClick,
+            onDismissActionMessage = onDismissActionMessage,
             onOpenComments = onOpenComments
         )
     }
