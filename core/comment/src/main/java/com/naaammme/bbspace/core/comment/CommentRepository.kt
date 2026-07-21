@@ -83,6 +83,26 @@ class CommentRepository @Inject constructor(
         )
     }
 
+    suspend fun likeReply(
+        subject: CommentSubject,
+        rpid: Long,
+        liked: Boolean
+    ) {
+        val accessToken = authProvider.accessToken
+        check(accessToken.isNotBlank()) { "请先登录" }
+        val ts = System.currentTimeMillis() / 1000L
+        restClient.postSigned(
+            url = "${BiliConstants.BASE_URL_API}$ACTION_ENDPOINT",
+            params = restParamBuilder.app(BiliRestProfile.APP, ts, accessToken) + mapOf(
+                "oid" to subject.oid.toString(),
+                "type" to subject.type.toString(),
+                "rpid" to rpid.toString(),
+                "action" to if (liked) "1" else "0"
+            ),
+            profile = BiliRestProfile.APP
+        )
+    }
+
     suspend fun publishReply(
         subject: CommentSubject,
         message: String,
@@ -419,6 +439,7 @@ class CommentRepository @Inject constructor(
             rpid = info.id,
             message = info.content.message.trim(),
             likeCount = info.like,
+            liked = info.replyControl.action == 1L,
             replyCount = info.count,
             timeText = formatReplyTime(info.ctime),
             locationText = formatReplyLocation(info.replyControl.location),
@@ -458,6 +479,7 @@ class CommentRepository @Inject constructor(
             rpid = reply.optLong("rpid"),
             message = content?.optString("message").orEmpty().trim(),
             likeCount = reply.optLong("like"),
+            liked = reply.optInt("action") == 1,
             replyCount = reply.optLong("count"),
             timeText = formatReplyTime(reply.optLong("ctime")),
             locationText = formatReplyLocation(replyControl?.optString("location").orEmpty()),
@@ -705,6 +727,7 @@ class CommentRepository @Inject constructor(
         const val TRANSLATE_ENDPOINT = "bilibili.main.community.reply.v1.Reply/TranslateReply"
         const val ADD_ENDPOINT = "/x/v2/reply/add"
         const val DEL_ENDPOINT = "/x/v2/reply/del"
+        const val ACTION_ENDPOINT = "/x/v2/reply/action"
         const val UPLOAD_ENDPOINT = "/x/dynamic/feed/draw/upload_bfs"
         const val TAG = "CommentRepo"
     }
