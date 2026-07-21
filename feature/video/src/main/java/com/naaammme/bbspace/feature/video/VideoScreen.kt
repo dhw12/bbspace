@@ -186,7 +186,8 @@ fun VideoScreen(
                         isFull = fullOn,
                         onToggleFull = { isFull = !isFull },
                         onBackClick = handleBack,
-                        onGoHome = onGoHome
+                        onGoHome = onGoHome,
+                        onDownloadClick = downloadClick
                     )
                 }
             }
@@ -211,7 +212,8 @@ fun VideoScreen(
                         isFull = false,
                         onToggleFull = { isFull = true },
                         onBackClick = handleBack,
-                        onGoHome = onGoHome
+                        onGoHome = onGoHome,
+                        onDownloadClick = downloadClick
                     )
                     VideoDetailPage(
                         modifier = Modifier.weight(1f),
@@ -224,7 +226,6 @@ fun VideoScreen(
                         contentHorizontalPad = 0.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
-                        onDownloadClick = downloadClick,
                         onLikeClick = viewModel::likeVideo,
                         onFavoriteClick = viewModel::favoriteVideo,
                         onFavoriteLongClick = viewModel::openFavoriteFolderPicker,
@@ -253,7 +254,8 @@ fun VideoScreen(
                             isFull = false,
                             onToggleFull = { isFull = true },
                             onBackClick = handleBack,
-                            onGoHome = onGoHome
+                            onGoHome = onGoHome,
+                            onDownloadClick = downloadClick
                         )
                     }
                     VideoDetailPage(
@@ -269,7 +271,6 @@ fun VideoScreen(
                         contentHorizontalPad = 16.dp,
                         onOpenVideo = openTarget,
                         onOpenSpace = onOpenSpace,
-                        onDownloadClick = downloadClick,
                         onLikeClick = viewModel::likeVideo,
                         onFavoriteClick = viewModel::favoriteVideo,
                         onFavoriteLongClick = viewModel::openFavoriteFolderPicker,

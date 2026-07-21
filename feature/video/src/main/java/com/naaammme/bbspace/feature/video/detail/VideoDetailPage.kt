@@ -89,7 +89,6 @@ internal fun VideoDetailPage(
     contentHorizontalPad: Dp,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit,
     onLikeClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
@@ -155,7 +154,6 @@ internal fun VideoDetailPage(
                 },
                 onOpenVideo = onOpenVideo,
                 onOpenSpace = onOpenSpace,
-                onDownloadClick = onDownloadClick,
                 onLikeClick = onLikeClick,
                 onFavoriteClick = onFavoriteClick,
                 onFavoriteLongClick = onFavoriteLongClick,
@@ -234,7 +232,6 @@ private fun DetailPageContent(
     onOpenComments: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit,
     onLikeClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
@@ -268,7 +265,6 @@ private fun DetailPageContent(
             onPageClick = onPageClick,
             onOpenVideo = onOpenVideo,
             onOpenSpace = onOpenSpace,
-            onDownloadClick = onDownloadClick,
             onLikeClick = onLikeClick,
             onFavoriteClick = onFavoriteClick,
             onFavoriteLongClick = onFavoriteLongClick,
@@ -293,7 +289,6 @@ private fun LazyListScope.detailItems(
     onPageClick: () -> Unit,
     onOpenVideo: (VideoTarget) -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit,
     onLikeClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
@@ -345,7 +340,6 @@ private fun LazyListScope.detailItems(
                     onToggleDesc = onToggleDesc,
                     onToggleTag = onToggleTag,
                     onOpenSpace = onOpenSpace,
-                    onDownloadClick = onDownloadClick,
                     onLikeClick = onLikeClick,
                     onFavoriteClick = onFavoriteClick,
                     onFavoriteLongClick = onFavoriteLongClick,
@@ -424,7 +418,6 @@ private fun VideoSummarySection(
     onToggleDesc: () -> Unit,
     onToggleTag: () -> Unit,
     onOpenSpace: (SpaceRoute) -> Unit,
-    onDownloadClick: () -> Unit,
     onLikeClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
@@ -459,7 +452,6 @@ private fun VideoSummarySection(
             onLikeClick = onLikeClick,
             onFavoriteClick = onFavoriteClick,
             onFavoriteLongClick = onFavoriteLongClick,
-            onDownloadClick = onDownloadClick,
             onDismissActionMessage = onDismissActionMessage
         )
     }
@@ -612,7 +604,6 @@ private fun ActionCapsule(
     onLikeClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onFavoriteLongClick: () -> Unit,
-    onDownloadClick: () -> Unit,
     onDismissActionMessage: () -> Unit
 ) {
     LaunchedEffect(videoActionState.message) {
@@ -643,10 +634,6 @@ private fun ActionCapsule(
                 )
                 ActionChip("分享", it.share)
             }
-            ActionChip(
-                label = "下载",
-                onClick = onDownloadClick
-            )
         }
     }
 }

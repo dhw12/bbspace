@@ -108,7 +108,8 @@ internal fun VideoPlayerPane(
     isFull: Boolean,
     onToggleFull: () -> Unit,
     onBackClick: () -> Unit,
-    onGoHome: () -> Unit
+    onGoHome: () -> Unit,
+    onDownloadClick: () -> Unit
 ) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
@@ -347,6 +348,10 @@ internal fun VideoPlayerPane(
                     state = state,
                     viewModel = viewModel,
                     onDismiss = { showPlaybackSheet = false },
+                    onDownloadClick = {
+                        showPlaybackSheet = false
+                        onDownloadClick()
+                    },
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .fillMaxSize()
@@ -418,7 +423,11 @@ internal fun VideoPlayerPane(
                 state = state,
                 viewModel = viewModel,
                 limitUnderPlayer = true,
-                onDismiss = { showPlaybackSheet = false }
+                onDismiss = { showPlaybackSheet = false },
+                onDownloadClick = {
+                    showPlaybackSheet = false
+                    onDownloadClick()
+                }
             )
         }
     }

@@ -78,7 +78,8 @@ internal fun VideoPlaybackSheet(
     state: VideoPlaybackState,
     viewModel: VideoViewModel,
     limitUnderPlayer: Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onDownloadClick: () -> Unit
 ) {
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -110,6 +111,7 @@ internal fun VideoPlaybackSheet(
             viewModel = viewModel,
             section = section,
             onSectionChange = { section = it },
+            onDownloadClick = onDownloadClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .then(
@@ -130,6 +132,7 @@ internal fun VideoPlaybackSidebar(
     state: VideoPlaybackState,
     viewModel: VideoViewModel,
     onDismiss: () -> Unit,
+    onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val settingsState by viewModel.settingsState.collectAsStateWithLifecycle(initialValue = PlayerSettingsState())
@@ -156,6 +159,7 @@ internal fun VideoPlaybackSidebar(
                     viewModel = viewModel,
                     section = section,
                     onSectionChange = { section = it },
+                    onDownloadClick = onDownloadClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
@@ -174,6 +178,7 @@ private fun VideoPlaybackPanelContent(
     viewModel: VideoViewModel,
     section: PlaybackSheetSection,
     onSectionChange: (PlaybackSheetSection) -> Unit,
+    onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -194,6 +199,9 @@ private fun VideoPlaybackPanelContent(
                     label = { Text(item.title) }
                 )
             }
+        }
+        TextButton(onClick = onDownloadClick) {
+            Text("下载")
         }
 
         when (section) {
@@ -669,4 +677,3 @@ private fun playbackErrorText(err: PlaybackError): String {
         is PlaybackError.RequestFailed -> err.message
     }
 }
-
