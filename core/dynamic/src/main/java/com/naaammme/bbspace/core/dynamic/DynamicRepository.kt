@@ -101,13 +101,9 @@ class DynamicRepository @Inject constructor(
         val credential = authStore.getSavedCredential() ?: error("请先登录")
         val csrf = credential.cookies.firstOrNull { it.name == "bili_jct" }?.value
             ?: error("登录凭证缺少 csrf，请重新登录")
-        restClient.postForm(
-            url = "${BiliConstants.BASE_URL_API}$DYNAMIC_LIKE_ENDPOINT",
-            params = mapOf(
-                "dynamic_id" to dynamicId,
-                "up" to if (liked) "1" else "2",
-                "csrf" to csrf
-            ),
+        restClient.postJson(
+            url = "${BiliConstants.BASE_URL_API}$DYNAMIC_LIKE_ENDPOINT?csrf=$csrf",
+            json = """{"dyn_id_str":"$dynamicId","up":${if (liked) 1 else 2}}""",
             headers = mapOf(
                 "cookie" to credential.cookies.joinToString("; ") { "${it.name}=${it.value}" },
                 "origin" to "https://www.bilibili.com",
@@ -756,7 +752,7 @@ class DynamicRepository @Inject constructor(
         const val ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynAll"
         const val OPUS_DETAIL_ENDPOINT = "bilibili.app.dynamic.v2.Opus/OpusDetail"
         const val SPACE_ENDPOINT = "bilibili.app.dynamic.v2.Dynamic/DynSpace"
-        const val DYNAMIC_LIKE_ENDPOINT = "/dynamic_like/v1/dynamic_like/thumb"
+        const val DYNAMIC_LIKE_ENDPOINT = "/x/dynamic/feed/dyn/thumb"
         const val DEFAULT_QN = 80L
         const val DEFAULT_FNVER = 0L
         const val DEFAULT_FNVAL = 272L

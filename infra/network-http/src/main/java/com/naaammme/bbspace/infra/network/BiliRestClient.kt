@@ -4,6 +4,7 @@ import com.naaammme.bbspace.infra.crypto.AppSigner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -117,6 +118,20 @@ class BiliRestClient @Inject constructor(
             params.forEach { (key, value) -> add(key, value) }
         }.build()
         val requestBuilder = Request.Builder().url(url).post(formBody)
+        headers.forEach { (key, value) -> requestBuilder.addHeader(key, value) }
+        return executeJson(requestBuilder.build())
+    }
+
+    /**
+     * 发送未签名的 JSON POST 请求（Web API 模式，使用 Cookie 认证）
+     */
+    suspend fun postJson(
+        url: String,
+        json: String,
+        headers: Map<String, String>
+    ): JSONObject {
+        val requestBody = json.toRequestBody("application/json; charset=utf-8".toMediaType())
+        val requestBuilder = Request.Builder().url(url).post(requestBody)
         headers.forEach { (key, value) -> requestBuilder.addHeader(key, value) }
         return executeJson(requestBuilder.build())
     }
