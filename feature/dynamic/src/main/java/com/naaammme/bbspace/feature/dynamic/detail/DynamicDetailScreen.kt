@@ -296,34 +296,30 @@ private fun DynamicDetailStats(
                 if (isNotEmpty()) append("  ")
                 append("评论 ${stats.reply}")
             }
-            if (stats.like > 0) {
-                if (isNotEmpty()) append("  ")
-                append("点赞 ${stats.like}")
-            }
         }
     }
-    if (text.isNotEmpty()) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Row(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (text.isNotEmpty()) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = if (stats.liked) "已点赞" else "点赞",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (stats.liked) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.clickable(enabled = !isLiking) { onToggleLike() }
-            )
         }
+        Text(
+            text = if (stats.liked) "已点赞 ${stats.like}" else "点赞 ${stats.like}",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (stats.liked) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.clickable(enabled = !isLiking) { onToggleLike() }
+        )
     }
 }
 
